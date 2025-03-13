@@ -1,0 +1,47 @@
+<!-- templates/base/navbar.html -->
+<nav class="navbar navbar-expand-lg navbar-light bg-light">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'home' %}">
+            <img src="{% static 'images/logo.png' %}" alt="PulseConnect" height="40">
+        </a>
+        
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav me-auto">
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'polls:list' %}">Polls</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'analytics:dashboard' %}">Analytics</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="{% url 'community:discussions' %}">Community</a>
+                </li>
+            </ul>
+            
+            {% if user.is_authenticated %}
+            <div class="dropdown">
+                <button class="btn btn-link dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                    <img src="{{ user.profile_picture.url|default:'default_avatar.png' }}" 
+                         class="rounded-circle" alt="{{ user.username }}" width="32" height="32">
+                    {{ user.username }}
+                </button>
+                <ul class="dropdown-menu dropdown-menu-end">
+                    <li><a class="dropdown-item" href="{% url 'accounts:profile' user.username %}">Profile</a></li>
+                    <li><a class="dropdown-item" href="{% url 'accounts:settings' %}">Settings</a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li><a class="dropdown-item" href="{% url 'accounts:logout' %}">Logout</a></li>
+                </ul>
+            </div>
+            {% else %}
+            <div class="nav-buttons">
+                <a href="{% url 'accounts:login' %}" class="btn btn-outline-primary me-2">Login</a>
+                <a href="{% url 'accounts:signup' %}" class="btn btn-primary">Sign Up</a>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+</nav>

@@ -1,0 +1,150 @@
+{% extends 'base.html' %}
+
+{% block title %}Log In - PulseConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full">
+        <div class="card backdrop-blur-lg bg-opacity-30">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold">Welcome Back</h2>
+                <p class="mt-2 opacity-80">Log in to your account</p>
+            </div>
+
+            <form method="post" class="space-y-6" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="space-y-4">
+                    <!-- Username field -->
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" 
+                               class="block text-sm font-medium">
+                            Username or Email
+                        </label>
+                        <div class="mt-1">
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="text-red-500 text-sm mt-1">
+                                    {{ form.username.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Password field -->
+                    <div>
+                        <label for="{{ form.password.id_for_label }}" 
+                               class="block text-sm font-medium">
+                            Password
+                        </label>
+                        <div class="mt-1 relative">
+                            {{ form.password }}
+                            {% if form.password.errors %}
+                                <div class="text-red-500 text-sm mt-1">
+                                    {{ form.password.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="flex items-center justify-between">
+                        <div class="flex items-center">
+                            <input type="checkbox" name="remember" id="remember" 
+                                   class="h-4 w-4 text-accent focus:ring-accent border-gray-300 rounded">
+                            <label for="remember" class="ml-2 block text-sm">
+                                Remember me
+                            </label>
+                        </div>
+
+                        <div class="text-sm">
+                            <a href="{% url 'accounts:signup' %}" 
+                               class="text-accent hover:underline">
+                                Forgot your password?
+                            </a>
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn-primary w-full">
+                        Log In
+                    </button>
+                </div>
+
+                <div class="text-center text-sm">
+                    <p>
+                        Don't have an account? 
+                        <a href="{% url 'accounts:signup' %}" class="text-accent hover:underline">
+                            Sign up
+                        </a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add input styling
+    document.querySelectorAll('input').forEach(input => {
+        if (input.type !== 'checkbox') {
+            input.classList.add(
+                'w-full',
+                'px-3',
+                'py-2',
+                'border',
+                'border-gray-300',
+                'rounded-md',
+                'shadow-sm',
+                'focus:outline-none',
+                'focus:ring-2',
+                'focus:ring-accent',
+                'focus:border-accent',
+                'dark:bg-gray-800',
+                'dark:border-gray-700'
+            );
+        }
+    });
+
+    // Show/hide password toggle
+    const togglePassword = () => {
+        const input = document.querySelector('#{{ form.password.id_for_label }}');
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+    };
+
+    const passwordInput = document.querySelector('#{{ form.password.id_for_label }}');
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.classList.add(
+        'absolute',
+        'right-2',
+        'top-1/2',
+        'transform',
+        '-translate-y-1/2',
+        'text-gray-500',
+        'hover:text-gray-700',
+        'focus:outline-none'
+    );
+    button.innerHTML = `
+        <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                  d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+        </svg>
+    `;
+    button.addEventListener('click', togglePassword);
+    passwordInput.parentNode.appendChild(button);
+</script>
+{% endblock %}

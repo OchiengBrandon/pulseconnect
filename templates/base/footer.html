@@ -1,0 +1,32 @@
+<!-- templates/base/footer.html -->
+<footer class="footer bg-light py-4 mt-auto">
+    <div class="container">
+        <div class="row">
+            <div class="col-lg-4">
+                <h5>About PulseConnect</h5>
+                <p>Empowering communities through meaningful engagement and data-driven insights.</p>
+            </div>
+            <div class="col-lg-4">
+                <h5>Quick Links</h5>
+                <ul class="list-unstyled">
+                    <li><a href="{% url 'about' %}">About Us</a></li>
+                    <li><a href="{% url 'contact' %}">Contact</a></li>
+                    <li><a href="{% url 'privacy' %}">Privacy Policy</a></li>
+                    <li><a href="{% url 'terms' %}">Terms of Service</a></li>
+                </ul>
+            </div>
+            <div class="col-lg-4">
+                <h5>Connect With Us</h5>
+                <div class="social-links">
+                    <a href="#" class="me-3"><i class="fab fa-twitter"></i></a>
+                    <a href="#" class="me-3"><i class="fab fa-linkedin"></i></a>
+                    <a href="#" class="me-3"><i class="fab fa-github"></i></a>
+                </div>
+            </div>
+        </div>
+        <hr>
+        <div class="text-center">
+            <p>&copy; {% now "Y" %} PulseConnect. All rights reserved.</p>
+        </div>
+    </div>
+</footer>

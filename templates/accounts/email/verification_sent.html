@@ -1,0 +1,151 @@
+{% extends 'base.html' %}
+
+{% block title %}Verification Email Sent - PulseConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full">
+        <div class="card backdrop-blur-lg bg-opacity-30 text-center">
+            <div class="animate__animated animate__fadeIn">
+                <!-- Email sent animation -->
+                <div class="w-24 h-24 mx-auto mb-6 relative">
+                    <svg class="w-full h-full text-accent" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                              d="M3 8l7.89 5.26a2 2 0 002.22 0L21 8M5 19h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v10a2 2 0 002 2z"/>
+                    </svg>
+                    <div class="absolute top-0 right-0 w-8 h-8 bg-green-500 rounded-full flex items-center justify-center animate__animated animate__bounceIn animate__delay-1s">
+                        <svg class="w-5 h-5 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                  d="M5 13l4 4L19 7"/>
+                        </svg>
+                    </div>
+                </div>
+
+                <h2 class="text-3xl font-bold mb-4">Check Your Email</h2>
+                
+                <p class="mb-6 opacity-80">
+                    We've sent a verification link to your email address. 
+                    Please click the link to verify your account.
+                </p>
+
+                <div class="space-y-4">
+                    <div class="p-4 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                        <p class="text-sm">
+                            <span class="font-semibold">Didn't receive the email?</span>
+                            <br>
+                            • Check your spam folder
+                            <br>
+                            • Make sure you entered the correct email address
+                        </p>
+                    </div>
+
+                    <button type="button" id="resendButton" 
+                            class="btn-secondary w-full"
+                            data-countdown="60">
+                        Resend Verification Email
+                    </button>
+                </div>
+
+                <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
+                    <p class="text-sm">
+                        Need help? 
+                        <a href="{% url 'contact' %}" class="text-accent hover:underline">
+                            Contact Support
+                        </a>
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Resend email functionality with countdown
+    const resendButton = document.getElementById('resendButton');
+    let countdown = parseInt(resendButton.dataset.countdown);
+    let countdownInterval;
+
+    function updateButtonText(seconds) {
+        if (seconds > 0) {
+            resendButton.textContent = `Resend Email (${seconds}s)`;
+            resendButton.disabled = true;
+            resendButton.classList.add('opacity-50', 'cursor-not-allowed');
+        } else {
+            resendButton.textContent = 'Resend Verification Email';
+            resendButton.disabled = false;
+            resendButton.classList.remove('opacity-50', 'cursor-not-allowed');
+        }
+    }
+
+    function startCountdown() {
+        let seconds = countdown;
+        updateButtonText(seconds);
+
+        countdownInterval = setInterval(() => {
+            seconds -= 1;
+            if (seconds < 0) {
+                clearInterval(countdownInterval);
+                updateButtonText(0);
+                return;
+            }
+            updateButtonText(seconds);
+        }, 1000);
+    }
+
+    resendButton.addEventListener('click', async () => {
+        try {
+            const response = await fetch('{% url "accounts:resend_verification" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': '{{ csrf_token }}',
+                    'Content-Type': 'application/json',
+                },
+            });
+
+            if (response.ok) {
+                // Show success message
+                const successMessage = document.createElement('div');
+                successMessage.className = 
+                    'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg ' +
+                    'animate__animated animate__fadeInRight';
+                successMessage.textContent = 'Verification email sent successfully!';
+                document.body.appendChild(successMessage);
+
+                // Remove message after 5 seconds
+                setTimeout(() => {
+                    successMessage.classList.remove('animate__fadeInRight');
+                    successMessage.classList.add('animate__fadeOutRight');
+                    setTimeout(() => successMessage.remove(), 1000);
+                }, 5000);
+
+                // Start countdown
+                startCountdown();
+            } else {
+                throw new Error('Failed to resend verification email');
+            }
+        } catch (error) {
+            // Show error message
+            const errorMessage = document.createElement('div');
+            errorMessage.className = 
+                'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg ' +
+                'animate__animated animate__fadeInRight';
+            errorMessage.textContent = 'Failed to resend verification email. Please try again later.';
+            document.body.appendChild(errorMessage);
+
+            // Remove message after 5 seconds
+            setTimeout(() => {
+                errorMessage.classList.remove('animate__fadeInRight');
+                errorMessage.classList.add('animate__fadeOutRight');
+                setTimeout(() => errorMessage.remove(), 1000);
+            }, 5000);
+        }
+    });
+
+    // Start initial countdown if needed
+    if (countdown > 0) {
+        startCountdown();
+    }
+</script>
+{% endblock %}

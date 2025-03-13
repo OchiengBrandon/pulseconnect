@@ -1,0 +1,98 @@
+<!-- templates/gamification/rewards_home.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        <!-- User Points Card -->
+        {% if user.is_authenticated %}
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Your Points</h2>
+            <div class="space-y-2">
+                <div class="flex justify-between">
+                    <span>Total Points:</span>
+                    <span class="font-bold">{{ user_points.total_points }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Poll Points:</span>
+                    <span>{{ user_points.poll_creation_points|add:user_points.poll_participation_points }}</span>
+                </div>
+                <div class="flex justify-between">
+                    <span>Discussion Points:</span>
+                    <span>{{ user_points.discussion_points }}</span>
+                </div>
+                <!-- Add more point categories -->
+            </div>
+            <a href="{% url 'gamification:points_history' %}" 
+               class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
+                View History
+            </a>
+        </div>
+        {% endif %}
+
+        <!-- Recent Badges -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Recent Badges</h2>
+            <div class="grid grid-cols-2 gap-4">
+                {% for badge_award in user_badges|slice:":4" %}
+                <div class="text-center">
+                    <div class="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
+                        <i class="{{ badge_award.badge.icon }} text-2xl"></i>
+                    </div>
+                    <p class="text-sm">{{ badge_award.badge.name }}</p>
+                </div>
+                {% endfor %}
+            </div>
+            <a href="{% url 'gamification:badge_list' %}" 
+               class="mt-4 inline-block bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
+                View All Badges
+            </a>
+        </div>
+
+        <!-- Leaderboard Preview -->
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <h2 class="text-2xl font-bold mb-4">Top Contributors</h2>
+            {% for leaderboard in leaderboards %}
+            <div class="mb-6">
+                <h3 class="text-lg font-semibold mb-2">{{ leaderboard.title }}</h3>
+                <div class="space-y-2">
+                    {% for leader in leaderboard.get_leaders|slice:":5" %}
+                    <div class="flex justify-between items-center">
+                        <div class="flex items-center">
+                            <span class="w-6 text-center">{{ forloop.counter }}</span>
+                            <span>{{ leader.username }}</span>
+                        </div>
+                        <span class="font-bold">{{ leader.score }}</span>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endfor %}
+            <a href="{% url 'gamification:leaderboard' %}" 
+               class="mt-4 inline-block bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
+                View Full Leaderboard
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Points Update Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    function updatePoints() {
+        fetch('{% url "gamification:api_points" %}')
+            .then(response => response.json())
+            .then(data => {
+                // Update points display
+                document.getElementById('total-points').textContent = data.total_points;
+                // Update other point categories...
+            })
+            .catch(error => console.error('Error fetching points:', error));
+    }
+
+    // Update points every 60 seconds
+    setInterval(updatePoints, 60000);
+});
+</script>
+{% endblock %}

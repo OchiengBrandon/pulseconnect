@@ -1,0 +1,302 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PulseConnect - {% block title %}Home{% endblock %}</title>
+    
+    <!-- CSS Libraries -->
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tippy.js@6/dist/tippy.css">
+    {% load static %}
+    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
+</head>
+<body>
+    <!-- Dynamic Background -->
+    <div class="animated-bg"></div>
+    <div class="noise-overlay"></div>
+    <div class="gradient-sphere"></div>
+    
+    <!-- Top Banner (Optional) -->
+    <div class="announcement-banner" id="announcementBanner">
+        <div class="banner-content">
+            <span class="banner-icon">🎉</span>
+            <p>Welcome to the new PulseConnect! Explore our new features</p>
+            <a href="#" class="banner-link">Learn More</a>
+        </div>
+        <button class="banner-close" aria-label="Close banner">×</button>
+    </div>
+
+    <!-- Navigation -->
+    <nav class="main-nav">
+        <div class="nav-container">
+            <div class="nav-content">
+                <!-- Logo Section -->
+                <div class="nav-logo">
+                    <a href="{% url 'home' %}" class="logo-link">
+                        <div class="logo-wrapper">
+                            <svg class="logo-icon" viewBox="0 0 24 24">
+                                <!-- Your logo SVG -->
+                            </svg>
+                            <span class="logo-text">Pulse<span class="text-gradient">Connect</span></span>
+                        </div>
+                    </a>
+                </div>
+
+                <!-- Main Navigation Links -->
+                <div class="nav-links">
+                    <a href="{% url 'polls:list' %}" class="nav-item" data-tippy-content="Create and participate in polls">
+                        <i class="fas fa-chart-bar"></i>
+                        <span>Polls</span>
+                    </a>
+                    <a href="{% url 'analytics:dashboard' %}" class="nav-item" data-tippy-content="View detailed analytics">
+                        <i class="fas fa-analytics"></i>
+                        <span>Analytics</span>
+                    </a>
+                    <a href="{% url 'community:dashboard' %}" class="nav-item" data-tippy-content="Connect with community">
+                        <i class="fas fa-users"></i>
+                        <span>Community</span>
+                    </a>
+                    <a href="{% url 'collaboration:project_list' %}" class="nav-item" data-tippy-content="Collaborate on projects">
+                        <i class="fas fa-project-diagram"></i>
+                        <span>Collaborate</span>
+                    </a>
+                </div>
+
+                <!-- User Section -->
+                {% if user.is_authenticated %}
+                <div class="user-section" x-data="{ open: false }">
+                    <button @click="open = !open" class="user-profile-btn">
+                        <div class="user-avatar">
+                            <img src="{{ user.profile.avatar.url }}" alt="Profile" class="avatar-img">
+                            <div class="status-indicator {{ user.profile.status }}"></div>
+                        </div>
+                        <div class="user-info">
+                            <span class="username">{{ user.username }}</span>
+                            <div class="user-meta">
+                                <span class="level">Level {{ user.profile.level }}</span>
+                                <span class="xp">{{ user.profile.experience }} XP</span>
+                            </div>
+                        </div>
+                        <div class="notifications-indicator" data-count="{{ notifications_count }}"></div>
+                    </button>
+
+                    <!-- Profile Dropdown -->
+                    <div x-show="open" @click.away="open = false" class="profile-dropdown">
+                        <!-- User Stats Summary -->
+                        <div class="user-stats-summary">
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
+                                <div class="stat-info">
+                                    <span class="stat-value">#{{ user.profile.rank }}</span>
+                                    <span class="stat-label">Global Rank</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-star"></i></div>
+                                <div class="stat-info">
+                                    <span class="stat-value">{{ user.profile.achievements_count }}</span>
+                                    <span class="stat-label">Achievements</span>
+                                </div>
+                            </div>
+                            <div class="stat-card">
+                                <div class="stat-icon"><i class="fas fa-medal"></i></div>
+                                <div class="stat-info">
+                                    <span class="stat-value">{{ user.profile.points }}</span>
+                                    <span class="stat-label">Points</span>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Progress Bar -->
+                        <div class="level-progress">
+                            <div class="progress-info">
+                                <span>Level {{ user.profile.level }}</span>
+                                <span>{{ user.profile.xp_to_next_level }} XP to next level</span>
+                            </div>
+                            <div class="progress-bar">
+                                <div class="progress-fill" style="width: {{ user.profile.level_progress }}%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Menu Items -->
+                        <div class="menu-sections">
+                            <div class="menu-section">
+                                <a href="{% url 'accounts:profile' username=user.username %}" class="menu-item">
+                                    <i class="fas fa-user"></i>
+                                    <span>My Profile</span>
+                                </a>
+                                <a href="{% url 'accounts:logout' %}" class="menu-item logout">
+                                    <i class="fas fa-sign-out-alt"></i>
+                                    <span>Logout</span>
+                                </a>
+                            </div>
+
+                            <div class="menu-section">
+                                <a href="{% url 'accounts:researcher_directory' %}" class="menu-item">
+                                    <i class="fas fa-users"></i>
+                                    <span>Researchers</span>
+                                </a>
+                                <a href="#" class="menu-item">
+                                    <i class="fas fa-bell"></i>
+                                    <span>Notifications</span>
+                                    <span class="notification-badge">{{ notifications_count }}</span>
+                                </a>
+                            </div>
+
+                            <div class="menu-section">
+                                <a href="{% url 'accounts:profile_edit' %}" class="menu-item">
+                                    <i class="fas fa-user-edit"></i>
+                                    <span>Edit Profile</span>
+                                </a>
+                                <a href="{% url 'accounts:password_change' %}" class="menu-item">
+                                    <i class="fas fa-lock"></i>
+                                    <span>Change Password</span>
+                                </a>
+                                <a href="{% url 'accounts:researcher_directory' %}" class="menu-item">
+                                    <i class="fas fa-users"></i>
+                                    <span>Institutions</span>
+                                </a>
+                                <a href="{% url 'accounts:toggle_accessibility' %}" class="menu-item">
+                                    <i class="fas fa-universal-access"></i>
+                                    <span>Toggle Accessibility</span>
+                                </a>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% else %}
+                <div class="auth-buttons">
+                    <a href="{% url 'accounts:login' %}" class="btn-login">
+                        <i class="fas fa-sign-in-alt"></i>
+                        <span>Login</span>
+                    </a>
+                    <a href="{% url 'accounts:signup' %}" class="btn-signup">
+                        <i class="fas fa-user-plus"></i>
+                        <span>Sign Up</span>
+                    </a>
+                </div>
+                {% endif %}
+
+                <!-- Theme Toggle -->
+                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
+                    <div class="toggle-icons">
+                        <svg class="sun-icon" viewBox="0 0 24 24"><!-- Sun icon SVG --></svg>
+                        <svg class="moon-icon" viewBox="0 0 24 24"><!-- Moon icon SVG --></svg>
+                    </div>
+                </button>
+
+                <!-- Mobile Menu Button -->
+                <button class="mobile-menu-btn" aria-label="Toggle mobile menu">
+                    <div class="hamburger">
+                        <span></span>
+                        <span></span>
+                        <span></span>
+                    </div>
+                </button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Mobile Navigation Menu -->
+    <div class="mobile-menu">
+        <!-- Mobile menu content -->
+    </div>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        {% block content %}{% endblock %}
+    </main>
+
+    <!-- Footer -->
+    <footer class="modern-footer">
+        <div class="footer-waves">
+            <svg class="waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
+                <path class="wave-1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+                <path class="wave-2" d="M0,192L48,176C96,160,192,128,288,128C384,128,480,160,576,176C672,192,768,192,864,176C960,160,1056,128,1152,128C1248,128,1344,160,1392,176L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
+            </svg>
+        </div>
+
+        <div class="footer-content">
+            <div class="footer-grid">
+                <!-- Brand Section -->
+                <div class="footer-brand" data-aos="fade-up">
+                    <h3 class="brand-title">PulseConnect</h3>
+                    <p class="brand-description">Connecting students, institutions, and researchers through innovative polling solutions.</p>
+                    <div class="social-links">
+                        <a href="#" class="social-link" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
+                        <a href="#" class="social-link" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
+                        <a href="#" class="social-link" aria-label="GitHub"><i class="fab fa-github"></i></a>
+                        <a href="#" class="social-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
+                    </div>
+                </div>
+
+                <!-- Quick Links -->
+                <div class="footer-section" data-aos="fade-up" data-aos-delay="100">
+                    <h4 class="footer-title">Quick Links</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">About Us</a></li>
+                        <li><a href="#">Our Team</a></li>
+                        <li><a href="#">Contact</a></li>
+                        <li><a href="#">Careers</a></li>
+                        <li><a href="#">Privacy Policy</a></li>
+                        <li><a href="#">Terms of Service</a></li>
+                    </ul>
+                </div>
+
+                <!-- Resources -->
+                <div class="footer-section" data-aos="fade-up" data-aos-delay="200">
+                    <h4 class="footer-title">Resources</h4>
+                    <ul class="footer-links">
+                        <li><a href="#">Documentation</a></li>
+                        <li><a href="#">API Reference</a></li>
+                        <li><a href="#">Developer Guide</a></li>
+                        <li><a href="#">Blog</a></li>
+                        <li><a href="#">Community Forum</a></li>
+                        <li><a href="#">FAQ</a></li>
+                    </ul>
+                </div>
+
+                <!-- Newsletter -->
+                <div class="footer-newsletter" data-aos="fade-up" data-aos-delay="300">
+                    <h4 class="footer-title">Stay Updated</h4>
+                    <p class="newsletter-description">Subscribe to our newsletter for the latest updates and insights.</p>
+                    
+                    <form class="newsletter-form">
+                        <div class="input-group">
+                            <input type="email" placeholder="Enter your email" required>
+                            <button type="submit" class="submit-btn">
+                                <i class="fas fa-paper-plane"></i>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer Bottom -->
+        <div class="footer-bottom">
+            <div class="footer-info">
+                <p class="copyright">© {% now "Y" %} PulseConnect. All rights reserved.</p>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Scroll to Top Button -->
+    <button id="scrollToTop" class="scroll-to-top" aria-label="Scroll to top">
+        <i class="fas fa-arrow-up"></i>
+    </button>
+
+    <!-- JavaScript -->
+    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/tippy.js@6/dist/tippy-bundle.umd.js"></script>
+    <script src="{% static 'js/main.js' %}"></script>
+    {% block extra_js %}{% endblock %}
+</body>
+</html>

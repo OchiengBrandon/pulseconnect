@@ -1,0 +1,278 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ profile_user.username }}'s Profile - PulseConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-7xl mx-auto">
+        <!-- Profile Header -->
+        <div class="card mb-8 relative overflow-hidden">
+            <!-- Background Pattern -->
+            <div class="absolute inset-0 opacity-10">
+                <svg class="w-full h-full" viewBox="0 0 100 100" preserveAspectRatio="none">
+                    <pattern id="grid" width="10" height="10" patternUnits="userSpaceOnUse">
+                        <path d="M 10 0 L 0 0 0 10" fill="none" stroke="currentColor" stroke-width="0.5"/>
+                    </pattern>
+                    <rect width="100" height="100" fill="url(#grid)"/>
+                </svg>
+            </div>
+
+            <div class="relative">
+                <!-- Profile Info -->
+                <div class="flex flex-col md:flex-row items-center md:items-start gap-8">
+                    <!-- Avatar -->
+                    <div class="relative group">
+                        <div class="w-32 h-32 rounded-full overflow-hidden ring-4 ring-accent/20">
+                            {% if profile_user.avatar %}
+                                <img src="{{ profile_user.avatar.url }}" alt="{{ profile_user.username }}"
+                                     class="w-full h-full object-cover">
+                            {% else %}
+                                <div class="w-full h-full bg-gradient-to-br from-primary to-accent flex items-center justify-center text-white text-4xl font-bold">
+                                    {{ profile_user.username.0|upper }}
+                                </div>
+                            {% endif %}
+                        </div>
+                        {% if user == profile_user %}
+                            <div class="absolute inset-0 bg-black/50 rounded-full opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                <a href="{% url 'accounts:profile_edit' %}" class="text-white text-sm">
+                                    Change Photo
+                                </a>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- User Info -->
+                    <div class="flex-1 text-center md:text-left">
+                        <div class="flex flex-col md:flex-row md:items-center gap-4 mb-4">
+                            <h1 class="text-3xl font-bold">{{ profile_user.get_full_name|default:profile_user.username }}</h1>
+                            {% if profile_user.user_type == 'researcher' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-blue-100 text-blue-800 dark:bg-blue-900 dark:text-blue-200">
+                                    Researcher
+                                </span>
+                            {% elif profile_user.user_type == 'institution' %}
+                                <span class="inline-flex items-center px-3 py-1 rounded-full text-sm font-medium bg-purple-100 text-purple-800 dark:bg-purple-900 dark:text-purple-200">
+                                    Institution
+                                </span>
+                            {% endif %}
+                        </div>
+
+                        <p class="text-lg opacity-80 mb-4">{{ profile_user.bio|default:"" }}</p>
+
+                        {% if profile_user.user_type == 'researcher' %}
+                            <div class="flex flex-wrap gap-4 mb-4">
+                                {% if profile_user.institution %}
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                  d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4"/>
+                                        </svg>
+                                        <span>{{ profile_user.institution }}</span>
+                                    </div>
+                                {% endif %}
+                                {% if profile_user.field_of_study %}
+                                    <div class="flex items-center gap-2">
+                                        <svg class="w-5 h-5 opacity-60" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                                                  d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253"/>
+                                        </svg>
+                                        <span>{{ profile_user.field_of_study }}</span>
+                                    </div>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+
+                        <!-- Action Buttons -->
+                        <div class="flex flex-wrap justify-center md:justify-start gap-4">
+                            {% if user == profile_user %}
+                                <a href="{% url 'accounts:profile_edit' %}" class="btn-primary">
+                                    Edit Profile
+                                </a>
+                                <a href="{% url 'accounts:password_change' %}" class="btn-secondary">
+                                    Change Password
+                                </a>
+                            {% else %}
+                                <button class="btn-primary" id="followButton">
+                                    Follow
+                                </button>
+                                <a href="{% url 'messages:compose' profile_user.username %}" class="btn-secondary">
+                                    Message
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Stats -->
+                    <div class="flex flex-wrap justify-center gap-8 md:border-l md:pl-8 dark:md:border-gray-700">
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-accent">{{ polls_created }}</div>
+                            <div class="text-sm opacity-80">Polls</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-accent">{{ polls_participated }}</div>
+                            <div class="text-sm opacity-80">Participations</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-2xl font-bold text-accent">{{ discussions_created }}</div>
+                            <div class="text-sm opacity-80">Discussions</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Badges and Achievements -->
+        {% if badges %}
+            <div class="card mb-8">
+                <h2 class="text-2xl font-bold mb-6">Badges & Achievements</h2>
+                <div class="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-6 gap-4">
+                    {% for badge in badges %}
+                        <div class="text-center">
+                            <div class="w-16 h-16 mx-auto mb-2 relative">
+                                <img src="{{ badge.icon.url }}" alt="{{ badge.name }}" 
+                                     class="w-full h-full object-contain">
+                                <div class="absolute inset-0 bg-gradient-to-tr from-primary/20 to-accent/20 rounded-full"></div>
+                            </div>
+                            <div class="font-medium">{{ badge.name }}</div>
+                            <div class="text-sm opacity-60">{{ badge.description }}</div>
+                        </div>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Tabs Section -->
+        <div x-data="{ activeTab: 'polls' }">
+            <!-- Tab Navigation -->
+            <div class="flex overflow-x-auto space-x-4 mb-8">
+                <button @click="activeTab = 'polls'" 
+                        :class="{ 'text-accent border-accent': activeTab === 'polls' }"
+                        class="pb-2 border-b-2 border-transparent font-medium">
+                    Polls
+                </button>
+                <button @click="activeTab = 'discussions'" 
+                        :class="{ 'text-accent border-accent': activeTab === 'discussions' }"
+                        class="pb-2 border-b-2 border-transparent font-medium">
+                    Discussions
+                </button>
+                {% if profile_user.user_type == 'researcher' %}
+                    <button @click="activeTab = 'publications'" 
+                            :class="{ 'text-accent border-accent': activeTab === 'publications' }"
+                            class="pb-2 border-b-2 border-transparent font-medium">
+                        Publications
+                    </button>
+                {% endif %}
+                {% if profile_user.user_type == 'institution' %}
+                    <button @click="activeTab = 'researchers'" 
+                            :class="{ 'text-accent border-accent': activeTab === 'researchers' }"
+                            class="pb-2 border-b-2 border-transparent font-medium">
+                        Researchers
+                    </button>
+                {% endif %}
+            </div>
+
+            <!-- Tab Content -->
+            <div class="space-y-8">
+                <!-- Polls Tab -->
+                <div x-show="activeTab === 'polls'" x-cloak>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {% for poll in polls %}
+                            {% include 'polls/components/poll_card.html' with poll=poll %}
+                        {% empty %}
+                            <div class="col-span-full text-center py-12">
+                                <div class="text-lg opacity-60">No polls yet</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Discussions Tab -->
+                <div x-show="activeTab === 'discussions'" x-cloak>
+                    <div class="space-y-6">
+                        {% for discussion in discussions %}
+                            {% include 'community/components/discussion_card.html' with discussion=discussion %}
+                        {% empty %}
+                            <div class="text-center py-12">
+                                <div class="text-lg opacity-60">No discussions yet</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Publications Tab -->
+                <div x-show="activeTab === 'publications'" x-cloak>
+                    <div class="space-y-6">
+                        {% for publication in publications %}
+                            {% include 'research/components/publication_card.html' with publication=publication %}
+                        {% empty %}
+                            <div class="text-center py-12">
+                                <div class="text-lg opacity-60">No publications yet</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+
+                <!-- Researchers Tab -->
+                <div x-show="activeTab === 'researchers'" x-cloak>
+                    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                        {% for researcher in researchers %}
+                            {% include 'accounts/components/researcher_card.html' with researcher=researcher %}
+                        {% empty %}
+                            <div class="col-span-full text-center py-12">
+                                <div class="text-lg opacity-60">No researchers yet</div>
+                            </div>
+                        {% endfor %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Follow functionality
+    const followButton = document.getElementById('followButton');
+    if (followButton) {
+        followButton.addEventListener('click', async () => {
+            try {
+                const response = await fetch(`{% url 'accounts:follow' profile_user.username %}`, {
+                    method: 'POST',
+                    headers: {
+                        'X-CSRFToken': '{{ csrf_token }}',
+                        'Content-Type': 'application/json',
+                    },
+                });
+
+                if (response.ok) {
+                    const data = await response.json();
+                    followButton.textContent = data.is_following ? 'Unfollow' : 'Follow';
+                    followButton.classList.toggle('bg-gray-500');
+                }
+            } catch (error) {
+                console.error('Error:', error);
+            }
+        });
+    }
+
+    // Add smooth transitions for tab switching
+    document.addEventListener('alpine:init', () => {
+        Alpine.store('tabs', {
+            transition: (el, show) => {
+                if (show) {
+                    el.style.display = 'block';
+                    el.offsetHeight; // Force reflow
+                    el.classList.add('opacity-100');
+                    el.classList.remove('opacity-0');
+                } else {
+                    el.classList.add('opacity-0');
+                    el.classList.remove('opacity-100');
+                    setTimeout(() => {
+                        el.style.display = 'none';
+                    }, 300);
+                }
+            }
+        });
+    });
+</script>
+{% endblock %}

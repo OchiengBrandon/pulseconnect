@@ -1,0 +1,124 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Verify Your PulseConnect Account</title>
+    <style>
+        /* Email-client-safe styles */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+            line-height: 1.6;
+            color: #333333;
+            background-color: #f5f5f5;
+        }
+        .container {
+            max-width: 600px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+        .email-wrapper {
+            background-color: #ffffff;
+            border-radius: 8px;
+            padding: 40px;
+            margin: 20px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .logo {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .logo-text {
+            font-size: 24px;
+            font-weight: bold;
+            color: #2563eb;
+        }
+        .header {
+            text-align: center;
+            margin-bottom: 30px;
+        }
+        .title {
+            font-size: 24px;
+            font-weight: bold;
+            color: #1f2937;
+            margin-bottom: 10px;
+        }
+        .verification-button {
+            display: inline-block;
+            background-color: #2563eb;
+            color: #ffffff;
+            text-decoration: none;
+            padding: 12px 24px;
+            border-radius: 6px;
+            font-weight: 600;
+            margin: 20px 0;
+        }
+        .verification-button:hover {
+            background-color: #1d4ed8;
+        }
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #e5e7eb;
+            font-size: 14px;
+            color: #6b7280;
+        }
+        .verification-link {
+            word-break: break-all;
+            color: #2563eb;
+            text-decoration: none;
+        }
+        .help-text {
+            font-size: 14px;
+            color: #6b7280;
+            margin-top: 20px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="email-wrapper">
+            <div class="logo">
+                <span class="logo-text">Pulse<span style="color: #7c3aed;">Connect</span></span>
+            </div>
+            
+            <div class="header">
+                <h1 class="title">Verify Your Email Address</h1>
+                <p>Hi {{ user.username }},</p>
+                <p>Welcome to PulseConnect! Please verify your email address to complete your registration.</p>
+            </div>
+            
+            <div style="text-align: center;">
+                <a href="{{ verification_url }}" class="verification-button">
+                    Verify Email Address
+                </a>
+                
+                <p class="help-text">
+                    If the button above doesn't work, you can copy and paste the following link into your browser:
+                </p>
+                <p>
+                    <a href="{{ verification_url }}" class="verification-link">
+                        {{ verification_url }}
+                    </a>
+                </p>
+            </div>
+            
+            <div style="margin-top: 30px;">
+                <p>This verification link will expire in 3 days.</p>
+                <p>If you didn't create an account with PulseConnect, you can safely ignore this email.</p>
+            </div>
+            
+            <div class="footer">
+                <p>
+                    PulseConnect - Connecting Research Communities
+                    <br>
+                    This is an automated message, please do not reply to this email.
+                </p>
+            </div>
+        </div>
+    </div>
+</body>
+</html>

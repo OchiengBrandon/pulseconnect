@@ -1,0 +1,199 @@
+{% extends 'base.html' %}
+
+{% block title %}Sign Up - PulseConnect{% endblock %}
+
+{% block content %}
+<div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
+    <div class="max-w-md w-full">
+        <div class="card backdrop-blur-lg bg-opacity-30">
+            <div class="text-center mb-8">
+                <h2 class="text-3xl font-bold">Join PulseConnect</h2>
+                <p class="mt-2 opacity-80">Create your account to get started</p>
+            </div>
+
+            <form method="post" class="space-y-6" novalidate>
+                {% csrf_token %}
+
+                {% if form.non_field_errors %}
+                    <div class="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded">
+                        {% for error in form.non_field_errors %}
+                            <p>{{ error }}</p>
+                        {% endfor %}
+                    </div>
+                {% endif %}
+
+                <div class="space-y-4">
+                    <!-- Username field -->
+                    <div>
+                        <label for="{{ form.username.id_for_label }}" 
+                               class="block text-sm font-medium">
+                            Username
+                        </label>
+                        <div class="mt-1 relative">
+                            {{ form.username }}
+                            {% if form.username.errors %}
+                                <div class="text-red-500 text-sm mt-1">
+                                    {{ form.username.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Email field -->
+                    <div>
+                        <label for="{{ form.email.id_for_label }}" 
+                               class="block text-sm font-medium">
+                            Email Address
+                        </label>
+                        <div class="mt-1 relative">
+                            {{ form.email }}
+                            {% if form.email.errors %}
+                                <div class="text-red-500 text-sm mt-1">
+                                    {{ form.email.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- User Type field -->
+                    <div>
+                        <label for="{{ form.user_type.id_for_label }}" 
+                               class="block text-sm font-medium">
+                            I am a
+                        </label>
+                        <div class="mt-1 relative">
+                            {{ form.user_type }}
+                            {% if form.user_type.errors %}
+                                <div class="text-red-500 text-sm mt-1">
+                                    {{ form.user_type.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <!-- Password fields -->
+                    <div>
+                        <label for="{{ form.password1.id_for_label }}" 
+                               class="block text-sm font-medium">
+                            Password
+                        </label>
+                        <div class="mt-1 relative">
+                            {{ form.password1 }}
+                            {% if form.password1.errors %}
+                                <div class="text-red-500 text-sm mt-1">
+                                    {{ form.password1.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div>
+                        <label for="{{ form.password2.id_for_label }}" 
+                               class="block text-sm font-medium">
+                            Confirm Password
+                        </label>
+                        <div class="mt-1 relative">
+                            {{ form.password2 }}
+                            {% if form.password2.errors %}
+                                <div class="text-red-500 text-sm mt-1">
+                                    {{ form.password2.errors|join:", " }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <div>
+                    <button type="submit" class="btn-primary w-full">
+                        Create Account
+                    </button>
+                </div>
+
+                <div class="text-center text-sm">
+                    <p>
+                        Already have an account? 
+                        <a href="{% url 'accounts:login' %}" class="text-accent hover:underline">
+                            Log in
+                        </a>
+                    </p>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add input styling
+    document.querySelectorAll('input, select').forEach(input => {
+        input.classList.add(
+            'w-full',
+            'px-3',
+            'py-2',
+            'border',
+            'border-gray-300',
+            'rounded-md',
+            'shadow-sm',
+            'focus:outline-none',
+            'focus:ring-2',
+            'focus:ring-accent',
+            'focus:border-accent',
+            'dark:bg-gray-800',
+            'dark:border-gray-700'
+        );
+    });
+
+    // Password strength indicator
+    const password1Input = document.querySelector('#{{ form.password1.id_for_label }}');
+    const strengthIndicator = document.createElement('div');
+    strengthIndicator.classList.add('mt-1', 'h-1', 'rounded-full');
+    password1Input.parentNode.appendChild(strengthIndicator);
+
+    password1Input.addEventListener('input', (e) => {
+        const password = e.target.value;
+        let strength = 0;
+        
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+
+        const colors = ['bg-red-500', 'bg-yellow-500', 'bg-green-500', 'bg-accent'];
+        strengthIndicator.className = `mt-1 h-1 rounded-full transition-all duration-300 ${colors[strength-1] || ''}`;
+        strengthIndicator.style.width = `${(strength/4) * 100}%`;
+    });
+
+    // Show/hide password toggle
+    const togglePassword = (inputId) => {
+        const input = document.querySelector(`#${inputId}`);
+        const type = input.getAttribute('type') === 'password' ? 'text' : 'password';
+        input.setAttribute('type', type);
+    };
+
+    document.querySelectorAll('input[type="password"]').forEach(input => {
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.classList.add(
+            'absolute',
+            'right-2',
+            'top-1/2',
+            'transform',
+            '-translate-y-1/2',
+            'text-gray-500',
+            'hover:text-gray-700',
+            'focus:outline-none'
+        );
+        button.innerHTML = `
+            <svg class="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"/>
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" 
+                      d="M2.458 12C3.732 7.943 7.523 5 12 5c4.478 0 8.268 2.943 9.542 7-1.274 4.057-5.064 7-9.542 7-4.477 0-8.268-2.943-9.542-7z"/>
+            </svg>
+        `;
+        button.addEventListener('click', () => togglePassword(input.id));
+        input.parentNode.appendChild(button);
+    });
+</script>
+{% endblock %}

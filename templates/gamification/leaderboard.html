@@ -1,0 +1,51 @@
+<!-- templates/gamification/leaderboard.html -->
+{% extends 'base.html' %}
+{% load custom_filters %}
+{% load static %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-3xl font-bold mb-8">Leaderboards</h1>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+        {% for leaderboard in leaderboards %}
+        <div class="bg-white rounded-lg shadow-lg p-6">
+            <div class="flex justify-between items-center mb-4">
+                <h2 class="text-2xl font-bold">{{ leaderboard.title }}</h2>
+                <span class="text-sm text-gray-600">{{ leaderboard.get_time_period_display }}</span>
+            </div>
+
+            <div class="space-y-4">
+                {% for leader in leaderboard.leaders %}
+                <div class="flex items-center {% if leader.id == user.id %}bg-blue-50{% endif %} p-2 rounded">
+                    <span class="w-8 text-center font-bold {% if forloop.counter <= 3 %}text-gold{% endif %}">
+                        {{ forloop.counter }}
+                    </span>
+                    <div class="flex-1">
+                        <span class="font-medium">{{ leader.username }}</span>
+                        {% if leader.id == user.id %}
+                        <span class="text-sm text-blue-600">(You)</span>
+                        {% endif %}
+                    </div>
+                    <span class="font-bold">{{ leader.score }}</span>
+                </div>
+                {% endfor %}
+            </div>
+
+            {% if user.is_authenticated %}
+            <div class="mt-6 pt-4 border-t">
+                <div class="text-sm text-gray-600">
+                    Your Rank: 
+                    {% if user_ranks|get_item:leaderboard.id %}
+                        #{{ user_ranks|get_item:leaderboard.id }}
+                    {% else %}
+                        Not ranked
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+</div>
+{% endblock %}
