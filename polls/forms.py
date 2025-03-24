@@ -1,7 +1,7 @@
 from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
-from .models import Poll, Question, Choice, PollResponse, PollTemplate, QuestionType, PollCategory
+from .models import Poll, PollComment, Question, Choice, PollResponse, PollTemplate, QuestionType, PollCategory
 import json
 
 class PollForm(forms.ModelForm):
@@ -226,3 +226,15 @@ class QuestionTypeForm(forms.ModelForm):
         super().__init__(*args, **kwargs)
         for field_name in self.fields:
             self.fields[field_name].widget.attrs.update({'class': 'form-control'})
+            
+class PollCommentForm(forms.ModelForm):
+    class Meta:
+        model = PollComment
+        fields = ['content']
+        widgets = {
+            'content': forms.Textarea(attrs={
+                'rows': 3,
+                'class': 'form-control',
+                'placeholder': _('Write your comment...')
+            })
+        }

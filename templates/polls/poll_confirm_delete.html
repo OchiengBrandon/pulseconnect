@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+
+{% block title %}Delete Poll{% endblock %}
+
+{% block content %}
+<div class="poll-delete">
+    <h1>Delete Poll</h1>
+
+    <p>Are you sure you want to delete the poll "{{ poll.title }}"?</p>
+
+    <form method="post">
+        {% csrf_token %}
+        <button type="submit" class="btn-submit">Yes, delete</button>
+    </form>
+    <a href="{% url 'polls:my_polls' %}">Cancel</a>
+</div>
+{% endblock %}

@@ -1,0 +1,294 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Create Poll - PulseConnect{% endblock %}
+
+{% block page_title %}Create Poll{% endblock %}
+
+{% block content %}
+<div class="widget-card">
+    <form id="pollForm" method="POST">
+        {% csrf_token %}
+        
+        <!-- Poll Basic Info -->
+        <div class="mb-4">
+            <h5 class="mb-3">Basic Information</h5>
+            <div class="row g-3">
+                <div class="col-12">
+                    <label class="form-label">Poll Title</label>
+                    <input type="text" name="title" class="form-control" required 
+                           placeholder="Enter a descriptive title for your poll">
+                </div>
+                
+                <div class="col-12">
+                    <label class="form-label">Description</label>
+                    <textarea name="description" class="form-control" rows="3" 
+                              placeholder="Provide a detailed description of your poll"></textarea>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">Category</label>
+                    <select name="category" class="form-select" required>
+                        <option value="">Select Category</option>
+                        {% for category in categories %}
+                        <option value="{{ category.id }}">{{ category.name }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                
+                <div class="col-md-6">
+                    <label class="form-label">Poll Type</label>
+                    <select name="poll_type" class="form-select" required>
+                        <option value="public">Public</option>
+                        <option value="private">Private</option>
+                        <option value="institution">Institution Only</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Questions Section -->
+        <div class="mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h5 class="mb-0">Questions</h5>
+                <button type="button" class="btn btn-primary btn-sm" onclick="addQuestion()">
+                    <i class="ri-add-line me-1"></i> Add Question
+                </button>
+            </div>
+            
+            <div id="questionsContainer" class="questions-container">
+                <!-- Questions will be added here -->
+            </div>
+        </div>
+
+        <!-- Poll Settings -->
+        <div class="mb-4">
+            <h5 class="mb-3">Poll Settings</h5>
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="allow_comments" id="allowComments">
+                        <label class="form-check-label" for="allowComments">Allow Comments</label>
+                    </div>
+                </div>
+                <div class="col-md-6">
+                    <div class="form-check form-switch">
+                        <input class="form-check-input" type="checkbox" name="show_results" id="showResults">
+                        <label class="form-check-label" for="showResults">Show Results to Participants</label>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Submit Button -->
+        <div class="d-flex justify-content-end gap-2">
+            <button type="button" class="btn btn-outline-primary" onclick="saveDraft()">
+                <i class="ri-draft-line me-1"></i> Save as Draft
+            </button>
+            <button type="submit" class="btn btn-primary">
+                <i class="ri-send-plane-line me-1"></i> Create Poll
+            </button>
+        </div>
+    </form>
+</div>
+
+<!-- Question Template -->
+<template id="questionTemplate">
+    <div class="question-card mb-3 p-3 border rounded-3" style="background: var(--surface);">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div class="d-flex align-items-center gap-2">
+                <i class="ri-drag-move-fill text-muted"></i>
+                <h6 class="mb-0">Question <span class="question-number"></span></h6>
+            </div>
+            <div class="d-flex gap-2">
+                <button type="button" class="btn btn-outline-primary btn-sm" onclick="duplicateQuestion(this)">
+                    <i class="ri-file-copy-line"></i>
+                </button>
+                <button type="button" class="btn btn-outline-danger btn-sm" onclick="removeQuestion(this)">
+                    <i class="ri-delete-bin-line"></i>
+                </button>
+            </div>
+        </div>
+
+        <div class="row g-3">
+            <div class="col-12">
+                <input type="text" class="form-control" name="questions[][text]" 
+                       placeholder="Enter your question" required>
+            </div>
+            
+            <div class="col-md-6">
+                <select class="form-select" name="questions[][type]" onchange="handleQuestionTypeChange(this)">
+                    <option value="multiple_choice">Multiple Choice</option>
+                    <option value="single_choice">Single Choice</option>
+                    <option value="text">Text Answer</option>
+                    <option value="rating">Rating Scale</option>
+                    <option value="scale">Numeric Scale</option>
+                    <option value="date">Date</option>
+                </select>
+            </div>
+            
+            <div class="col-md-6">
+                <div class="d-flex gap-3">
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="questions[][required]" checked>
+                        <label class="form-check-label">Required</label>
+                    </div>
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" name="questions[][shuffle]">
+                        <label class="form-check-label">Shuffle Options</label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-12 choices-container" style="display: none;">
+                <div class="d-flex justify-content-between align-items-center mb-2">
+                    <label class="form-label mb-0">Answer Choices</label>
+                    <button type="button" class="btn btn-outline-primary btn-sm" onclick="addChoice(this)">
+                        <i class="ri-add-line me-1"></i> Add Choice
+                    </button>
+                </div>
+                <div class="choices-list">
+                    <!-- Choices will be added here -->
+                </div>
+            </div>
+
+            <div class="col-12 scale-settings" style="display: none;">
+                <div class="row g-2">
+                    <div class="col-md-4">
+                        <label class="form-label">Min Value</label>
+                        <input type="number" class="form-control" name="questions[][min_value]" value="1">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Max Value</label>
+                        <input type="number" class="form-control" name="questions[][max_value]" value="5">
+                    </div>
+                    <div class="col-md-4">
+                        <label class="form-label">Step</label>
+                        <input type="number" class="form-control" name="questions[][step]" value="1">
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</template>
+
+{% block extra_js %}
+<script>
+    let questionCount = 0;
+
+    function addQuestion() {
+        questionCount++;
+        const template = document.getElementById('questionTemplate');
+        const clone = template.content.cloneNode(true);
+        
+        // Update question number
+        clone.querySelector('.question-number').textContent = questionCount;
+        
+        // Add to container
+        document.getElementById('questionsContainer').appendChild(clone);
+        
+        // Initialize the first choice for multiple/single choice questions
+        const questionCard = document.querySelector('.question-card:last-child');
+        const questionType = questionCard.querySelector('select[name="questions[][type]"]').value;
+        if (['multiple_choice', 'single_choice'].includes(questionType)) {
+            const choicesContainer = questionCard.querySelector('.choices-container');
+            choicesContainer.style.display = 'block';
+            addChoice(choicesContainer.querySelector('button'));
+        }
+    }
+
+    function addChoice(button) {
+        const choicesList = button.closest('.choices-container').querySelector('.choices-list');
+        const choiceDiv = document.createElement('div');
+        choiceDiv.className = 'input-group mb-2';
+        choiceDiv.innerHTML = `
+            <span class="input-group-text">
+                <i class="ri-drag-move-fill"></i>
+            </span>
+            <input type="text" class="form-control" name="questions[][choices][]" 
+                   placeholder="Enter choice" required>
+            <button type="button" class="btn btn-outline-danger" onclick="removeChoice(this)">
+                <i class="ri-delete-bin-line"></i>
+            </button>
+        `;
+        choicesList.appendChild(choiceDiv);
+    }
+
+    function removeChoice(button) {
+        const choiceDiv = button.closest('.input-group');
+        choiceDiv.remove();
+    }
+
+    function removeQuestion(button) {
+        const questionCard = button.closest('.question-card');
+        questionCard.remove();
+        updateQuestionNumbers();
+    }
+
+    function duplicateQuestion(button) {
+        const questionCard = button.closest('.question-card');
+        const clone = questionCard.cloneNode(true);
+        questionCount++;
+        clone.querySelector('.question-number').textContent = questionCount;
+        questionCard.after(clone);
+        updateQuestionNumbers();
+    }
+
+    function handleQuestionTypeChange(select) {
+        const questionCard = select.closest('.question-card');
+        const choicesContainer = questionCard.querySelector('.choices-container');
+        const scaleSettings = questionCard.querySelector('.scale-settings');
+        
+        choicesContainer.style.display = ['multiple_choice', 'single_choice'].includes(select.value) ? 'block' : 'none';
+        scaleSettings.style.display = ['rating', 'scale'].includes(select.value) ? 'block' : 'none';
+        
+        if (['multiple_choice', 'single_choice'].includes(select.value) && 
+            !choicesContainer.querySelector('.input-group')) {
+            addChoice(choicesContainer.querySelector('button'));
+        }
+    }
+
+    function updateQuestionNumbers() {
+        document.querySelectorAll('.question-number').forEach((span, index) => {
+            span.textContent = index + 1;
+        });
+    }
+
+    function saveDraft() {
+        // Add draft saving logic here
+        const notification = document.createElement('div');
+        notification.className = 'alert alert-success position-fixed top-0 end-0 m-3';
+        notification.textContent = 'Draft saved successfully!';
+        document.body.appendChild(notification);
+        setTimeout(() => notification.remove(), 3000);
+    }
+
+    // Add first question by default
+    document.addEventListener('DOMContentLoaded', () => {
+        addQuestion();
+    });
+
+    // Form submission
+    document.getElementById('pollForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        
+        try {
+            // Add your form submission logic here
+            
+            // Show success message
+            const notification = document.createElement('div');
+            notification.className = 'alert alert-success position-fixed top-0 end-0 m-3';
+            notification.textContent = 'Poll created successfully!';
+            document.body.appendChild(notification);
+            
+            // Redirect after success
+            setTimeout(() => {
+                window.location.href = '{% url "polls:poll_list" %}';
+            }, 2000);
+        } catch (error) {
+            console.error('Error:', error);
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

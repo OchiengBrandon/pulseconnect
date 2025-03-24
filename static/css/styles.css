@@ -487,3 +487,57 @@ body {
 .social-link:hover {
     color: var(--primary);
 }
+
+/* POLL */
+.poll-container {
+    padding: 20px;
+}
+
+.poll-title {
+    font-size: 2rem;
+    margin-bottom: 20px;
+}
+
+.poll-filters {
+    margin-bottom: 20px;
+}
+
+.poll-list {
+    display: flex;
+    flex-direction: column;
+}
+
+.poll-item {
+    border: 1px solid #ccc;
+    padding: 15px;
+    margin-bottom: 10px;
+    border-radius: 5px;
+}
+
+.btn-submit {
+    background-color: #2563eb;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    border-radius: 5px;
+    cursor: pointer;
+}
+
+.btn-submit:hover {
+    background-color: #1d4ed8;
+}
+
+.pagination {
+    margin-top: 20px;
+}
+
+.related-polls, .comments-list {
+    margin-top: 20px;
+}
+
+.question-form {
+    margin-bottom: 20px;
+    border: 1px dashed #ccc;
+    padding: 10px;
+    border-radius: 5px;
+}

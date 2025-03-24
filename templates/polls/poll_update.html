@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+
+{% block title %}Update Poll{% endblock %}
+
+{% block content %}
+<div class="poll-update">
+    <h1>Update Poll</h1>
+
+    <form method="post">
+        {% csrf_token %}
+        {{ form.as_p }}
+
+        <h2>Questions</h2>
+        {{ question_formset.management_form }}
+        {% for form in question_formset %}
+            <div class="question-form">
+                {{ form.as_p }}
+            </div>
+        {% endfor %}
+        
+        <button type="submit" class="btn-submit">Update Poll</button>
+    </form>
+</div>
+{% endblock %}

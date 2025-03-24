@@ -16,11 +16,11 @@ from django.utils.decorators import method_decorator
 from django.db import transaction
 
 from .models import (
-    Poll, Question, Choice, PollResponse, 
+    Poll, PollComment, Question, Choice, PollResponse, 
     PollTemplate, PollCategory, QuestionType
 )
 from .forms import (
-    PollForm, QuestionForm, ChoiceForm, 
+    PollCommentForm, PollForm, QuestionForm, ChoiceForm, 
     QuestionFormSet, ChoiceFormSet, 
     PollResponseForm, PollTemplateForm,
     PollCategoryForm, QuestionTypeForm
@@ -128,70 +128,54 @@ class PollDetailView(DetailView):
         return context
 
 
-@method_decorator(login_required, name='dispatch')
 class PollCreateView(CreateView):
     model = Poll
     form_class = PollForm
     template_name = 'polls/poll_create.html'
-    
-    def get_form_kwargs(self):
-        kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
-        return kwargs
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
-        
         if self.request.POST:
             context['question_formset'] = QuestionFormSet(self.request.POST)
         else:
-            context['question_formset'] = QuestionFormSet()
+            context['question_formset'] = QuestionFormSet(queryset=Question.objects.none())
         
-        # Add templates for the user to choose from
-        context['templates'] = PollTemplate.objects.filter(
-            Q(creator=self.request.user) | Q(is_public=True)
-        )
+        # Fetch categories and add to context
+        context['categories'] = PollCategory.objects.all()
         
         return context
-    
+
     @transaction.atomic
     def form_valid(self, form):
         form.instance.creator = self.request.user
         context = self.get_context_data()
         question_formset = context['question_formset']
-        
+
         if question_formset.is_valid():
             self.object = form.save()
             question_formset.instance = self.object
-            question_formset.save()
-            
-            # Process each question to create choices
-            for question_form in question_formset:
-                if not question_form.cleaned_data.get('DELETE', False):
-                    question = question_form.instance
-                    choices_data = self.request.POST.getlist(f'question_{question.id}_choices', [])
-                    
-                    if choices_data:
-                        for i, choice_text in enumerate(choices_data):
-                            if choice_text.strip():
-                                Choice.objects.create(
-                                    question=question,
-                                    text=choice_text.strip(),
-                                    order=i
-                                )
-            
-            # Award points for poll creation
-            from gamification.models import award_points
-            award_points(self.request.user, 'poll_creation')
-            
+            questions = question_formset.save(commit=False)
+
+            # Save each question and its choices
+            for question in questions:
+                question.poll = self.object
+                question.save()
+
+                # Handle choices for each question based on question type
+                question_type = question.question_type
+                if question_type.requires_choices:
+                    choices_data = self.request.POST.getlist(f'question_{question.id}_choices')
+                    for i, choice_text in enumerate(choices_data):
+                        if choice_text.strip():  # Ensure the choice text is not empty
+                            Choice.objects.create(question=question, text=choice_text.strip(), order=i)
+
             messages.success(self.request, _('Poll created successfully!'))
             return redirect(self.get_success_url())
         else:
             return self.form_invalid(form)
-    
+
     def get_success_url(self):
         return reverse('polls:detail', kwargs={'slug': self.object.slug})
-
 
 @method_decorator(login_required, name='dispatch')
 class PollUpdateView(UserPassesTestMixin, UpdateView):
@@ -791,3 +775,41 @@ def delete_question_type(request, pk):
     question_type.delete()
     messages.success(request, _('Question type deleted successfully!'))
     return redirect('polls:question_types')
+
+
+
+@login_required
+def add_comment(request, slug):
+    """Add a comment to a poll"""
+    poll = get_object_or_404(Poll, slug=slug)
+    
+    if request.method == 'POST':
+        form = PollCommentForm(request.POST)
+        if form.is_valid():
+            comment = form.save(commit=False)
+            comment.poll = poll
+            comment.user = request.user
+            comment.save()
+            messages.success(request, _('Your comment has been added.'))
+            return redirect('polls:detail', slug=poll.slug)
+    else:
+        form = PollCommentForm()
+
+    return redirect('polls:detail', slug=poll.slug)  # Redirect to the poll detail on success
+
+class PollDetailWithCommentsView(DetailView):
+    model = Poll
+    template_name = 'polls/poll_detail.html'
+    context_object_name = 'poll'
+    
+    def get_context_data(self, **kwargs):
+        context = super().get_context_data(**kwargs)
+        poll = self.get_object()
+
+        # Comments for the poll
+        context['comments'] = PollComment.objects.filter(poll=poll).order_by('-created_at')
+        
+        # Include the comment form in context
+        context['comment_form'] = PollCommentForm()
+        
+        return context

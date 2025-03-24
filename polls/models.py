@@ -12,20 +12,20 @@ class PollCategory(models.Model):
     slug = models.SlugField(unique=True, verbose_name=_('Slug'))
     description = models.TextField(blank=True, verbose_name=_('Description'))
     icon = models.CharField(max_length=50, blank=True, verbose_name=_('Icon'))
-    
+
     class Meta:
         verbose_name = _('Poll Category')
         verbose_name_plural = _('Poll Categories')
         ordering = ['name']
-    
+
     def __str__(self):
         return self.name
-    
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.name)
         super().save(*args, **kwargs)
-    
+
     def get_absolute_url(self):
         return reverse('polls:category', kwargs={'slug': self.slug})
 
@@ -36,14 +36,14 @@ class Poll(models.Model):
         ('anonymous', _('Anonymous')),
         ('institution', _('Institution-specific')),
     )
-    
+
     POLL_STATUS_CHOICES = (
         ('draft', _('Draft')),
         ('active', _('Active')),
         ('closed', _('Closed')),
         ('archived', _('Archived')),
     )
-    
+
     title = models.CharField(max_length=255, verbose_name=_('Title'))
     slug = models.SlugField(unique=True, blank=True, verbose_name=_('Slug'))
     description = models.TextField(verbose_name=_('Description'))
@@ -75,7 +75,7 @@ class Poll(models.Model):
     )
     start_date = models.DateTimeField(verbose_name=_('Start Date'))
     end_date = models.DateTimeField(blank=True, null=True, verbose_name=_('End Date'))
-    
+
     # Visibility and access control
     is_featured = models.BooleanField(default=False, verbose_name=_('Featured'))
     allow_comments = models.BooleanField(default=True, verbose_name=_('Allow Comments'))
@@ -85,22 +85,22 @@ class Poll(models.Model):
         blank=True, 
         verbose_name=_('Restricted to Institution')
     )
-    
+
     # Metadata
     created_at = models.DateTimeField(auto_now_add=True)
     updated_at = models.DateTimeField(auto_now=True)
-    
+
     # Tagging
     tags = TaggableManager(blank=True)
-    
+
     class Meta:
         verbose_name = _('Poll')
         verbose_name_plural = _('Polls')
         ordering = ['-created_at']
-    
+
     def __str__(self):
         return self.title
-    
+
     def save(self, *args, **kwargs):
         if not self.slug:
             self.slug = slugify(self.title)
@@ -108,35 +108,58 @@ class Poll(models.Model):
             if Poll.objects.filter(slug=self.slug).exists():
                 self.slug = f"{self.slug}-{uuid.uuid4().hex[:8]}"
         super().save(*args, **kwargs)
-    
+
     def get_absolute_url(self):
         return reverse('polls:detail', kwargs={'slug': self.slug})
-    
+
     @property
     def total_responses(self):
         return PollResponse.objects.filter(question__poll=self).count()
-    
+
     @property
     def total_participants(self):
         return PollResponse.objects.filter(question__poll=self).values('user').distinct().count()
-    
+
     @property
     def is_active(self):
         return self.status == 'active'
+
+
+class PollComment(models.Model):
+    poll = models.ForeignKey(
+        Poll,
+        on_delete=models.CASCADE,
+        related_name='comments',
+        verbose_name=_('Poll')
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='poll_comments',
+        verbose_name=_('User')
+    )
+    content = models.TextField(verbose_name=_('Comment Content'))
+    created_at = models.DateTimeField(auto_now_add=True, verbose_name=_('Created At'))
+
+    class Meta:
+        ordering = ['-created_at']  # Optional: to order comments by creation date by default
+
+    def __str__(self):
+        return f"{self.user} - {self.content[:20]}..."  # Customize as needed
 
 
 class QuestionType(models.Model):
     name = models.CharField(max_length=100, verbose_name=_('Name'))
     slug = models.SlugField(unique=True, verbose_name=_('Slug'))
     description = models.TextField(blank=True, verbose_name=_('Description'))
-    
+    requires_choices = models.BooleanField(default=False, verbose_name=_('Requires Choices'))  # New field
+
     class Meta:
         verbose_name = _('Question Type')
         verbose_name_plural = _('Question Types')
     
     def __str__(self):
         return self.name
-
 
 class Question(models.Model):
     poll = models.ForeignKey(

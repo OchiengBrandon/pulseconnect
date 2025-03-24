@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block title %}Respond to Poll{% endblock %}
+
+{% block content %}
+<div class="poll-respond">
+    <h1>Respond to Poll: {{ poll.title }}</h1>
+
+    <form method="post" class="response-form">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn-submit">Submit Response</button>
+    </form>
+</div>
+{% endblock %}

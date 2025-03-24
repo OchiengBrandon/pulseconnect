@@ -1,0 +1,251 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Polls - PulseConnect{% endblock %}
+
+{% block page_title %}Polls{% endblock %}
+
+{% block content %}
+<div class="polls-container">
+    <!-- Filters and Search Section -->
+    <div class="widget-card mb-4">
+        <div class="d-flex align-items-center justify-content-between flex-wrap gap-3">
+            <div class="d-flex align-items-center gap-3">
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="ri-filter-3-line me-2"></i>
+                        {{ current_type|default:"All Types" }}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="?type=">All Types</a></li>
+                        <li><a class="dropdown-item" href="?type=public">Public</a></li>
+                        <li><a class="dropdown-item" href="?type=private">Private</a></li>
+                        <li><a class="dropdown-item" href="?type=institution">Institution</a></li>
+                    </ul>
+                </div>
+                
+                <div class="dropdown">
+                    <button class="btn btn-outline-secondary dropdown-toggle" type="button" data-bs-toggle="dropdown">
+                        <i class="ri-sort-desc me-2"></i>
+                        {{ sort_by|default:"Recent" }}
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li><a class="dropdown-item" href="?sort=recent">Recent</a></li>
+                        <li><a class="dropdown-item" href="?sort=popular">Popular</a></li>
+                        <li><a class="dropdown-item" href="?sort=ending_soon">Ending Soon</a></li>
+                    </ul>
+                </div>
+            </div>
+            
+            <a href="{% url 'polls:create' %}" class="btn btn-primary">
+                <i class="ri-add-line me-2"></i>
+                Create New Poll
+            </a>
+        </div>
+    </div>
+
+    <!-- Featured Polls Section -->
+    {% if featured_polls %}
+    <div class="featured-polls mb-4">
+        <h5 class="mb-3"><i class="ri-star-line me-2"></i>Featured Polls</h5>
+        <div class="row g-4">
+            {% for poll in featured_polls %}
+            <div class="col-md-6 col-lg-4">
+                <div class="widget-card h-100 featured-poll-card">
+                    <div class="d-flex align-items-center mb-3">
+                        <img src="{{ poll.creator.profile.avatar.url|default:'https://via.placeholder.com/32' }}" 
+                             class="rounded-circle me-2" width="32" height="32">
+                        <div>
+                            <div class="fw-medium">{{ poll.creator.get_full_name }}</div>
+                            <div class="text-muted small">{{ poll.created_at|timesince }} ago</div>
+                        </div>
+                    </div>
+                    
+                    <h5 class="mb-2">{{ poll.title }}</h5>
+                    <p class="text-muted mb-3">{{ poll.description|truncatewords:20 }}</p>
+                    
+                    <div class="d-flex align-items-center justify-content-between">
+                        <div class="d-flex align-items-center gap-3">
+                            <span class="badge bg-primary">Featured</span>
+                            {% if poll.category %}
+                            <span class="badge" style="background-color: {{ poll.category.color }}">
+                                {{ poll.category.name }}
+                            </span>
+                            {% endif %}
+                        </div>
+                        <a href="{% url 'polls:detail' poll.slug %}" class="btn btn-sm btn-primary">
+                            View Poll
+                        </a>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Main Polls Grid -->
+    <div class="row g-4">
+        {% for poll in polls %}
+        <div class="col-md-6 col-lg-4">
+            <div class="widget-card h-100 poll-card">
+                <div class="d-flex justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ poll.creator.profile.avatar.url|default:'https://via.placeholder.com/32' }}" 
+                             class="rounded-circle me-2" width="32" height="32">
+                        <div>
+                            <div class="fw-medium">{{ poll.creator.get_full_name }}</div>
+                            <div class="text-muted small">{{ poll.created_at|timesince }} ago</div>
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-icon" data-bs-toggle="dropdown">
+                            <i class="ri-more-2-fill"></i>
+                        </button>
+                        <ul class="dropdown-menu dropdown-menu-end">
+                            <li><a class="dropdown-item" href="{% url 'polls:detail' poll.slug %}">
+                                <i class="ri-eye-line me-2"></i>View Details
+                            </a></li>
+                            {% if user == poll.creator %}
+                            <li><a class="dropdown-item" href="{% url 'polls:update' poll.slug %}">
+                                <i class="ri-edit-line me-2"></i>Edit Poll
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'polls:delete' poll.slug %}">
+                                <i class="ri-delete-bin-line me-2"></i>Delete Poll
+                            </a></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+                
+                <h5 class="mb-2">{{ poll.title }}</h5>
+                <p class="text-muted mb-3">{{ poll.description|truncatewords:20 }}</p>
+                
+                <div class="d-flex align-items-center gap-3 mb-3">
+                    {% if poll.category %}
+                    <span class="badge" style="background-color: {{ poll.category.color }}">
+                        {{ poll.category.name }}
+                    </span>
+                    {% endif %}
+                    <span class="badge bg-secondary">{{ poll.get_poll_type_display }}</span>
+                    {% if poll.end_date %}
+                    <span class="badge {% if poll.is_expired %}bg-danger{% else %}bg-warning{% endif %}">
+                        {% if poll.is_expired %}Expired{% else %}Ends in {{ poll.end_date|timeuntil }}{% endif %}
+                    </span>
+                    {% endif %}
+                </div>
+                
+                <div class="progress mb-3" style="height: 6px;">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: {{ poll.completion_percentage }}%"
+                         aria-valuenow="{{ poll.completion_percentage }}" 
+                         aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+                
+                <div class="d-flex align-items-center justify-content-between">
+                    <div class="d-flex align-items-center gap-3">
+                        <div class="d-flex align-items-center">
+                            <i class="ri-user-line me-1"></i>
+                            {{ poll.total_participants }} participants
+                        </div>
+                        <div class="d-flex align-items-center">
+                            <i class="ri-bar-chart-line me-1"></i>
+                            {{ poll.total_responses }} responses
+                        </div>
+                    </div>
+                    <a href="{% url 'polls:detail' poll.slug %}" class="btn btn-sm btn-primary">
+                        View Poll
+                    </a>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="widget-card text-center py-5">
+                <i class="ri-inbox-line display-4 text-muted mb-3"></i>
+                <h4>No Polls Found</h4>
+                <p class="text-muted">There are no polls matching your criteria.</p>
+                <a href="{% url 'polls:create' %}" class="btn btn-primary">
+                    <i class="ri-add-line me-2"></i>Create New Poll
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                    <i class="ri-arrow-left-s-line"></i>
+                </a>
+            </li>
+            {% endif %}
+            
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+            
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                    <i class="ri-arrow-right-s-line"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+    .poll-card {
+        transition: all 0.3s ease;
+    }
+    
+    .poll-card:hover {
+        transform: translateY(-4px);
+    }
+    
+    .featured-poll-card {
+        border: 2px solid var(--primary);
+        position: relative;
+        overflow: hidden;
+    }
+    
+    .featured-poll-card::before {
+        content: '';
+        position: absolute;
+        top: 0;
+        right: 0;
+        width: 0;
+        height: 0;
+        border-style: solid;
+        border-width: 0 50px 50px 0;
+        border-color: transparent var(--primary) transparent transparent;
+    }
+    
+    .btn-icon {
+        width: 32px;
+        height: 32px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius);
+        background-color: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+    
+    .btn-icon:hover {
+        background-color: var(--surface-3);
+    }
+</style>
+{% endblock %}

@@ -36,6 +36,7 @@ INSTALLED_APPS = [
     'django_celery_results',
     'channels',
     'colorfield',
+    'django_extensions',
     
     # Custom apps
     'accounts',

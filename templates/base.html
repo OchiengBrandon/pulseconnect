@@ -3,300 +3,615 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PulseConnect - {% block title %}Home{% endblock %}</title>
+    <title>{% block title %}PulseConnect{% endblock %}</title>
     
-    <!-- CSS Libraries -->
-    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/animate.css/4.1.1/animate.min.css">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.css">
-    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css">
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/tippy.js@6/dist/tippy.css">
     {% load static %}
-    <link rel="stylesheet" href="{% static 'css/styles.css' %}">
-</head>
-<body>
-    <!-- Dynamic Background -->
-    <div class="animated-bg"></div>
-    <div class="noise-overlay"></div>
-    <div class="gradient-sphere"></div>
+    <link rel="icon" type="image/png" href="{% static 'img/favicon.png' %}">
     
-    <!-- Top Banner (Optional) -->
-    <div class="announcement-banner" id="announcementBanner">
-        <div class="banner-content">
-            <span class="banner-icon">🎉</span>
-            <p>Welcome to the new PulseConnect! Explore our new features</p>
-            <a href="#" class="banner-link">Learn More</a>
-        </div>
-        <button class="banner-close" aria-label="Close banner">×</button>
-    </div>
+    <!-- Modern dependencies -->
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/remixicon@3.5.0/fonts/remixicon.css" rel="stylesheet">
+    <link href="https://unpkg.com/tippy.js@6/dist/tippy.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary: #6366f1;
+            --primary-light: #818cf8;
+            --primary-dark: #4f46e5;
+            --surface: #ffffff;
+            --surface-2: #f8fafc;
+            --surface-3: #f1f5f9;
+            --text: #0f172a;
+            --text-2: #64748b;
+            --border: #e2e8f0;
+            --danger: #ef4444;
+            --success: #10b981;
+            --warning: #f59e0b;
+            --radius: 12px;
+            --radius-sm: 8px;
+            --radius-lg: 16px;
+            --shadow: 0 1px 3px 0 rgb(0 0 0 / 0.1);
+            --shadow-md: 0 4px 6px -1px rgb(0 0 0 / 0.1);
+            --shadow-lg: 0 10px 15px -3px rgb(0 0 0 / 0.1);
+        }
 
-    <!-- Navigation -->
-    <nav class="main-nav">
-        <div class="nav-container">
-            <div class="nav-content">
-                <!-- Logo Section -->
-                <div class="nav-logo">
-                    <a href="{% url 'home' %}" class="logo-link">
-                        <div class="logo-wrapper">
-                            <svg class="logo-icon" viewBox="0 0 24 24">
-                                <!-- Your logo SVG -->
-                            </svg>
-                            <span class="logo-text">Pulse<span class="text-gradient">Connect</span></span>
-                        </div>
+        [data-theme="dark"] {
+            --surface: #0f172a;
+            --surface-2: #1e293b;
+            --surface-3: #334155;
+            --text: #f8fafc;
+            --text-2: #94a3b8;
+            --border: #334155;
+        }
+
+        body {
+            background-color: var(--surface-2);
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
+            transition: all 0.2s ease;
+            min-height: 100vh;
+        }
+
+        /* Modern App Layout */
+        .app-wrapper {
+            display: flex;
+            min-height: 100vh;
+        }
+
+        /* Enhanced Sidebar */
+        .sidebar {
+            width: 280px;
+            background-color: var(--surface);
+            border-right: 1px solid var(--border);
+            padding: 1.5rem;
+            display: flex;
+            flex-direction: column;
+            position: fixed;
+            height: 100vh;
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .sidebar-brand {
+            display: flex;
+            align-items: center;
+            padding: 0.5rem;
+            margin-bottom: 1.5rem;
+            border-radius: var(--radius);
+            transition: all 0.2s ease;
+        }
+
+        .sidebar-brand:hover {
+            background-color: var(--surface-2);
+        }
+
+        .sidebar-section {
+            margin-bottom: 1.5rem;
+        }
+
+        .sidebar-section-title {
+            font-size: 0.75rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--text-2);
+            margin-bottom: 0.75rem;
+            padding: 0 0.75rem;
+        }
+
+        /* Modern Navigation Links */
+        .nav-link {
+            display: flex;
+            align-items: center;
+            padding: 0.75rem 1rem;
+            color: var(--text-2);
+            border-radius: var(--radius);
+            transition: all 0.2s ease;
+            margin-bottom: 0.25rem;
+            position: relative;
+        }
+
+        .nav-link:hover {
+            background-color: var(--surface-2);
+            color: var(--primary);
+        }
+
+        .nav-link.active {
+            background-color: var(--primary);
+            color: white;
+        }
+
+        .nav-link.active:before {
+            content: '';
+            position: absolute;
+            left: -1.5rem;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 4px;
+            height: 24px;
+            background-color: var(--primary);
+            border-radius: 0 var(--radius) var(--radius) 0;
+        }
+
+        .nav-link i {
+            font-size: 1.25rem;
+            margin-right: 0.75rem;
+        }
+
+        /* Badge Styles */
+        .badge-dot {
+            width: 8px;
+            height: 8px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-left: auto;
+        }
+
+        .badge-dot.online { background-color: var(--success); }
+        .badge-dot.busy { background-color: var(--danger); }
+        .badge-dot.away { background-color: var(--warning); }
+
+        /* Modern Search Bar */
+        .search-bar {
+            position: relative;
+            margin-bottom: 1.5rem;
+        }
+
+        .search-input {
+            width: 100%;
+            padding: 0.75rem 1rem 0.75rem 2.5rem;
+            border: 1px solid var(--border);
+            border-radius: var(--radius);
+            background-color: var(--surface-2);
+            color: var(--text);
+            transition: all 0.2s ease;
+        }
+
+        .search-input:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        }
+
+        .search-icon {
+            position: absolute;
+            left: 0.75rem;
+            top: 50%;
+            transform: translateY(-50%);
+            color: var(--text-2);
+            font-size: 1.25rem;
+        }
+
+        /* Modern Cards */
+        .widget-card {
+            background-color: var(--surface);
+            border: 1px solid var(--border);
+            border-radius: var(--radius-lg);
+            padding: 1.5rem;
+            transition: all 0.3s ease;
+        }
+
+        .widget-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-lg);
+        }
+
+        /* Stats Widget */
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+            gap: 1.5rem;
+            margin-bottom: 2rem;
+        }
+
+        .stat-card {
+            background-color: var(--surface);
+            border-radius: var(--radius);
+            padding: 1.5rem;
+            display: flex;
+            align-items: center;
+            gap: 1rem;
+            transition: all 0.2s ease;
+        }
+
+        .stat-card:hover {
+            transform: translateY(-2px);
+            box-shadow: var(--shadow-md);
+        }
+
+        .stat-icon {
+            width: 48px;
+            height: 48px;
+            border-radius: var(--radius);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+        }
+
+        .stat-icon.purple {
+            background-color: rgba(99, 102, 241, 0.1);
+            color: var(--primary);
+        }
+
+        .stat-icon.green {
+            background-color: rgba(16, 185, 129, 0.1);
+            color: var(--success);
+        }
+
+        .stat-icon.blue {
+            background-color: rgba(59, 130, 246, 0.1);
+            color: #3b82f6;
+        }
+
+        /* Modern Buttons */
+        .btn {
+            padding: 0.625rem 1.25rem;
+            border-radius: var(--radius);
+            transition: all 0.2s ease;
+            display: inline-flex;
+            align-items: center;
+            gap: 0.5rem;
+        }
+
+        .btn-primary {
+            background-color: var(--primary);
+            border: none;
+            color: white;
+        }
+
+        .btn-primary:hover {
+            background-color: var(--primary-dark);
+        }
+
+        /* User Menu */
+        .user-menu {
+            margin-top: auto;
+            background-color: var(--surface-2);
+            border-radius: var(--radius);
+            padding: 1rem;
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .user-menu:hover {
+            background-color: var(--surface-3);
+        }
+
+        .user-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            object-fit: cover;
+            border: 2px solid var(--primary);
+        }
+
+        .user-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .user-name {
+            font-weight: 500;
+            margin-bottom: 0.25rem;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .user-role {
+            font-size: 0.875rem;
+            color: var(--text-2);
+        }
+
+        /* Quick Actions Menu */
+        .quick-actions {
+            position: fixed;
+            bottom: 2rem;
+            right: 2rem;
+            z-index: 1000;
+        }
+
+        .action-button {
+            width: 56px;
+            height: 56px;
+            border-radius: 50%;
+            background-color: var(--primary);
+            color: white;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 1.5rem;
+            box-shadow: var(--shadow-lg);
+            transition: all 0.2s ease;
+        }
+
+        .action-button:hover {
+            transform: scale(1.1);
+            background-color: var(--primary-dark);
+        }
+
+        /* Modern Notifications */
+        .notification-badge {
+            position: absolute;
+            top: 0.25rem;
+            right: 0.25rem;
+            width: 18px;
+            height: 18px;
+            background-color: var(--danger);
+            color: white;
+            border-radius: 50%;
+            font-size: 0.75rem;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+
+        /* Modern Tooltips */
+        [data-tippy-root] {
+            font-size: 0.875rem;
+            border-radius: var(--radius-sm);
+        }
+
+        /* Responsive Design */
+        @media (max-width: 991px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+            
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0 !important;
+            }
+        }
+
+        /* Main Content Area */
+        .main-content {
+            flex: 1;
+            margin-left: 280px;
+            padding: 2rem;
+            max-width: 100%;
+        }
+
+        /* Page Header */
+        .page-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            margin-bottom: 2rem;
+            padding-bottom: 1rem;
+            border-bottom: 1px solid var(--border);
+        }
+
+        .page-title {
+            font-size: 1.5rem;
+            font-weight: 600;
+            margin: 0;
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 24px;
+            height: 24px;
+            border: 3px solid var(--surface-3);
+            border-top-color: var(--primary);
+            border-radius: 50%;
+            animation: spin 1s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body data-theme="light">
+    <div class="app-wrapper">
+        <!-- Enhanced Sidebar -->
+        <aside class="sidebar" id="sidebar">
+            <div class="sidebar-brand">
+                <img src="{% static 'img/logo.png' %}" alt="PulseConnect" height="32" class="me-2">
+                <span class="fw-bold">PulseConnect</span>
+            </div>
+
+            <div class="search-bar">
+                <i class="ri-search-line search-icon"></i>
+                <input type="text" class="search-input" placeholder="Search...">
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Main Menu</div>
+                <nav>
+                    <a href="{% url 'home' %}" class="nav-link {% if request.path == '/' %}active{% endif %}">
+                        <i class="ri-dashboard-line"></i> Dashboard
+                    </a>
+                    <a href="{% url 'polls:poll_list' %}" class="nav-link {% if 'polls' in request.path %}active{% endif %}">
+                        <i class="ri-bar-chart-line"></i> Polls
+                        <span class="notification-badge">3</span>
+                    </a>
+                    <a href="{% url 'community:dashboard' %}" class="nav-link {% if 'community' in request.path %}active{% endif %}">
+                        <i class="ri-team-line"></i> Community
+                        <span class="badge-dot online"></span>
+                    </a>
+                    <a href="{% url 'analytics:dashboard' %}" class="nav-link {% if 'analytics' in request.path %}active{% endif %}">
+                        <i class="ri-line-chart-line"></i> Analytics
+                    </a>
+                </nav>
+            </div>
+
+            <div class="sidebar-section">
+                <div class="sidebar-section-title">Workspace</div>
+                <nav>
+                    <a href="#" class="nav-link">
+                        <i class="ri-folder-line"></i> Projects
+                    </a>
+                    <a href="#" class="nav-link">
+                        <i class="ri-calendar-line"></i> Calendar
+                    </a>
+                    <a href="#" class="nav-link">
+                        <i class="ri-file-list-line"></i> Documents
+                    </a>
+                </nav>
+            </div>
+
+            {% if user.is_authenticated %}
+                <div class="user-menu" data-bs-toggle="dropdown">
+                    <img src="{{ user.profile.avatar.url|default:'https://via.placeholder.com/40' }}" 
+                         class="user-avatar">
+                    <div class="user-info">
+                        <div class="user-name">{{ user.get_short_name }}</div>
+                        <div class="user-role">Premium Member</div>
+                    </div>
+                    <i class="ri-arrow-down-s-line"></i>
+                </div>
+                <div class="dropdown-menu">
+                    <a class="dropdown-item" href="{% url 'accounts:profile' request.user.username %}">
+                        <i class="ri-user-line me-2"></i> Profile
+                    </a>
+                    <a class="dropdown-item" href="#">
+                        <i class="ri-settings-line me-2"></i> Settings
+                    </a>
+                    <div class="dropdown-divider"></div>
+                    <a class="dropdown-item text-danger" href="{% url 'accounts:logout' %}">
+                        <i class="ri-logout-box-line me-2"></i> Logout
                     </a>
                 </div>
+            {% endif %}
+        </aside>
 
-                <!-- Main Navigation Links -->
-                <div class="nav-links">
-                    <a href="{% url 'polls:list' %}" class="nav-item" data-tippy-content="Create and participate in polls">
-                        <i class="fas fa-chart-bar"></i>
-                        <span>Polls</span>
-                    </a>
-                    <a href="{% url 'analytics:dashboard' %}" class="nav-item" data-tippy-content="View detailed analytics">
-                        <i class="fas fa-analytics"></i>
-                        <span>Analytics</span>
-                    </a>
-                    <a href="{% url 'community:dashboard' %}" class="nav-item" data-tippy-content="Connect with community">
-                        <i class="fas fa-users"></i>
-                        <span>Community</span>
-                    </a>
-                    <a href="{% url 'collaboration:project_list' %}" class="nav-item" data-tippy-content="Collaborate on projects">
-                        <i class="fas fa-project-diagram"></i>
-                        <span>Collaborate</span>
-                    </a>
+        <!-- Main Content -->
+        <main class="main-content">
+            <!-- Page Header -->
+            <header class="page-header">
+                <div class="d-flex align-items-center gap-3">
+                    <button class="d-lg-none btn btn-icon" onclick="toggleSidebar()">
+                        <i class="ri-menu-line"></i>
+                    </button>
+                    <h1 class="page-title">{% block page_title %}Dashboard{% endblock %}</h1>
                 </div>
 
-                <!-- User Section -->
-                {% if user.is_authenticated %}
-                <div class="user-section" x-data="{ open: false }">
-                    <button @click="open = !open" class="user-profile-btn">
-                        <div class="user-avatar">
-                            <img src="{{ user.profile.avatar.url }}" alt="Profile" class="avatar-img">
-                            <div class="status-indicator {{ user.profile.status }}"></div>
-                        </div>
-                        <div class="user-info">
-                            <span class="username">{{ user.username }}</span>
-                            <div class="user-meta">
-                                <span class="level">Level {{ user.profile.level }}</span>
-                                <span class="xp">{{ user.profile.experience }} XP</span>
-                            </div>
-                        </div>
-                        <div class="notifications-indicator" data-count="{{ notifications_count }}"></div>
+                <div class="d-flex align-items-center gap-3">
+                    {% if not user.is_authenticated %}
+                        <a href="{% url 'accounts:login' %}" class="btn btn-outline-primary">
+                            <i class="ri-login-box-line"></i> Login
+                        </a>
+                        <a href="{% url 'accounts:signup' %}" class="btn btn-primary">
+                            <i class="ri-user-add-line"></i> Register
+                        </a>
+                    {% endif %}
+                    
+                    <button id="theme-toggle" class="btn btn-icon" data-tippy-content="Toggle theme">
+                        <i class="ri-moon-line"></i>
                     </button>
 
-                    <!-- Profile Dropdown -->
-                    <div x-show="open" @click.away="open = false" class="profile-dropdown">
-                        <!-- User Stats Summary -->
-                        <div class="user-stats-summary">
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-trophy"></i></div>
-                                <div class="stat-info">
-                                    <span class="stat-value">#{{ user.profile.rank }}</span>
-                                    <span class="stat-label">Global Rank</span>
-                                </div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-star"></i></div>
-                                <div class="stat-info">
-                                    <span class="stat-value">{{ user.profile.achievements_count }}</span>
-                                    <span class="stat-label">Achievements</span>
-                                </div>
-                            </div>
-                            <div class="stat-card">
-                                <div class="stat-icon"><i class="fas fa-medal"></i></div>
-                                <div class="stat-info">
-                                    <span class="stat-value">{{ user.profile.points }}</span>
-                                    <span class="stat-label">Points</span>
-                                </div>
-                            </div>
-                        </div>
+                    <button class="btn btn-icon position-relative" data-tippy-content="Notifications">
+                        <i class="ri-notification-line"></i>
+                        <span class="notification-badge">5</span>
+                    </button>
+                </div>
+            </header>
 
-                        <!-- Progress Bar -->
-                        <div class="level-progress">
-                            <div class="progress-info">
-                                <span>Level {{ user.profile.level }}</span>
-                                <span>{{ user.profile.xp_to_next_level }} XP to next level</span>
-                            </div>
-                            <div class="progress-bar">
-                                <div class="progress-fill" style="width: {{ user.profile.level_progress }}%"></div>
-                            </div>
-                        </div>
-
-                        <!-- Menu Items -->
-                        <div class="menu-sections">
-                            <div class="menu-section">
-                                <a href="{% url 'accounts:profile' username=user.username %}" class="menu-item">
-                                    <i class="fas fa-user"></i>
-                                    <span>My Profile</span>
-                                </a>
-                                <a href="{% url 'accounts:logout' %}" class="menu-item logout">
-                                    <i class="fas fa-sign-out-alt"></i>
-                                    <span>Logout</span>
-                                </a>
-                            </div>
-
-                            <div class="menu-section">
-                                <a href="{% url 'accounts:researcher_directory' %}" class="menu-item">
-                                    <i class="fas fa-users"></i>
-                                    <span>Researchers</span>
-                                </a>
-                                <a href="#" class="menu-item">
-                                    <i class="fas fa-bell"></i>
-                                    <span>Notifications</span>
-                                    <span class="notification-badge">{{ notifications_count }}</span>
-                                </a>
-                            </div>
-
-                            <div class="menu-section">
-                                <a href="{% url 'accounts:profile_edit' %}" class="menu-item">
-                                    <i class="fas fa-user-edit"></i>
-                                    <span>Edit Profile</span>
-                                </a>
-                                <a href="{% url 'accounts:password_change' %}" class="menu-item">
-                                    <i class="fas fa-lock"></i>
-                                    <span>Change Password</span>
-                                </a>
-                                <a href="{% url 'accounts:researcher_directory' %}" class="menu-item">
-                                    <i class="fas fa-users"></i>
-                                    <span>Institutions</span>
-                                </a>
-                                <a href="{% url 'accounts:toggle_accessibility' %}" class="menu-item">
-                                    <i class="fas fa-universal-access"></i>
-                                    <span>Toggle Accessibility</span>
-                                </a>
-                            </div>
-                        </div>
+            <!-- Example Stats Section -->
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="ri-pulse-line"></i>
+                    </div>
+                    <div>
+                        <div class="h3 mb-0">2,451</div>
+                        <div class="text-muted">Total Responses</div>
                     </div>
                 </div>
-                {% else %}
-                <div class="auth-buttons">
-                    <a href="{% url 'accounts:login' %}" class="btn-login">
-                        <i class="fas fa-sign-in-alt"></i>
-                        <span>Login</span>
-                    </a>
-                    <a href="{% url 'accounts:signup' %}" class="btn-signup">
-                        <i class="fas fa-user-plus"></i>
-                        <span>Sign Up</span>
-                    </a>
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="ri-bar-chart-box-line"></i>
+                    </div>
+                    <div>
+                        <div class="h3 mb-0">85%</div>
+                        <div class="text-muted">Completion Rate</div>
+                    </div>
                 </div>
-                {% endif %}
-
-                <!-- Theme Toggle -->
-                <button id="theme-toggle" class="theme-toggle" aria-label="Toggle theme">
-                    <div class="toggle-icons">
-                        <svg class="sun-icon" viewBox="0 0 24 24"><!-- Sun icon SVG --></svg>
-                        <svg class="moon-icon" viewBox="0 0 24 24"><!-- Moon icon SVG --></svg>
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="ri-user-voice-line"></i>
                     </div>
-                </button>
-
-                <!-- Mobile Menu Button -->
-                <button class="mobile-menu-btn" aria-label="Toggle mobile menu">
-                    <div class="hamburger">
-                        <span></span>
-                        <span></span>
-                        <span></span>
+                    <div>
+                        <div class="h3 mb-0">1,287</div>
+                        <div class="text-muted">Active Users</div>
                     </div>
-                </button>
+                </div>
             </div>
-        </div>
-    </nav>
 
-    <!-- Mobile Navigation Menu -->
-    <div class="mobile-menu">
-        <!-- Mobile menu content -->
+            <!-- Main Content Block -->
+            {% block content %}{% endblock %}
+        </main>
+
+        <!-- Quick Actions -->
+        <div class="quick-actions">
+            <button class="action-button" data-tippy-content="Create new poll">
+                <i class="ri-add-line"></i>
+            </button>
+        </div>
     </div>
 
-    <!-- Main Content -->
-    <main class="main-content">
-        {% block content %}{% endblock %}
-    </main>
+    <!-- Scripts -->
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://unpkg.com/@popperjs/core@2"></script>
+    <script src="https://unpkg.com/tippy.js@6"></script>
+    
+    <script>
+        // Initialize Tippy.js tooltips
+        tippy('[data-tippy-content]', {
+            placement: 'bottom',
+            animation: 'scale',
+            theme: document.body.getAttribute('data-theme') === 'dark' ? 'dark' : 'light'
+        });
 
-    <!-- Footer -->
-    <footer class="modern-footer">
-        <div class="footer-waves">
-            <svg class="waves" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1440 320">
-                <path class="wave-1" d="M0,96L48,112C96,128,192,160,288,160C384,160,480,128,576,112C672,96,768,96,864,112C960,128,1056,160,1152,160C1248,160,1344,128,1392,112L1440,96L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
-                <path class="wave-2" d="M0,192L48,176C96,160,192,128,288,128C384,128,480,160,576,176C672,192,768,192,864,176C960,160,1056,128,1152,128C1248,128,1344,160,1392,176L1440,192L1440,320L1392,320C1344,320,1248,320,1152,320C1056,320,960,320,864,320C768,320,672,320,576,320C480,320,384,320,288,320C192,320,96,320,48,320L0,320Z"></path>
-            </svg>
-        </div>
+        // Theme Toggle
+        const themeToggle = document.getElementById('theme-toggle');
+        const themeIcon = themeToggle.querySelector('i');
 
-        <div class="footer-content">
-            <div class="footer-grid">
-                <!-- Brand Section -->
-                <div class="footer-brand" data-aos="fade-up">
-                    <h3 class="brand-title">PulseConnect</h3>
-                    <p class="brand-description">Connecting students, institutions, and researchers through innovative polling solutions.</p>
-                    <div class="social-links">
-                        <a href="#" class="social-link" aria-label="Twitter"><i class="fab fa-twitter"></i></a>
-                        <a href="#" class="social-link" aria-label="LinkedIn"><i class="fab fa-linkedin-in"></i></a>
-                        <a href="#" class="social-link" aria-label="GitHub"><i class="fab fa-github"></i></a>
-                        <a href="#" class="social-link" aria-label="Instagram"><i class="fab fa-instagram"></i></a>
-                    </div>
-                </div>
+        function updateTheme(theme) {
+            document.body.setAttribute('data-theme', theme);
+            themeIcon.className = theme === 'dark' ? 'ri-sun-line' : 'ri-moon-line';
+            localStorage.setItem('theme', theme);
+            
+            // Update tooltip theme
+            document.querySelectorAll('[data-tippy-root]').forEach(tooltip => {
+                tooltip._tippy.setProps({
+                    theme: theme === 'dark' ? 'dark' : 'light'
+                });
+            });
+        }
 
-                <!-- Quick Links -->
-                <div class="footer-section" data-aos="fade-up" data-aos-delay="100">
-                    <h4 class="footer-title">Quick Links</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">About Us</a></li>
-                        <li><a href="#">Our Team</a></li>
-                        <li><a href="#">Contact</a></li>
-                        <li><a href="#">Careers</a></li>
-                        <li><a href="#">Privacy Policy</a></li>
-                        <li><a href="#">Terms of Service</a></li>
-                    </ul>
-                </div>
+        themeToggle.addEventListener('click', () => {
+            const currentTheme = document.body.getAttribute('data-theme');
+            const newTheme = currentTheme === 'light' ? 'dark' : 'light';
+            updateTheme(newTheme);
+        });
 
-                <!-- Resources -->
-                <div class="footer-section" data-aos="fade-up" data-aos-delay="200">
-                    <h4 class="footer-title">Resources</h4>
-                    <ul class="footer-links">
-                        <li><a href="#">Documentation</a></li>
-                        <li><a href="#">API Reference</a></li>
-                        <li><a href="#">Developer Guide</a></li>
-                        <li><a href="#">Blog</a></li>
-                        <li><a href="#">Community Forum</a></li>
-                        <li><a href="#">FAQ</a></li>
-                    </ul>
-                </div>
+        // Load saved theme
+        const savedTheme = localStorage.getItem('theme') || 'light';
+        updateTheme(savedTheme);
 
-                <!-- Newsletter -->
-                <div class="footer-newsletter" data-aos="fade-up" data-aos-delay="300">
-                    <h4 class="footer-title">Stay Updated</h4>
-                    <p class="newsletter-description">Subscribe to our newsletter for the latest updates and insights.</p>
-                    
-                    <form class="newsletter-form">
-                        <div class="input-group">
-                            <input type="email" placeholder="Enter your email" required>
-                            <button type="submit" class="submit-btn">
-                                <i class="fas fa-paper-plane"></i>
-                            </button>
-                        </div>
-                    </form>
-                </div>
-            </div>
-        </div>
+        // Mobile Sidebar Toggle
+        function toggleSidebar() {
+            document.getElementById('sidebar').classList.toggle('show');
+        }
 
-        <!-- Footer Bottom -->
-        <div class="footer-bottom">
-            <div class="footer-info">
-                <p class="copyright">© {% now "Y" %} PulseConnect. All rights reserved.</p>
-            </div>
-        </div>
-    </footer>
-
-    <!-- Scroll to Top Button -->
-    <button id="scrollToTop" class="scroll-to-top" aria-label="Scroll to top">
-        <i class="fas fa-arrow-up"></i>
-    </button>
-
-    <!-- JavaScript -->
-    <script src="https://cdn.jsdelivr.net/npm/alpinejs@3.x.x/dist/cdn.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/aos@2.3.4/dist/aos.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/@popperjs/core@2.11.6/dist/umd/popper.min.js"></script>
-    <script src="https://cdn.jsdelivr.net/npm/tippy.js@6/dist/tippy-bundle.umd.js"></script>
-    <script src="{% static 'js/main.js' %}"></script>
+        // Search functionality
+        const searchInput = document.querySelector('.search-input');
+        searchInput.addEventListener('input', (e) => {
+            // Add your search logic here
+            console.log('Searching for:', e.target.value);
+        });
+    </script>
+    
     {% block extra_js %}{% endblock %}
 </body>
 </html>

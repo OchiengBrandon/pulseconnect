@@ -12,6 +12,31 @@ document.addEventListener('DOMContentLoaded', () => {
         animation: 'shift-away',
         theme: 'modern'
     });
+
+    // Add event listeners for response forms
+    const responseForms = document.querySelectorAll('.response-form');
+
+    responseForms.forEach(form => {
+        form.addEventListener('submit', function(event) {
+            // Confirmation before submitting the response
+            const confirmation = confirm("Are you sure you want to submit your response?");
+            if (!confirmation) {
+                event.preventDefault();
+            }
+        });
+    });
+
+    // Scroll to top button functionality
+    const scrollToTopBtn = document.getElementById('scrollToTop');
+    if (scrollToTopBtn) {
+        scrollToTopBtn.addEventListener('click', function() {
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        });
+
+        window.addEventListener('scroll', function() {
+            scrollToTopBtn.style.display = window.scrollY > 300 ? 'block' : 'none';
+        });
+    }
 });
 
 // Theme Toggle
@@ -56,24 +81,6 @@ mobileMenuBtn.addEventListener('click', () => {
     mobileMenuBtn.classList.toggle('active');
     mobileMenu.classList.toggle('active');
     body.classList.toggle('menu-open');
-});
-
-// Scroll to Top Button
-const scrollToTopBtn = document.getElementById('scrollToTop');
-
-window.addEventListener('scroll', () => {
-    if (window.pageYOffset > 100) {
-        scrollToTopBtn.classList.add('visible');
-    } else {
-        scrollToTopBtn.classList.remove('visible');
-    }
-});
-
-scrollToTopBtn.addEventListener('click', () => {
-    window.scrollTo({
-        top: 0,
-        behavior: 'smooth'
-    });
 });
 
 // Announcement Banner
@@ -176,3 +183,5 @@ document.querySelectorAll('a[href^="#"]').forEach(anchor => {
         });
     });
 });
+
+// For Poll System - Additional functionality can be added here

@@ -1,0 +1,274 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-8">
+    <div class="bg-white rounded-lg shadow-lg p-6 max-w-4xl mx-auto">
+        <div class="border-b pb-4 mb-6">
+            <h1 class="text-2xl font-bold">Edit Profile</h1>
+        </div>
+
+        <form method="post" enctype="multipart/form-data" class="space-y-6">
+            {% csrf_token %}
+            
+            <!-- Profile Image Upload -->
+            <div class="flex items-center space-x-6 mb-6">
+                <div class="relative">
+                    <img id="preview-avatar" 
+                         src="{{ user.avatar.url|default:'https://via.placeholder.com/128' }}" 
+                         alt="Profile picture" 
+                         class="w-32 h-32 rounded-full object-cover">
+                    <label for="avatar-upload" 
+                           class="absolute bottom-0 right-0 bg-primary text-white p-2 rounded-full cursor-pointer shadow-lg">
+                        <i class="fas fa-camera"></i>
+                    </label>
+                    <input type="file" 
+                           id="avatar-upload" 
+                           name="avatar" 
+                           class="hidden" 
+                           accept="image/*" 
+                           title="Upload your profile picture">
+                </div>
+                <div>
+                    <h3 class="text-lg font-medium">Profile Picture</h3>
+                    <p class="text-gray-500 text-sm">JPG, GIF or PNG. Max size of 2MB</p>
+                </div>
+            </div>
+
+            <!-- Basic Information -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div class="form-group">
+                    <label class="form-label" for="first_name">First Name</label>
+                    {{ form.first_name }}
+                </div>
+                <div class="form-group">
+                    <label class="form-label" for="last_name">Last Name</label>
+                    {{ form.last_name }}
+                </div>
+                <div class="form-group md:col-span-2">
+                    <label class="form-label" for="bio">Bio</label>
+                    {{ form.bio }}
+                </div>
+            </div>
+
+            <!-- Institution Profile (if applicable) -->
+            {% if institution_form %}
+            <div class="border-t pt-6 mt-6">
+                <h2 class="text-xl font-semibold mb-4">Institution Details</h2>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {{ institution_form.as_div }}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Accessibility Settings -->
+            <div class="border-t pt-6 mt-6">
+                <h2 class="text-xl font-semibold mb-4">Accessibility Preferences</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-medium">High Contrast Mode</h3>
+                            <p class="text-sm text-gray-500">Increase contrast for better visibility</p>
+                        </div>
+                        <label class="switch">
+                            {{ accessibility_form.high_contrast }}
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                    <div class="flex items-center justify-between">
+                        <div>
+                            <h3 class="font-medium">Large Text</h3>
+                            <p class="text-sm text-gray-500">Increase text size throughout the site</p>
+                        </div>
+                        <label class="switch">
+                            {{ accessibility_form.large_text }}
+                            <span class="slider round"></span>
+                        </label>
+                    </div>
+                </div>
+            </div>
+
+            <div class="flex justify-end space-x-4 mt-6">
+                <a href="{% url 'accounts:profile' user.username %}" 
+                   class="btn btn-secondary">Cancel</a>
+                <button type="submit" class="btn btn-primary">Save Changes</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Switch Toggle Styles */
+.switch {
+    position: relative;
+    display: inline-block;
+    width: 60px;
+    height: 34px;
+}
+
+.switch input {
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.slider {
+    position: absolute;
+    cursor: pointer;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background-color: #ccc;
+    transition: .4s;
+}
+
+.slider:before {
+    position: absolute;
+    content: "";
+    height: 26px;
+    width: 26px;
+    left: 4px;
+    bottom: 4px;
+    background-color: white;
+    transition: .4s;
+}
+
+input:checked + .slider {
+    background-color: var(--primary);
+}
+
+input:focus + .slider {
+    box-shadow: 0 0 1px var(--primary);
+}
+
+input:checked + .slider:before {
+    transform: translateX(26px);
+}
+
+.slider.round {
+    border-radius: 34px;
+}
+
+.slider.round:before {
+    border-radius: 50%;
+}
+
+/* Form Animations */
+.form-input, .form-textarea {
+    transition: all 0.3s ease;
+}
+
+.form-input:focus, .form-textarea:focus {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+/* Loading States */
+.btn-loading {
+    position: relative;
+    color: transparent !important;
+}
+
+.btn-loading:after {
+    content: '';
+    position: absolute;
+    width: 20px;
+    height: 20px;
+    top: 50%;
+    left: 50%;
+    margin: -10px 0 0 -10px;
+    border: 2px solid rgba(255,255,255,0.3);
+    border-radius: 50%;
+    border-top-color: #fff;
+    animation: spin 0.6s linear infinite;
+}
+
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+// Avatar preview
+document.getElementById('avatar-upload').addEventListener('change', function(e) {
+    const file = e.target.files[0];
+    if (file) {
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('preview-avatar').src = e.target.result;
+        }
+        reader.readAsDataURL(file);
+    }
+});
+
+// Form submission handling
+const form = document.querySelector('form');
+form.addEventListener('submit', function(e) {
+    const submitBtn = form.querySelector('button[type="submit"]');
+    submitBtn.classList.add('btn-loading');
+    submitBtn.disabled = true;
+});
+
+// Accessibility settings
+document.querySelectorAll('.switch input').forEach(toggle => {
+    toggle.addEventListener('change', async function() {
+        try {
+            const response = await fetch('{% url "accounts:toggle_accessibility" %}', {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    setting: this.name,
+                    value: this.checked
+                })
+            });
+
+            if (!response.ok) throw new Error('Failed to update setting');
+
+            // Apply changes immediately
+            document.documentElement.classList.toggle(this.name, this.checked);
+        } catch (error) {
+            console.error('Error:', error);
+            this.checked = !this.checked; // Revert toggle
+            alert('Failed to update setting. Please try again.');
+        }
+    });
+});
+
+// Form validation
+const validateForm = () => {
+    let isValid = true;
+    const required = form.querySelectorAll('[required]');
+    
+    required.forEach(field => {
+        if (!field.value.trim()) {
+            isValid = false;
+            field.classList.add('error');
+            
+            // Add error message
+            let errorMsg = field.parentNode.querySelector('.error-message');
+            if (!errorMsg) {
+                errorMsg = document.createElement('p');
+                errorMsg.className = 'error-message text-red-500 text-sm mt-1';
+                field.parentNode.appendChild(errorMsg);
+            }
+            errorMsg.textContent = `${field.labels[0].textContent} is required`;
+        } else {
+            field.classList.remove('error');
+            const errorMsg = field.parentNode.querySelector('.error-message');
+            if (errorMsg) errorMsg.remove();
+        }
+    });
+
+    return isValid;
+};
+
+form.addEventListener('submit', function(e) {
+    if (!validateForm()) {
+        e.preventDefault();
+    }
+});
+</script>
+{% endblock %}

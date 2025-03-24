@@ -1,0 +1,331 @@
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ poll.title }} - PulseConnect{% endblock %}
+
+{% block page_title %}{{ poll.title }}{% endblock %}
+
+{% block content %}
+<div class="poll-detail-container">
+    <!-- Poll Header -->
+    <div class="widget-card mb-4">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div class="d-flex gap-3">
+                <img src="{{ poll.creator.profile.avatar.url|default:'https://via.placeholder.com/48' }}" 
+                     class="rounded-circle" width="48" height="48">
+                <div>
+                    <h4 class="mb-1">{{ poll.title }}</h4>
+                    <div class="d-flex align-items-center gap-2 text-muted">
+                        <span>Created by {{ poll.creator.get_full_name }}</span>
+                        <span>•</span>
+                        <span>{{ poll.created_at|timesince }} ago</span>
+                        {% if poll.end_date %}
+                        <span>•</span>
+                        <span class="{% if poll.is_expired %}text-danger{% else %}text-warning{% endif %}">
+                            {% if poll.is_expired %}
+                                Expired {{ poll.end_date|timesince }} ago
+                            {% else %}
+                                Ends in {{ poll.end_date|timeuntil }}
+                            {% endif %}
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+            
+            <div class="d-flex gap-2">
+                {% if user == poll.creator %}
+                <a href="{% url 'polls:update' poll.slug %}" class="btn btn-outline-primary">
+                    <i class="ri-edit-line me-2"></i>Edit Poll
+                </a>
+                {% endif %}
+                <div class="dropdown">
+                    <button class="btn btn-icon" data-bs-toggle="dropdown">
+                        <i class="ri-more-2-fill"></i>
+                    </button>
+                    <ul class="dropdown-menu dropdown-menu-end">
+                        <li><a class="dropdown-item" href="#" onclick="sharePoll()">
+                            <i class="ri-share-line me-2"></i>Share Poll
+                        </a></li>
+                        <li><a class="dropdown-item" href="{% url 'polls:export_data' poll.slug %}">
+                            <i class="ri-download-line me-2"></i>Export Data
+                        </a></li>
+                        {% if user == poll.creator %}
+                        <li><hr class="dropdown-divider"></li>
+                        <li><a class="dropdown-item" href="{% url 'polls:save_template' poll.slug %}">
+                            <i class="ri-file-copy-line me-2"></i>Save as Template
+                        </a></li>
+                        <li><a class="dropdown-item text-danger" href="{% url 'polls:delete' poll.slug %}">
+                            <i class="ri-delete-bin-line me-2"></i>Delete Poll
+                        </a></li>
+                        {% endif %}
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+        <p class="mb-4">{{ poll.description }}</p>
+
+        <div class="d-flex flex-wrap gap-3">
+            {% if poll.category %}
+            <span class="badge" style="background-color: {{ poll.category.color }}">
+                {{ poll.category.name }}
+            </span>
+            {% endif %}
+            <span class="badge bg-secondary">{{ poll.get_poll_type_display }}</span>
+            {% for tag in poll.tags.all %}
+            <span class="badge bg-light text-dark">#{{ tag.name }}</span>
+            {% endfor %}
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Poll Questions Section -->
+        <div class="col-lg-8">
+            {% if not user_responded and poll.status == 'active' and user.is_authenticated %}
+            <form method="post" action="{% url 'polls:respond' poll.slug %}" id="pollForm">
+                {% csrf_token %}
+                {% for field in response_form %}
+                <div class="widget-card mb-4">
+                    <div class="mb-3">
+                        <label class="form-label fw-medium">
+                            {{ field.label }}
+                            {% if field.field.required %}
+                            <span class="text-danger">*</span>
+                            {% endif %}
+                        </label>
+                        {% if field.field.widget.input_type == 'radio' %}
+                            <div class="d-flex flex-column gap-2">
+                                {% for choice in field %}
+                                <div class="form-check">
+                                    {{ choice.tag }}
+                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                        {{ choice.choice_label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% elif field.field.widget.input_type == 'checkbox' %}
+                            <div class="d-flex flex-column gap-2">
+                                {% for choice in field %}
+                                <div class="form-check">
+                                    {{ choice.tag }}
+                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
+                                        {{ choice.choice_label }}
+                                    </label>
+                                </div>
+                                {% endfor %}
+                            </div>
+                        {% else %}
+                            {{ field }}
+                        {% endif %}
+                        {% if field.help_text %}
+                            <div class="form-text">{{ field.help_text }}</div>
+                        {% endif %}
+                        {% if field.errors %}
+                            <div class="invalid-feedback d-block">
+                                {{ field.errors|join:", " }}
+                            </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+                
+                <div class="d-flex justify-content-between align-items-center">
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-send-plane-line me-2"></i>Submit Response
+                    </button>
+                    <button type="button" class="btn btn-link text-muted" onclick="resetForm()">
+                        Reset Form
+                    </button>
+                </div>
+            </form>
+            {% elif user_responded %}
+            <div class="widget-card">
+                <div class="text-center py-4">
+                    <i class="ri-checkbox-circle-line text-success display-4"></i>
+                    <h4 class="mt-3">Thank You!</h4>
+                    <p class="text-muted">You have already submitted your response to this poll.</p>
+                    <a href="{% url 'polls:results' poll.slug %}" class="btn btn-primary mt-3">
+                        <i class="ri-bar-chart-line me-2"></i>View Results
+                    </a>
+                </div>
+            </div>
+            {% else %}
+            <div class="widget-card">
+                <div class="text-center py-4">
+                    {% if not user.is_authenticated %}
+                    <i class="ri-lock-line text-warning display-4"></i>
+                    <h4 class="mt-3">Authentication Required</h4>
+                    <p class="text-muted">Please log in to participate in this poll.</p>
+                    <a href="{% url 'login' %}?next={{ request.path }}" class="btn btn-primary mt-3">
+                        <i class="ri-login-box-line me-2"></i>Log In
+                    </a>
+                    {% elif poll.status != 'active' %}
+                    <i class="ri-time-line text-danger display-4"></i>
+                    <h4 class="mt-3">Poll is Closed</h4>
+                    <p class="text-muted">This poll is no longer accepting responses.</p>
+                    <a href="{% url 'polls:results' poll.slug %}" class="btn btn-primary mt-3">
+                        <i class="ri-bar-chart-line me-2"></i>View Results
+                    </a>
+                    {% endif %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Poll Statistics -->
+            <div class="widget-card mb-4">
+                <h5 class="mb-4"><i class="ri-bar-chart-box-line me-2"></i>Poll Statistics</h5>
+                <div class="d-flex flex-column gap-3">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Total Responses</span>
+                        <span class="fw-medium">{{ total_responses }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Participants</span>
+                        <span class="fw-medium">{{ total_participants }}</span>
+                    </div>
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="text-muted">Completion Rate</span>
+                        <span class="fw-medium">{{ poll.completion_rate }}%</span>
+                    </div>
+                </div>
+                <div class="progress mt-4" style="height: 6px;">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: {{ poll.completion_rate }}%"
+                         aria-valuenow="{{ poll.completion_rate }}" 
+                         aria-valuemin="0" aria-valuemax="100"></div>
+                </div>
+            </div>
+
+            <!-- Related Polls -->
+            {% if related_polls %}
+            <div class="widget-card mb-4">
+                <h5 class="mb-4"><i class="ri-links-line me-2"></i>Related Polls</h5>
+                <div class="d-flex flex-column gap-3">
+                    {% for related_poll in related_polls %}
+                    <a href="{% url 'polls:detail' related_poll.slug %}" 
+                       class="related-poll-card p-3 rounded">
+                        <h6 class="mb-2">{{ related_poll.title }}</h6>
+                        <div class="d-flex align-items-center text-muted small">
+                            <img src="{{ related_poll.creator.profile.avatar.url|default:'https://via.placeholder.com/24' }}" 
+                                 class="rounded-circle me-2" width="24" height="24">
+                            <span>{{ related_poll.creator.get_short_name }}</span>
+                            <span class="mx-2">•</span>
+                            <span>{{ related_poll.created_at|timesince }} ago</span>
+                        </div>
+                    </a>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+
+            <!-- Comments Section -->
+            <div class="widget-card">
+                <h5 class="mb-4"><i class="ri-chat-3-line me-2"></i>Comments</h5>
+                {% if user.is_authenticated %}
+                <form method="post" action="{% url 'polls:add_comment' poll.slug %}" class="mb-4">
+                    {% csrf_token %}
+                    <div class="mb-3">
+                        <textarea class="form-control" name="content" rows="3" 
+                                  placeholder="Add a comment..."></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-send-plane-line me-2"></i>Post Comment
+                    </button>
+                </form>
+                {% endif %}
+
+                <div class="comments-list">
+                    {% for comment in comments %}
+                    <div class="comment-card p-3 rounded mb-3">
+                        <div class="d-flex gap-3">
+                            <img src="{{ comment.user.profile.avatar.url|default:'https://via.placeholder.com/32' }}" 
+                                 class="rounded-circle" width="32" height="32">
+                            <div class="flex-grow-1">
+                                <div class="d-flex justify-content-between align-items-center mb-2">
+                                    <div class="fw-medium">{{ comment.user.get_full_name }}</div>
+                                    <small class="text-muted">{{ comment.created_at|timesince }} ago</small>
+                                </div>
+                                <p class="mb-0">{{ comment.content }}</p>
+                            </div>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="text-center text-muted py-4">
+                        <i class="ri-chat-3-line mb-2 display-6"></i>
+                        <p>No comments yet. Be the first to comment!</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+    .related-poll-card {
+        background-color: var(--surface-2);
+        transition: all 0.2s ease;
+        text-decoration: none;
+        color: var(--text);
+        border: 1px solid var(--border);
+    }
+    
+    .related-poll-card:hover {
+        background-color: var(--surface-3);
+        transform: translateX(4px);
+        color: var(--text);
+    }
+    
+    .comment-card {
+        background-color: var(--surface-2);
+        border: 1px solid var(--border);
+    }
+    
+    .form-control {
+        background-color: var(--surface-2);
+        border: 1px solid var(--border);
+        color: var(--text);
+    }
+    
+    .form-control:focus {
+        background-color: var(--surface);
+        border-color: var(--primary);
+        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+    }
+</style>
+
+<script>
+    function sharePoll() {
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ poll.title }}',
+                text: '{{ poll.description }}',
+                url: window.location.href
+            })
+            .catch(console.error);
+        } else {
+            // Fallback
+            const dummy = document.createElement('input');
+            document.body.appendChild(dummy);
+            dummy.value = window.location.href;
+            dummy.select();
+            document.execCommand('copy');
+            document.body.removeChild(dummy);
+            
+            // Show tooltip or notification
+            alert('Poll URL copied to clipboard!');
+        }
+    }
+
+    function resetForm() {
+        if (confirm('Are you sure you want to reset your responses?')) {
+            document.getElementById('pollForm').reset();
+        }
+    }
+</script>
+{% endblock %}

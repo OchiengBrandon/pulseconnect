@@ -1,0 +1,194 @@
+{% extends 'analytics/base.html' %}
+
+{% block title %}Dashboard{% endblock %}
+
+{% block content %}
+<div class="space-y-8">
+    <!-- Overview Stats -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div class="dashboard-card p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
+                    <i class="fas fa-database text-blue-500"></i>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Total Datasets
+                    </h3>
+                    <p class="text-2xl font-semibold">
+                        {{ datasets.count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
+                    <i class="fas fa-chart-line text-green-500"></i>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Total Reports
+                    </h3>
+                    <p class="text-2xl font-semibold">
+                        {{ reports.count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900">
+                    <i class="fas fa-chart-pie text-purple-500"></i>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Total Visualizations
+                    </h3>
+                    <p class="text-2xl font-semibold">
+                        {{ visualizations.count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div class="dashboard-card p-6">
+            <div class="flex items-center">
+                <div class="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900">
+                    <i class="fas fa-tasks text-yellow-500"></i>
+                </div>
+                <div class="ml-4">
+                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
+                        Active Jobs
+                    </h3>
+                    <p class="text-2xl font-semibold">
+                        {{ jobs.count }}
+                    </p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Items -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+        <!-- Recent Datasets -->
+        <div class="dashboard-card p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold">Recent Datasets</h2>
+                <a href="{% url 'analytics:dataset_list' %}" 
+                   class="text-sm text-primary hover:text-primary-light">
+                    View All
+                </a>
+            </div>
+            <div class="space-y-4">
+                {% for dataset in datasets %}
+                <div class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <i class="fas fa-database text-gray-400"></i>
+                    <div class="ml-4">
+                        <h3 class="text-sm font-medium">
+                            <a href="{% url 'analytics:dataset_detail' uuid=dataset.uuid %}"
+                               class="hover:text-primary">
+                                {{ dataset.title }}
+                            </a>
+                        </h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Created {{ dataset.created_at|timesince }} ago
+                        </p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-gray-500 dark:text-gray-400 text-center py-4">
+                    No datasets yet
+                </p>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Reports -->
+        <div class="dashboard-card p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-lg font-semibold">Recent Reports</h2>
+                <a href="{% url 'analytics:report_list' %}" 
+                   class="text-sm text-primary hover:text-primary-light">
+                    View All
+                </a>
+            </div>
+            <div class="space-y-4">
+                {% for report in reports %}
+                <div class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
+                    <i class="fas fa-chart-line text-gray-400"></i>
+                    <div class="ml-4">
+                        <h3 class="text-sm font-medium">
+                            <a href="{% url 'analytics:report_detail' uuid=report.uuid %}"
+                               class="hover:text-primary">
+                                {{ report.title }}
+                            </a>
+                        </h3>
+                        <p class="text-sm text-gray-500 dark:text-gray-400">
+                            Created {{ report.created_at|timesince }} ago
+                        </p>
+                    </div>
+                </div>
+                {% empty %}
+                <p class="text-gray-500 dark:text-gray-400 text-center py-4">
+                    No reports yet
+                </p>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Recent Visualizations -->
+    <div class="dashboard-card p-6">
+        <div class="flex justify-between items-center mb-6">
+            <h2 class="text-lg font-semibold">Recent Visualizations</h2>
+            <a href="{% url 'analytics:visualization_list' %}" 
+               class="text-sm text-primary hover:text-primary-light">
+                View All
+            </a>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            {% for viz in visualizations %}
+            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
+                <div class="aspect-w-16 aspect-h-9 mb-4">
+                    <div class="visualization-preview" data-viz-id="{{ viz.id }}">
+                        <!-- Visualization will be rendered here -->
+                    </div>
+                </div>
+                <h3 class="text-sm font-medium mb-2">
+                    <a href="{% url 'analytics:visualization_detail' pk=viz.id %}"
+                       class="hover:text-primary">
+                        {{ viz.title }}
+                    </a>
+                </h3>
+                <p class="text-sm text-gray-500 dark:text-gray-400">
+                    {{ viz.visualization_type|title }}
+                </p>
+            </div>
+            {% empty %}
+            <p class="text-gray-500 dark:text-gray-400 text-center py-4 col-span-3">
+                No visualizations yet
+            </p>
+            {% endfor %}
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Function to render visualization previews
+    function renderVisualizations() {
+        document.querySelectorAll('.visualization-preview').forEach(container => {
+            const vizId = container.dataset.vizId;
+            // Here you would fetch the visualization data and render it
+            // using Chart.js or other appropriate library
+        });
+    }
+
+    document.addEventListener('DOMContentLoaded', renderVisualizations);
+</script>
+{% endblock %}

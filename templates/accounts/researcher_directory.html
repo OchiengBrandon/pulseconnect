@@ -1,0 +1,194 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container py-8">
+    <div class="flex flex-col md:flex-row justify-between items-center mb-8">
+        <h1 class="text-3xl font-bold mb-4 md:mb-0">Researcher Directory</h1>
+        
+        <!-- Search and Filters -->
+        <div class="w-full md:w-auto flex flex-wrap gap-4">
+            <form class="flex-1 min-w-[200px]" method="get">
+                <div class="relative">
+                    <input type="text" 
+                           name="search" 
+                           placeholder="Search researchers..."
+                           value="{{ request.GET.search }}"
+                           class="w-full pl-10 pr-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-primary">
+                    <i class="fas fa-search absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400"></i>
+                </div>
+            </form>
+            
+            <select name="field" 
+                    class="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-primary">
+                <option value="">All Fields</option>
+                {% for field in fields %}
+                    <option value="{{ field }}" 
+                            {% if request.GET.field == field %}selected{% endif %}>
+                        {{ field }}
+                    </option>
+                {% endfor %}
+            </select>
+            
+            <select name="institution" 
+                    class="px-4 py-2 rounded-lg border border-gray-300 focus:outline-none focus:border-primary">
+                <option value="">All Institutions</option>
+                {% for inst in institutions %}
+                    <option value="{{ inst }}" 
+                            {% if request.GET.institution == inst %}selected{% endif %}>
+                        {{ inst }}
+                    </option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Researchers Grid -->
+    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+        {% for researcher in researchers %}
+        <div class="bg-white rounded-lg shadow-lg overflow-hidden hover:shadow-xl transition-shadow duration-300">
+            <div class="p-6">
+                <div class="flex items-center space-x-4">
+                    <img src="{{ researcher.avatar.url|default:'https://via.placeholder.com/64' }}" 
+                         alt="{{ researcher.get_full_name }}"
+                         class="w-16 h-16 rounded-full object-cover">
+                    <div>
+                        <h2 class="text-xl font-semibold">
+                            <a href="{% url 'accounts:profile' researcher.username %}"
+                               class="hover:text-primary transition-colors">
+                                {{ researcher.get_full_name }}
+                            </a>
+                        </h2>
+                        <p class="text-gray-500">{{ researcher.field_of_study }}</p>
+                    </div>
+                </div>
+                
+                <div class="mt-4">
+                    <p class="text-gray-600">{{ researcher.bio|truncatewords:30 }}</p>
+                </div>
+                
+                <div class="mt-4 flex items-center justify-between">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-gray-500">
+                            <i class="fas fa-university mr-2"></i>
+                            {{ researcher.institution }}
+                        </span>
+                        <span class="text-gray-500">
+                            <i class="fas fa-users mr-2"></i>
+                            {{ researcher.followers.count }}
+                        </span>
+                    </div>
+                    
+                    {% if user.is_authenticated and user != researcher %}
+                    <button class="btn btn-primary btn-sm follow-btn" 
+                            data-username="{{ researcher.username }}">
+                        {% if user in researcher.followers.all %}
+                            Unfollow
+                        {% else %}
+                            Follow
+                        {% endif %}
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-span-full text-center py-12">
+            <i class="fas fa-search text-6xl text-gray-300 mb-4"></i>
+            <h3 class="text-xl font-medium text-gray-500">No researchers found</h3>
+            <p class="text-gray-400 mt-2">Try adjusting your search criteria</p>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="flex justify-center space-x-2 mt-8">
+        {% if page_obj.has_previous %}
+        <a href="?page={{ page_obj.previous_page_number }}" 
+           class="btn btn-secondary btn-sm">
+            <i class="fas fa-chevron-left mr-2"></i> Previous
+        </a>
+        {% endif %}
+        
+        <span class="px-4 py-2 rounded-lg bg-white shadow">
+            Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+        </span>
+        
+        {% if page_obj.has_next %}
+        <a href="?page={{ page_obj.next_page_number }}" 
+           class="btn btn-secondary btn-sm">
+            Next <i class="fas fa-chevron-right ml-2"></i>
+        </a>
+        {% endif %}
+    </div>
+    {% endif %}
+</div>
+
+<script>
+// Handle filter changes
+document.querySelectorAll('select').forEach(select => {
+    select.addEventListener('change', () => {
+        document.querySelector('form').submit();
+    });
+});
+
+// Follow/Unfollow functionality
+document.querySelectorAll('.follow-btn').forEach(btn => {
+    btn.addEventListener('click', async () => {
+        const username = btn.dataset.username;
+        btn.classList.add('btn-loading');
+        
+        try {
+            const response = await fetch(`/accounts/follow/${username}/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            });
+            
+            const data = await response.json();
+            btn.textContent = data.is_following ? 'Unfollow' : 'Follow';
+        } catch (error) {
+            console.error('Error:', error);
+            alert('Failed to update follow status. Please try again.');
+        } finally {
+            btn.classList.remove('btn-loading');
+        }
+    });
+});
+
+// Infinite scroll
+let loading = false;
+let page = {{ page_obj.number }};
+const loadMore = async () => {
+    if (loading) return;
+    
+    const scrollPos = window.innerHeight + window.scrollY;
+    const pageHeight = document.documentElement.offsetHeight;
+    
+    if (scrollPos >= pageHeight - 1000 && page < {{ page_obj.paginator.num_pages }}) {
+        loading = true;
+        page++;
+        
+        try {
+            const response = await fetch(`?page=${page}`);
+            const html = await response.text();
+            const parser = new DOMParser();
+            const doc = parser.parseFromString(html, 'text/html');
+            const newResearchers = doc.querySelectorAll('.researcher-card');
+            
+            const container = document.querySelector('.researchers-grid');
+            newResearchers.forEach(researcher => {
+                container.appendChild(researcher);
+            });
+        } catch (error) {
+            console.error('Error:', error);
+        } finally {
+            loading = false;
+        }
+    }
+};
+
+window.addEventListener('scroll', loadMore);
+</script>
+{% endblock %}
