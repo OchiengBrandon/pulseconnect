@@ -1,0 +1,24 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ report.title }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card p-6">
+    <h1 class="text-2xl font-bold">{{ report.title }}</h1>
+    <p class="mt-4">{{ report.content }}</p>
+    <h2 class="mt-6 text-lg font-semibold">Datasets Used</h2>
+    <ul>
+        {% for dataset in datasets %}
+        <li>
+            <a href="{% url 'analytics:dataset_detail' dataset.uuid %}" class="text-blue-600 hover:underline">{{ dataset.title }}</a>
+        </li>
+        {% empty %}
+        <li>No datasets associated with this report.</li>
+        {% endfor %}
+    </ul>
+    <div class="mt-4">
+        <a href="{% url 'analytics:report_edit' report.uuid %}" class="btn-primary">Edit Report</a>
+        <a href="{% url 'analytics:report_list' %}" class="btn-primary">Back to Reports</a>
+    </div>
+</div>
+{% endblock %}

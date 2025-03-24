@@ -1,0 +1,23 @@
+{% extends 'analytics/base.html' %}
+
+{% block title %}{{ dataset.title }}{% endblock %}
+
+{% block content %}
+<div class="dashboard-card p-6">
+    <h1 class="text-2xl font-bold">{{ dataset.title }}</h1>
+    <p class="mt-4">{{ dataset.description }}</p>
+    <h2 class="mt-6 text-lg font-semibold">Data Preview</h2>
+    <pre class="bg-gray-100 p-4 rounded">{{ data_preview|safe }}</pre>
+    <h3 class="mt-6 text-lg font-semibold">Collaborators</h3>
+    <ul>
+        {% for collaborator in dataset.collaborators.all %}
+        <li>{{ collaborator.username }}</li>
+        {% empty %}
+        <li>No collaborators.</li>
+        {% endfor %}
+    </ul>
+    <div class="mt-4">
+        <a href="{% url 'analytics:dataset_list' %}" class="btn-primary">Back to Datasets</a>
+    </div>
+</div>
+{% endblock %}

@@ -118,12 +118,10 @@
             
             <div class="col-md-6">
                 <select class="form-select" name="questions[][type]" onchange="handleQuestionTypeChange(this)">
-                    <option value="multiple_choice">Multiple Choice</option>
-                    <option value="single_choice">Single Choice</option>
-                    <option value="text">Text Answer</option>
-                    <option value="rating">Rating Scale</option>
-                    <option value="scale">Numeric Scale</option>
-                    <option value="date">Date</option>
+                    <option value="">Select Question Type</option>
+                    {% for type in question_types %}
+                    <option value="{{ type.slug }}">{{ type.name }}</option>
+                    {% endfor %}
                 </select>
             </div>
             
@@ -272,21 +270,43 @@
     document.getElementById('pollForm').addEventListener('submit', async (e) => {
         e.preventDefault();
         
+        const formData = new FormData(document.getElementById('pollForm'));
+
         try {
-            // Add your form submission logic here
-            
-            // Show success message
-            const notification = document.createElement('div');
-            notification.className = 'alert alert-success position-fixed top-0 end-0 m-3';
-            notification.textContent = 'Poll created successfully!';
-            document.body.appendChild(notification);
-            
-            // Redirect after success
-            setTimeout(() => {
-                window.location.href = '{% url "polls:poll_list" %}';
-            }, 2000);
+            const response = await fetch('{% url "polls:create" %}', {
+                method: 'POST',
+                body: formData,
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': '{{ csrf_token }}'  // Ensure CSRF token is sent
+                }
+            });
+
+            if (response.ok) {
+                // Show success message
+                const notification = document.createElement('div');
+                notification.className = 'alert alert-success position-fixed top-0 end-0 m-3';
+                notification.textContent = 'Poll created successfully!';
+                document.body.appendChild(notification);
+                
+                // Redirect after success
+                setTimeout(() => {
+                    window.location.href = '{% url "polls:poll_list" %}';  // Redirect to poll list
+                }, 2000);
+            } else {
+                // Handle errors (e.g., validation errors) if necessary
+                const errorData = await response.json();
+                const errorNotification = document.createElement('div');
+                errorNotification.className = 'alert alert-danger position-fixed top-0 end-0 m-3';
+                errorNotification.textContent = errorData.message || 'An error occurred. Please try again.';
+                document.body.appendChild(errorNotification);
+            }
         } catch (error) {
             console.error('Error:', error);
+            const errorNotification = document.createElement('div');
+            errorNotification.className = 'alert alert-danger position-fixed top-0 end-0 m-3';
+            errorNotification.textContent = 'An unexpected error occurred. Please try again.';
+            document.body.appendChild(errorNotification);
         }
     });
 </script>

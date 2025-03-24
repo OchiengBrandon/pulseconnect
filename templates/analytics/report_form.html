@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Report{% endblock %}
+
+{% block content %}
+<div class="dashboard-card p-6">
+    <h1 class="text-2xl font-bold">Create New Report</h1>
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn-primary mt-4">Create Report</button>
+    </form>
+    <a href="{% url 'analytics:report_list' %}" class="btn-primary mt-4">Back to Reports</a>
+</div>
+{% endblock %}

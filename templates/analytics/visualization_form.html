@@ -1,0 +1,15 @@
+{% extends 'base.html' %}
+
+{% block title %}Create Visualization{% endblock %}
+
+{% block content %}
+<div class="dashboard-card p-6">
+    <h1 class="text-2xl font-bold">Create New Visualization</h1>
+    <form method="post" class="mt-4">
+        {% csrf_token %}
+        {{ form.as_p }}
+        <button type="submit" class="btn-primary mt-4">Create Visualization</button>
+    </form>
+    <a href="{% url 'analytics:visualization_list' %}" class="btn-primary mt-4">Back to Visualizations</a>
+</div>
+{% endblock %}

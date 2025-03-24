@@ -2,6 +2,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from .models import DataSet, AnalysisReport, Visualization, AnalyticsJob
 from polls.models import Poll
+from django.db import models
 
 class DataSetForm(forms.ModelForm):
     class Meta:

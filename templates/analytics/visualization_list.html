@@ -1,0 +1,19 @@
+{% extends 'analytics/base.html' %}
+
+{% block title %}Visualizations{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Visualizations</h1>
+    <a href="{% url 'analytics:visualization_create' %}" class="btn-primary">Create New Visualization</a>
+</div>
+<ul class="space-y-4">
+    {% for visualization in visualizations %}
+    <li class="dashboard-card p-4">
+        <a href="{% url 'analytics:visualization_detail' visualization.pk %}" class="text-lg font-semibold hover:underline">{{ visualization.title }}</a>
+    </li>
+    {% empty %}
+    <li class="dashboard-card p-4">No visualizations found.</li>
+    {% endfor %}
+</ul>
+{% endblock %}

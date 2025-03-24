@@ -128,6 +128,14 @@ class PollDetailView(DetailView):
         return context
 
 
+from django.urls import reverse
+from django.contrib import messages
+from django.db import transaction
+from django.views.generic import CreateView
+from .models import Poll
+from .forms import PollForm, QuestionFormSet
+from .models import PollCategory, QuestionType
+
 class PollCreateView(CreateView):
     model = Poll
     form_class = PollForm
@@ -140,14 +148,16 @@ class PollCreateView(CreateView):
         else:
             context['question_formset'] = QuestionFormSet(queryset=Question.objects.none())
         
-        # Fetch categories and add to context
+        # Fetch categories and question types and add to context
         context['categories'] = PollCategory.objects.all()
+        context['question_types'] = QuestionType.objects.all() 
         
         return context
 
     @transaction.atomic
     def form_valid(self, form):
         form.instance.creator = self.request.user
+        form.instance.status = 'active'  # Ensure the poll is active
         context = self.get_context_data()
         question_formset = context['question_formset']
 
@@ -164,7 +174,7 @@ class PollCreateView(CreateView):
                 # Handle choices for each question based on question type
                 question_type = question.question_type
                 if question_type.requires_choices:
-                    choices_data = self.request.POST.getlist(f'question_{question.id}_choices')
+                    choices_data = self.request.POST.getlist(f'question_{question.id}_choices', [])
                     for i, choice_text in enumerate(choices_data):
                         if choice_text.strip():  # Ensure the choice text is not empty
                             Choice.objects.create(question=question, text=choice_text.strip(), order=i)
@@ -175,7 +185,7 @@ class PollCreateView(CreateView):
             return self.form_invalid(form)
 
     def get_success_url(self):
-        return reverse('polls:detail', kwargs={'slug': self.object.slug})
+        return reverse('polls:detail', kwargs={'slug': self.object.slug})  # Ensure this points to the poll detail view
 
 @method_decorator(login_required, name='dispatch')
 class PollUpdateView(UserPassesTestMixin, UpdateView):

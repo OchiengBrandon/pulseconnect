@@ -1,0 +1,19 @@
+{% extends 'analytics/base.html' %}
+
+{% block title %}Analysis Reports{% endblock %}
+
+{% block content %}
+<div class="flex justify-between items-center mb-6">
+    <h1 class="text-2xl font-bold">Analysis Reports</h1>
+    <a href="{% url 'analytics:report_create' %}" class="btn-primary">Create New Report</a>
+</div>
+<ul class="space-y-4">
+    {% for report in reports %}
+    <li class="dashboard-card p-4">
+        <a href="{% url 'analytics:report_detail' report.uuid %}" class="text-lg font-semibold hover:underline">{{ report.title }}</a>
+    </li>
+    {% empty %}
+    <li class="dashboard-card p-4">No reports found.</li>
+    {% endfor %}
+</ul>
+{% endblock %}
