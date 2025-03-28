@@ -28,7 +28,7 @@ urlpatterns = [
     
     # Templates
     path('templates/', views.TemplateListView.as_view(), name='template_list'),
-    path('poll/<int:pk>/save-template/', views.save_as_template, name='save_template'),
+    path('poll/<slug:slug>/save-template/', views.save_as_template, name='save_template'),
     path('template/<int:pk>/create/', views.create_from_template, name='create_from_template'),
     
     # Categories

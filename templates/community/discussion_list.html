@@ -1,0 +1,256 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Community Discussions</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Custom Styles -->
+    <style>
+        .discussion-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+        
+        .discussion-card:hover {
+            transform: translateY(-3px);
+            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
+        }
+
+        .tag {
+            transition: all 0.3s ease;
+        }
+
+        .tag:hover {
+            transform: scale(1.05);
+        }
+
+        /* Dark mode styles */
+        .dark {
+            background-color: #1a1a1a;
+            color: #ffffff;
+        }
+
+        .dark .discussion-card {
+            background: rgba(30, 30, 30, 0.8);
+        }
+
+        /* Background animation */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(45deg, #f3f4f6, #e5e7eb);
+            background-size: 400% 400%;
+            animation: gradient 15s ease infinite;
+        }
+
+        .dark .animated-bg {
+            background: linear-gradient(45deg, #1a1a1a, #2d3748);
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 transition-colors duration-300">
+    <!-- Animated Background -->
+    <div class="animated-bg"></div>
+
+    <!-- Dark Mode Toggle -->
+    <button id="darkModeToggle" class="fixed top-4 right-4 p-2 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path class="sun hidden" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+            <path class="moon" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        </svg>
+    </button>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Search and Filters -->
+        <div class="mb-8">
+            <form method="GET" class="space-y-4 md:space-y-0 md:flex md:items-center md:space-x-4">
+                <div class="flex-1">
+                    <input type="text" name="q" value="{{ search_query }}" 
+                           class="w-full px-4 py-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700"
+                           placeholder="Search discussions...">
+                </div>
+                
+                <!-- Poll Filter -->
+                <select name="poll" class="w-full md:w-auto px-4 py-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700">
+                    <option value="">All Polls</option>
+                    {% for poll in polls %}
+                        <option value="{{ poll.id }}" {% if poll.id|stringformat:"i" == current_poll %}selected{% endif %}>
+                            {{ poll.title }}
+                        </option>
+                    {% endfor %}
+                </select>
+
+                <!-- Sort Filter -->
+                <select name="sort" class="w-full md:w-auto px-4 py-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700">
+                    <option value="recent" {% if sort_by == 'recent' %}selected{% endif %}>Most Recent</option>
+                    <option value="popular" {% if sort_by == 'popular' %}selected{% endif %}>Most Popular</option>
+                </select>
+
+                <button type="submit" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300">
+                    Filter
+                </button>
+            </form>
+        </div>
+
+        <!-- Pinned Discussions -->
+        {% if pinned_discussions %}
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-4 dark:text-gray-200">📌 Pinned Discussions</h2>
+            <div class="space-y-4">
+                {% for discussion in pinned_discussions %}
+                <div class="discussion-card rounded-xl p-6 border dark:border-gray-700">
+                    <div class="flex items-start justify-between">
+                        <div>
+                            <h3 class="text-xl font-semibold mb-2">
+                                <a href="{% url 'community:discussion_detail' slug=discussion.slug %}" 
+                                   class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300">
+                                    {{ discussion.title }}
+                                </a>
+                            </h3>
+                            <p class="text-gray-600 dark:text-gray-400 mb-4">{{ discussion.content|truncatewords:30 }}</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex items-center justify-between mt-4">
+                        <div class="flex items-center space-x-4">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                By {{ discussion.creator.username }}
+                            </span>
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                {{ discussion.created_at|timesince }} ago
+                            </span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="text-sm text-gray-500 dark:text-gray-400">
+                                💬 {{ discussion.comment_count }} comments
+                            </span>
+                        </div>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <!-- Regular Discussions -->
+        <div class="space-y-4">
+            {% for discussion in discussions %}
+            <div class="discussion-card rounded-xl p-6 border dark:border-gray-700">
+                <div class="flex items-start justify-between">
+                    <div>
+                        <h3 class="text-xl font-semibold mb-2">
+                            <a href="{% url 'community:discussion_detail' slug=discussion.slug %}" 
+                               class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300">
+                                {{ discussion.title }}
+                            </a>
+                        </h3>
+                        <p class="text-gray-600 dark:text-gray-400 mb-4">{{ discussion.content|truncatewords:30 }}</p>
+                        
+                        <!-- Tags -->
+                        {% if discussion.tags.exists %}
+                        <div class="flex flex-wrap gap-2 mb-4">
+                            {% for tag in discussion.tags.all %}
+                            <a href="?tag={{ tag.name }}" 
+                               class="tag px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-full dark:bg-blue-900 dark:text-blue-200">
+                                #{{ tag.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                <div class="flex items-center justify-between mt-4">
+                    <div class="flex items-center space-x-4">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            By {{ discussion.creator.username }}
+                        </span>
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            {{ discussion.created_at|timesince }} ago
+                        </span>
+                    </div>
+                    <div class="flex items-center space-x-2">
+                        <span class="text-sm text-gray-500 dark:text-gray-400">
+                            💬 {{ discussion.comment_count }} comments
+                        </span>
+                    </div>
+                </div>
+            </div>
+            {% empty %}
+            <div class="text-center py-8">
+                <p class="text-gray-500 dark:text-gray-400">No discussions found.</p>
+            </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+        <div class="mt-8 flex justify-center">
+            <div class="flex space-x-2">
+                {% if page_obj.has_previous %}
+                <a href="?page={{ page_obj.previous_page_number }}" 
+                   class="px-4 py-2 bg-gray-200 rounded-lg dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
+                    Previous
+                </a>
+                {% endif %}
+                
+                <span class="px-4 py-2 bg-blue-600 text-white rounded-lg">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}" 
+                   class="px-4 py-2 bg-gray-200 rounded-lg dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
+                    Next
+                </a>
+                {% endif %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Create Discussion Button -->
+    <a href="{% url 'community:discussion_create' %}" 
+       class="fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
+        </svg>
+    </a>
+
+    <!-- Dark Mode Script -->
+    <script>
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const html = document.documentElement;
+        const sunIcon = darkModeToggle.querySelector('.sun');
+        const moonIcon = darkModeToggle.querySelector('.moon');
+
+        // Check for saved dark mode preference
+        if (localStorage.getItem('darkMode') === 'true' || 
+            (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            sunIcon.classList.remove('hidden');
+            moonIcon.classList.add('hidden');
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            sunIcon.classList.toggle('hidden');
+            moonIcon.classList.toggle('hidden');
+            localStorage.setItem('darkMode', html.classList.contains('dark'));
+        });
+    </script>
+</body>
+</html>

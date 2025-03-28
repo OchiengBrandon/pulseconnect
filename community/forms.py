@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.contrib.contenttypes.models import ContentType
 from .models import Discussion, Comment, Event, VolunteerOpportunity, Impact
 from polls.models import Poll
+from django.db import models
 
 class DiscussionForm(forms.ModelForm):
     class Meta:

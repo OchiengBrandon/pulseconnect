@@ -104,6 +104,9 @@ class DiscussionDetailView(DetailView):
         # Add comment form
         context['comment_form'] = CommentForm()
         
+        # Add content type to the context
+        context['content_type'] = discussion_type  # Add this line
+        
         # Add related discussions
         if discussion.tags.exists():
             tags = discussion.tags.all()

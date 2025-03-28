@@ -1,0 +1,348 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{{ discussion.title }} - Discussion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Highlight.js for code syntax highlighting -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/styles/atom-one-dark.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/highlight.js/11.7.0/highlight.min.js"></script>
+    <style>
+        .discussion-content {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+        }
+
+        .dark .discussion-content {
+            background: rgba(30, 30, 30, 0.8);
+        }
+
+        .comment-card {
+            transition: all 0.3s ease;
+        }
+
+        .comment-card:hover {
+            transform: translateX(8px);
+        }
+
+        /* Nested comments indentation */
+        .comment-thread {
+            position: relative;
+        }
+
+        .comment-thread::before {
+            content: '';
+            position: absolute;
+            left: -16px;
+            top: 0;
+            bottom: 0;
+            width: 2px;
+            background: #e5e7eb;
+            opacity: 0.5;
+        }
+
+        .dark .comment-thread::before {
+            background: #4b5563;
+        }
+
+        /* Animated background */
+        .animated-bg {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -1;
+            background: linear-gradient(120deg, #f3f4f6, #e5e7eb, #d1d5db);
+            background-size: 300% 300%;
+            animation: gradient 15s ease infinite;
+        }
+
+        .dark .animated-bg {
+            background: linear-gradient(120deg, #1a1a1a, #2d3748, #1a1a1a);
+        }
+
+        @keyframes gradient {
+            0% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+            100% { background-position: 0% 50%; }
+        }
+
+        /* Rich text content styles */
+        .rich-content h1 { @apply text-2xl font-bold mb-4; }
+        .rich-content h2 { @apply text-xl font-bold mb-3; }
+        .rich-content h3 { @apply text-lg font-bold mb-2; }
+        .rich-content p { @apply mb-4; }
+        .rich-content ul { @apply list-disc ml-6 mb-4; }
+        .rich-content ol { @apply list-decimal ml-6 mb-4; }
+        .rich-content blockquote { 
+            @apply border-l-4 border-gray-300 dark:border-gray-600 pl-4 italic my-4;
+        }
+        .rich-content pre { @apply rounded-lg p-4 mb-4 overflow-x-auto; }
+        .rich-content code { @apply font-mono text-sm; }
+        .rich-content a { @apply text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300; }
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <!-- Animated Background -->
+    <div class="animated-bg"></div>
+
+    <!-- Dark Mode Toggle -->
+    <button id="darkModeToggle" class="fixed top-4 right-4 p-2 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path class="sun hidden" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+            <path class="moon" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        </svg>
+    </button>
+
+    <div class="container mx-auto px-4 py-8">
+        <!-- Back Navigation -->
+        <a href="{% url 'community:discussion_list' %}" 
+           class="inline-flex items-center mb-8 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Discussions
+        </a>
+
+        <!-- Main Discussion Content -->
+        <div class="discussion-content rounded-xl p-8 shadow-lg mb-8">
+            <div class="flex items-start justify-between mb-6">
+                <div>
+                    <h1 class="text-3xl font-bold mb-4 dark:text-white">{{ discussion.title }}</h1>
+                    <div class="flex items-center space-x-4 text-sm text-gray-600 dark:text-gray-400">
+                        <span>Posted by {{ discussion.creator.username }}</span>
+                        <span>•</span>
+                        <span>{{ discussion.created_at|timesince }} ago</span>
+                        {% if discussion.tags.exists %}
+                        <span>•</span>
+                        <div class="flex space-x-2">
+                            {% for tag in discussion.tags.all %}
+                            <a href="{% url 'community:discussion_list' %}?tag={{ tag.name }}"
+                               class="px-2 py-1 bg-blue-100 text-blue-600 rounded-full text-xs hover:bg-blue-200 dark:bg-blue-900 dark:text-blue-300">
+                                #{{ tag.name }}
+                            </a>
+                            {% endfor %}
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                
+                {% if user == discussion.creator %}
+                <div class="flex space-x-2">
+                    <a href="{% url 'community:discussion_update' slug=discussion.slug %}"
+                       class="px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300">
+                        Edit
+                    </a>
+                    <a href="{% url 'community:discussion_delete' slug=discussion.slug %}"
+                       class="px-4 py-2 bg-red-600 text-white rounded-lg hover:bg-red-700 transition-colors duration-300">
+                        Delete
+                    </a>
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Discussion Content -->
+            <div class="rich-content prose max-w-none dark:text-gray-300">
+                {{ discussion.content|safe }}
+            </div>
+
+            {% if discussion.related_poll %}
+            <!-- Related Poll -->
+            <div class="mt-8 p-6 bg-blue-50 dark:bg-blue-900/30 rounded-lg">
+                <h3 class="text-lg font-semibold mb-4 dark:text-white">Related Poll</h3>
+                <a href="{% url 'polls:detail' pk=discussion.related_poll.pk %}"
+                   class="text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                    {{ discussion.related_poll.title }}
+                </a>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Comments Section -->
+        <div class="mb-8">
+            <h2 class="text-2xl font-bold mb-6 dark:text-white">Comments</h2>
+
+            <!-- Comment Form -->
+            {% if user.is_authenticated %}
+            <form method="post" action="{% url 'community:add_comment' content_type_id=content_type.id object_id=discussion.id %}"
+                  class="mb-8">
+                {% csrf_token %}
+                <div class="mb-4">
+                    {{ comment_form.content }}
+                </div>
+                <button type="submit"
+                        class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300">
+                    Add Comment
+                </button>
+            </form>
+            {% else %}
+            <div class="mb-8 p-4 bg-yellow-50 dark:bg-yellow-900/30 rounded-lg">
+                <p class="text-yellow-800 dark:text-yellow-200">
+                    Please <a href="{% url 'login' %}" class="underline">log in</a> to comment.
+                </p>
+            </div>
+            {% endif %}
+
+            <!-- Comments List -->
+            <div class="space-y-6">
+                {% for comment in comments %}
+                <div class="comment-card bg-white dark:bg-gray-800 rounded-lg p-6 shadow-md">
+                    <!-- Comment Content -->
+                    <div class="flex items-start space-x-4">
+                        <div class="flex-shrink-0">
+                            <div class="w-10 h-10 rounded-full bg-gray-200 dark:bg-gray-700 flex items-center justify-center">
+                                <span class="text-gray-600 dark:text-gray-400">
+                                    {{ comment.user.username|first|upper }}
+                                </span>
+                            </div>
+                        </div>
+                        <div class="flex-1">
+                            <div class="flex items-center mb-2">
+                                <span class="font-semibold dark:text-white">{{ comment.user.username }}</span>
+                                <span class="mx-2 text-gray-500 dark:text-gray-400">•</span>
+                                <span class="text-sm text-gray-500 dark:text-gray-400">
+                                    {{ comment.created_at|timesince }} ago
+                                </span>
+                            </div>
+                            <div class="text-gray-700 dark:text-gray-300">
+                                {{ comment.content|linebreaks }}
+                            </div>
+
+                            <!-- Comment Actions -->
+                            <div class="mt-4 flex items-center space-x-4">
+                                <button onclick="toggleReplyForm('reply-form-{{ comment.id }}')"
+                                        class="text-sm text-blue-600 hover:text-blue-800 dark:text-blue-400 dark:hover:text-blue-300">
+                                    Reply
+                                </button>
+                                {% if user == comment.user %}
+                                <form method="post" action="{% url 'community:delete_comment' comment_id=comment.id %}"
+                                      class="inline">
+                                    {% csrf_token %}
+                                    <button type="submit"
+                                            class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                                        Delete
+                                    </button>
+                                </form>
+                                {% endif %}
+                            </div>
+
+                            <!-- Reply Form -->
+                            <div id="reply-form-{{ comment.id }}" class="hidden mt-4">
+                                <form method="post" 
+                                      action="{% url 'community:add_comment' content_type_id=content_type.id object_id=discussion.id %}">
+                                    {% csrf_token %}
+                                    <input type="hidden" name="parent_id" value="{{ comment.id }}">
+                                    <textarea name="content" rows="3"
+                                              class="w-full px-3 py-2 border rounded-lg focus:ring-2 focus:ring-blue-500 dark:bg-gray-700 dark:border-gray-600 dark:text-white"
+                                              placeholder="Write a reply..."></textarea>
+                                    <button type="submit"
+                                            class="mt-2 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300">
+                                        Submit Reply
+                                    </button>
+                                </form>
+                            </div>
+
+                            <!-- Nested Comments -->
+                            {% if comment.replies.exists %}
+                            <div class="mt-4 ml-8 space-y-4 comment-thread">
+                                {% for reply in comment.replies.all %}
+                                <div class="comment-card bg-gray-50 dark:bg-gray-700/50 rounded-lg p-4">
+                                    <div class="flex items-start space-x-4">
+                                        <div class="flex-shrink-0">
+                                            <div class="w-8 h-8 rounded-full bg-gray-200 dark:bg-gray-600 flex items-center justify-center">
+                                                <span class="text-sm text-gray-600 dark:text-gray-400">
+                                                    {{ reply.user.username|first|upper }}
+                                                </span>
+                                            </div>
+                                        </div>
+                                        <div class="flex-1">
+                                            <div class="flex items-center mb-2">
+                                                <span class="font-semibold dark:text-white">{{ reply.user.username }}</span>
+                                                <span class="mx-2 text-gray-500 dark:text-gray-400">•</span>
+                                                <span class="text-sm text-gray-500 dark:text-gray-400">
+                                                    {{ reply.created_at|timesince }} ago
+                                                </span>
+                                            </div>
+                                            <div class="text-gray-700 dark:text-gray-300">
+                                                {{ reply.content|linebreaks }}
+                                            </div>
+                                            {% if user == reply.user %}
+                                            <form method="post" 
+                                                  action="{% url 'community:delete_comment' comment_id=reply.id %}"
+                                                  class="mt-2">
+                                                {% csrf_token %}
+                                                <button type="submit"
+                                                        class="text-sm text-red-600 hover:text-red-800 dark:text-red-400 dark:hover:text-red-300">
+                                                    Delete
+                                                </button>
+                                            </form>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                </div>
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="text-center py-8 text-gray-600 dark:text-gray-400">
+                    No comments yet. Be the first to comment!
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Related Discussions -->
+        {% if related_discussions %}
+        <div class="mt-12">
+            <h2 class="text-2xl font-bold mb-6 dark:text-white">Related Discussions</h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                {% for related in related_discussions %}
+                <a href="{% url 'community:discussion_detail' slug=related.slug %}"
+                   class="block p-6 bg-white dark:bg-gray-800 rounded-lg shadow-md hover:shadow-lg transition-shadow duration-300">
+                    <h3 class="text-lg font-semibold mb-2 dark:text-white">{{ related.title }}</h3>
+                    <p class="text-gray-600 dark:text-gray-400">{{ related.content|truncatewords:20 }}</p>
+                </a>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize syntax highlighting
+        hljs.highlightAll();
+
+        // Toggle reply form
+        function toggleReplyForm(formId) {
+            const form = document.getElementById(formId);
+            form.classList.toggle('hidden');
+        }
+
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const html = document.documentElement;
+        const sunIcon = darkModeToggle.querySelector('.sun');
+        const moonIcon = darkModeToggle.querySelector('.moon');
+
+        if (localStorage.getItem('darkMode') === 'true' || 
+            (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            sunIcon.classList.remove('hidden');
+            moonIcon.classList.add('hidden');
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            sunIcon.classList.toggle('hidden');
+            moonIcon.classList.toggle('hidden');
+            localStorage.setItem('darkMode', html.classList.contains('dark'));
+        });
+    </script>
+</body>
+</html>

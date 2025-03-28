@@ -128,13 +128,7 @@ class PollDetailView(DetailView):
         return context
 
 
-from django.urls import reverse
-from django.contrib import messages
-from django.db import transaction
-from django.views.generic import CreateView
-from .models import Poll
-from .forms import PollForm, QuestionFormSet
-from .models import PollCategory, QuestionType
+
 
 class PollCreateView(CreateView):
     model = Poll
@@ -148,20 +142,24 @@ class PollCreateView(CreateView):
         else:
             context['question_formset'] = QuestionFormSet(queryset=Question.objects.none())
         
-        # Fetch categories and question types and add to context
+        # Fetch categories, question types, and poll types and add to context
         context['categories'] = PollCategory.objects.all()
-        context['question_types'] = QuestionType.objects.all() 
+        context['question_types'] = QuestionType.objects.all()
+        context['poll_types'] = Poll.POLL_TYPE_CHOICES  # Fetch poll types from the model
         
         return context
 
     @transaction.atomic
     def form_valid(self, form):
+        # Set the creator and status of the poll
         form.instance.creator = self.request.user
         form.instance.status = 'active'  # Ensure the poll is active
+
         context = self.get_context_data()
         question_formset = context['question_formset']
 
         if question_formset.is_valid():
+            # Save the poll instance
             self.object = form.save()
             question_formset.instance = self.object
             questions = question_formset.save(commit=False)
@@ -182,11 +180,12 @@ class PollCreateView(CreateView):
             messages.success(self.request, _('Poll created successfully!'))
             return redirect(self.get_success_url())
         else:
+            messages.error(self.request, _('There were errors in the form. Please correct them.'))
             return self.form_invalid(form)
 
     def get_success_url(self):
+        # Redirect to the detail view of the created poll
         return reverse('polls:detail', kwargs={'slug': self.object.slug})  # Ensure this points to the poll detail view
-
 @method_decorator(login_required, name='dispatch')
 class PollUpdateView(UserPassesTestMixin, UpdateView):
     model = Poll
@@ -395,21 +394,21 @@ def change_poll_status(request, pk):
 
 
 @login_required
-def save_as_template(request, pk):
+def save_as_template(request, slug):
     """Save a poll as a template"""
-    poll = get_object_or_404(Poll, pk=pk)
-    
+    poll = get_object_or_404(Poll, slug=slug)  # Use slug here
+
     # Check if user is the creator
     if request.user != poll.creator:
         return HttpResponseForbidden()
-    
+
     if request.method == 'POST':
         form = PollTemplateForm(request.POST, user=request.user)
         if form.is_valid():
             template = form.save(commit=False)
             template.creator = request.user
             template.category = poll.category
-            
+
             # Create template data from poll
             template_data = {
                 'title': poll.title,
@@ -417,7 +416,7 @@ def save_as_template(request, pk):
                 'poll_type': poll.poll_type,
                 'questions': []
             }
-            
+
             for question in poll.questions.all():
                 q_data = {
                     'text': question.text,
@@ -430,18 +429,18 @@ def save_as_template(request, pk):
                     'settings': question.settings,
                     'choices': []
                 }
-                
+
                 for choice in question.choices.all():
                     q_data['choices'].append({
                         'text': choice.text,
                         'order': choice.order
                     })
-                
+
                 template_data['questions'].append(q_data)
-            
+
             template.template_data = template_data
             template.save()
-            
+
             messages.success(request, _('Poll saved as template successfully!'))
             return redirect('polls:template_list')
     else:
@@ -449,12 +448,11 @@ def save_as_template(request, pk):
             'title': f"{poll.title} - Template",
             'description': poll.description
         })
-    
+
     return render(request, 'polls/save_as_template.html', {
         'form': form,
         'poll': poll
     })
-
 
 @login_required
 def create_from_template(request, pk):

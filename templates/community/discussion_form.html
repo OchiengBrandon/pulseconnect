@@ -1,0 +1,229 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Create Discussion</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Tag input library -->
+    <script src="https://cdn.jsdelivr.net/npm/@yaireo/tagify"></script>
+    <link href="https://cdn.jsdelivr.net/npm/@yaireo/tagify/dist/tagify.css" rel="stylesheet">
+    <style>
+        .form-card {
+            background: rgba(255, 255, 255, 0.8);
+            backdrop-filter: blur(10px);
+        }
+        .dark .form-card {
+            background: rgba(30, 30, 30, 0.8);
+        }
+        /* Other styles remain unchanged */
+    </style>
+</head>
+<body class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
+    <div class="animated-bg"></div>
+
+    <button id="darkModeToggle" class="fixed top-4 right-4 p-2 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300">
+        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path class="sun hidden" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+            <path class="moon" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
+        </svg>
+    </button>
+
+    <div class="container mx-auto px-4 py-8">
+        <a href="{% url 'community:discussion_list' %}" 
+           class="inline-flex items-center mb-8 text-gray-600 hover:text-gray-800 dark:text-gray-400 dark:hover:text-gray-200">
+            <svg class="w-5 h-5 mr-2" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M10 19l-7-7m0 0l7-7m-7 7h18"/>
+            </svg>
+            Back to Discussions
+        </a>
+
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            <div class="lg:col-span-2">
+                <div class="form-card rounded-xl p-8 shadow-lg">
+                    <h1 class="text-3xl font-bold mb-8 dark:text-white">Create New Discussion</h1>
+
+                    <form method="post" class="space-y-6" id="discussionForm">
+                        {% csrf_token %}
+
+                        <!-- Title Field -->
+                        <div>
+                            <label for="id_title" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Title
+                            </label>
+                            <input type="text" name="title" id="id_title" required
+                                   class="form-control w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"
+                                   placeholder="Enter a descriptive title">
+                        </div>
+
+                        <!-- Content Field -->
+                        <div>
+                            <label for="id_content" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Content
+                            </label>
+                            <textarea name="content" id="id_content" rows="6"
+                                      class="form-control w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white"></textarea>
+                        </div>
+
+                        <!-- Tags Field -->
+                        <div>
+                            <label for="id_tags" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Tags
+                            </label>
+                            <input type="text" name="tags" id="id_tags"
+                                   class="form-control w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500">
+                        </div>
+
+                        <!-- Related Poll Field -->
+                        {% if polls %}
+                        <div>
+                            <label for="id_related_poll" class="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                                Related Poll (Optional)
+                            </label>
+                            <select name="related_poll" id="id_related_poll"
+                                    class="form-control w-full px-4 py-2 rounded-lg border focus:ring-2 focus:ring-blue-500 dark:bg-gray-800 dark:border-gray-700 dark:text-white">
+                                <option value="">Select a poll</option>
+                                {% for poll in polls %}
+                                <option value="{{ poll.id }}" {% if poll.id == initial_poll_id %}selected{% endif %}>
+                                    {{ poll.title }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        {% endif %}
+
+                        <!-- Additional Options -->
+                        <div class="flex items-center space-x-4">
+                            <label class="flex items-center space-x-2 text-gray-700 dark:text-gray-300">
+                                <input type="checkbox" name="is_pinned" id="id_is_pinned"
+                                       class="rounded border-gray-300 text-blue-600 focus:ring-blue-500 dark:border-gray-600">
+                                <span>Pin this discussion</span>
+                            </label>
+                        </div>
+
+                        <!-- Submit Button -->
+                        <div class="flex justify-end space-x-4">
+                            <button type="button" onclick="previewDiscussion()"
+                                    class="px-6 py-2 bg-gray-600 text-white rounded-lg hover:bg-gray-700 transition-colors duration-300">
+                                Preview
+                            </button>
+                            <button type="submit"
+                                    class="px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300">
+                                Create Discussion
+                            </button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <!-- Preview Section -->
+            <div class="lg:col-span-1">
+                <div class="sticky top-8">
+                    <div id="previewSection" class="hidden">
+                        <h2 class="text-xl font-bold mb-4 dark:text-white">Preview</h2>
+                        <div class="preview-card bg-white dark:bg-gray-800 rounded-xl p-6 shadow-lg">
+                            <h3 id="previewTitle" class="text-xl font-bold mb-4 dark:text-white"></h3>
+                            <div id="previewContent" class="prose dark:prose-invert max-w-none"></div>
+                            <div id="previewTags" class="mt-4 flex flex-wrap gap-2"></div>
+                        </div>
+                    </div>
+
+                    <!-- Writing Tips -->
+                    <div class="bg-blue-50 dark:bg-blue-900/30 rounded-xl p-6 mt-6">
+                        <h3 class="text-lg font-semibold mb-4 dark:text-white">Writing Tips</h3>
+                        <ul class="space-y-2 text-sm text-blue-800 dark:text-blue-200">
+                            <li>• Use a clear, descriptive title</li>
+                            <li>• Structure your content with headings</li>
+                            <li>• Include relevant examples</li>
+                            <li>• Add appropriate tags for better visibility</li>
+                            <li>• Proofread before posting</li>
+                        </ul>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
+    <script>
+        // Initialize Tagify
+        const input = document.querySelector('#id_tags');
+        const tagify = new Tagify(input, {
+            maxTags: 5,
+            dropdown: {
+                maxItems: 5,
+                classname: "tags-dropdown",
+                enabled: 0,
+                closeOnSelect: false
+            }
+        });
+
+        // Preview function
+        function previewDiscussion() {
+            const title = document.querySelector('#id_title').value;
+            const content = document.querySelector('#id_content').value; // Get content from the textarea
+            const tags = tagify.value;
+
+            document.querySelector('#previewTitle').textContent = title;
+            document.querySelector('#previewContent').innerHTML = content;
+
+            const tagsContainer = document.querySelector('#previewTags');
+            tagsContainer.innerHTML = '';
+            tags.forEach(tag => {
+                const tagElement = document.createElement('span');
+                tagElement.className = 'px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-full dark:bg-blue-900 dark:text-blue-200';
+                tagElement.textContent = `#${tag.value}`;
+                tagsContainer.appendChild(tagElement);
+            });
+
+            document.querySelector('#previewSection').classList.remove('hidden');
+        }
+
+        // Dark mode toggle
+        const darkModeToggle = document.getElementById('darkModeToggle');
+        const html = document.documentElement;
+        const sunIcon = darkModeToggle.querySelector('.sun');
+        const moonIcon = darkModeToggle.querySelector('.moon');
+
+        if (localStorage.getItem('darkMode') === 'true' || 
+            (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
+            html.classList.add('dark');
+            sunIcon.classList.remove('hidden');
+            moonIcon.classList.add('hidden');
+        }
+
+        darkModeToggle.addEventListener('click', () => {
+            html.classList.toggle('dark');
+            sunIcon.classList.toggle('hidden');
+            moonIcon.classList.toggle('hidden');
+            localStorage.setItem('darkMode', html.classList.contains('dark'));
+        });
+
+        // Form validation
+        document.getElementById('discussionForm').addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const title = document.querySelector('#id_title').value.trim();
+            const content = document.querySelector('#id_content').value.trim(); // Get content from the textarea
+            const tags = tagify.value;
+
+            if (!title) {
+                alert('Please enter a title');
+                return;
+            }
+
+            if (!content) {
+                alert('Please enter content');
+                return;
+            }
+
+            if (tags.length === 0) {
+                alert('Please add at least one tag');
+                return;
+            }
+
+            this.submit();
+        });
+    </script>
+</body>
+</html>
