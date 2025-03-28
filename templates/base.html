@@ -460,15 +460,17 @@
             </div>
 
             {% if user.is_authenticated %}
-                <div class="user-menu" data-bs-toggle="dropdown">
-                    <img src="{{ user.profile.avatar.url|default:'https://via.placeholder.com/40' }}" 
-                         class="user-avatar">
-                    <div class="user-info">
-                        <div class="user-name">{{ user.get_short_name }}</div>
-                        <div class="user-role">Premium Member</div>
-                    </div>
-                    <i class="ri-arrow-down-s-line"></i>
+            <div class="user-menu" data-bs-toggle="dropdown">
+                <img src="{% if user.profile.avatar %}{{ user.profile.avatar.url }}{% else %}https://via.placeholder.com/40{% endif %}" 
+                     alt="{{ user.get_short_name }}'s Avatar"
+                     class="rounded-circle"
+                     style="width: 40px; height: 40px; object-fit: cover;">
+                <div class="user-info">
+                    <div class="user-name">{{ user.get_short_name }}</div>
+                    <div class="user-role">Premium Member</div>
                 </div>
+                <i class="ri-arrow-down-s-line"></i>
+            </div>
                 <div class="dropdown-menu">
                     <a class="dropdown-item" href="{% url 'accounts:profile' request.user.username %}">
                         <i class="ri-user-line me-2"></i> Profile

@@ -1,425 +1,181 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}{{ profile_user.get_full_name }} | PulseConnect{% endblock %}
-{% block page_title %}Profile{% endblock %}
+{% block title %}{{ profile_user.get_full_name }} - PulseConnect{% endblock %}
 
 {% block content %}
-<div class="profile-container">
+<div class="container-fluid">
     <!-- Profile Header -->
-    <div class="profile-header widget-card mb-4">
-        <div class="profile-cover" style="background: linear-gradient(45deg, var(--primary), var(--primary-light));">
-            <div class="profile-avatar-wrapper">
-                <img src="{{ profile_user.profile.avatar.url|default:'https://via.placeholder.com/150' }}" 
-                     alt="{{ profile_user.get_full_name }}" class="profile-avatar">
-                {% if profile_user.is_verified %}
-                    <div class="verified-badge" data-tippy-content="Verified Account">
-                        <i class="ri-checkbox-circle-fill"></i>
-                    </div>
-                {% endif %}
-            </div>
-        </div>
-        
-        <div class="profile-info">
-            <div class="d-flex justify-content-between align-items-start">
-                <div>
-                    <h2 class="profile-name">{{ profile_user.get_full_name }}</h2>
-                    <p class="profile-username">@{{ profile_user.username }}</p>
-                    {% if profile_user.user_type == 'researcher' %}
-                        <div class="profile-badges">
-                            <span class="badge bg-primary-light">
-                                <i class="ri-microscope-line"></i> Researcher
+    <div class="widget-card mb-4">
+        <div class="d-flex flex-wrap align-items-center gap-4">
+            <img src="{% if profile_user.profile_picture %}{{ profile_user.profile_picture.url }}{% else %}https://via.placeholder.com/150{% endif %}" 
+                 alt="{{ profile_user.get_full_name }}"
+                 class="rounded-circle"
+                 style="width: 150px; height: 150px; object-fit: cover;">
+            
+            <div class="flex-grow-1">
+                <div class="d-flex justify-content-between align-items-start">
+                    <div>
+                        <h1 class="h2 mb-1">{{ profile_user.get_full_name }}</h1>
+                        <p class="text-muted mb-2">@{{ profile_user.username }}</p>
+                        <div class="d-flex align-items-center gap-3 mb-3">
+                            {% if profile_user.institution %}
+                            <span class="badge bg-primary-light text-primary">
+                                <i class="ri-building-line me-1"></i>{{ profile_user.institution }}
                             </span>
-                            <span class="badge bg-info-light">
-                                <i class="ri-building-line"></i> {{ profile_user.institution }}
+                            {% endif %}
+                            {% if profile_user.field_of_study %}
+                            <span class="badge bg-info-light text-info">
+                                <i class="ri-book-line me-1"></i>{{ profile_user.field_of_study }}
                             </span>
+                            {% endif %}
+                            {% if profile_user.location %}
+                            <span class="badge bg-success-light text-success">
+                                <i class="ri-map-pin-line me-1"></i>{{ profile_user.location }}
+                            </span>
+                            {% endif %}
                         </div>
-                    {% endif %}
-                </div>
-                
-                {% if request.user == profile_user %}
-                    <div class="profile-actions">
-                        <a href="{% url 'accounts:profile_edit' %}" class="btn btn-outline-primary">
-                            <i class="ri-edit-line"></i> Edit Profile
-                        </a>
                     </div>
-                {% else %}
-                    <div class="profile-actions">
+                    
+                    {% if user.is_authenticated and user != profile_user %}
+                    <div class="d-flex gap-2">
                         <button class="btn btn-primary follow-btn" data-username="{{ profile_user.username }}">
-                            {% if request.user.is_following %}
-                                <i class="ri-user-unfollow-line"></i> Unfollow
+                            {% if user.is_following %}
+                            <i class="ri-user-unfollow-line me-1"></i>Unfollow
                             {% else %}
-                                <i class="ri-user-follow-line"></i> Follow
+                            <i class="ri-user-follow-line me-1"></i>Follow
                             {% endif %}
                         </button>
                         <button class="btn btn-outline-primary">
-                            <i class="ri-message-3-line"></i> Message
+                            <i class="ri-message-3-line me-1"></i>Message
                         </button>
                     </div>
+                    {% elif user == profile_user %}
+                    <a href="{% url 'accounts:profile_edit' %}" class="btn btn-outline-primary">
+                        <i class="ri-edit-line me-1"></i>Edit Profile
+                    </a>
+                    {% endif %}
+                </div>
+
+                {% if profile_user.bio %}
+                <p class="mb-3">{{ profile_user.bio }}</p>
                 {% endif %}
-            </div>
-            
-            <div class="profile-stats">
-                <div class="stat-item">
-                    <span class="stat-value">{{ profile_user.followers.count }}</span>
-                    <span class="stat-label">Followers</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">{{ profile_user.following.count }}</span>
-                    <span class="stat-label">Following</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">{{ polls_created }}</span>
-                    <span class="stat-label">Polls Created</span>
-                </div>
-                <div class="stat-item">
-                    <span class="stat-value">{{ discussions_created }}</span>
-                    <span class="stat-label">Discussions</span>
+
+                <div class="d-flex gap-4">
+                    <div class="text-center">
+                        <h4 class="mb-1">{{ polls_created }}</h4>
+                        <p class="text-muted small mb-0">Polls</p>
+                    </div>
+                    <div class="text-center">
+                        <h4 class="mb-1">{{ discussions_created }}</h4>
+                        <p class="text-muted small mb-0">Discussions</p>
+                    </div>
+                    <div class="text-center">
+                        <h4 class="mb-1">{{ comments_made }}</h4>
+                        <p class="text-muted small mb-0">Comments</p>
+                    </div>
                 </div>
             </div>
-            
-            {% if profile_user.bio %}
-                <p class="profile-bio">{{ profile_user.bio }}</p>
-            {% endif %}
         </div>
     </div>
 
+    <!-- Profile Content -->
     <div class="row">
-        <!-- Activity Feed -->
-        <div class="col-lg-8">
+        <!-- Left Column -->
+        <div class="col-lg-4">
+            <!-- Social Links -->
+            {% if profile_user.website or profile_user.social_linkedin or profile_user.social_twitter or profile_user.social_github %}
             <div class="widget-card mb-4">
-                <div class="d-flex justify-content-between align-items-center mb-4">
-                    <h3 class="card-title">Recent Activity</h3>
-                    <div class="btn-group">
-                        <button class="btn btn-outline-primary active">All</button>
-                        <button class="btn btn-outline-primary">Polls</button>
-                        <button class="btn btn-outline-primary">Discussions</button>
-                    </div>
+                <h3 class="h5 mb-3">Connect</h3>
+                <div class="d-flex flex-column gap-2">
+                    {% if profile_user.website %}
+                    <a href="{{ profile_user.website }}" class="btn btn-outline-secondary btn-sm text-start" target="_blank">
+                        <i class="ri-global-line me-2"></i>Website
+                    </a>
+                    {% endif %}
+                    {% if profile_user.social_linkedin %}
+                    <a href="{{ profile_user.social_linkedin }}" class="btn btn-outline-secondary btn-sm text-start" target="_blank">
+                        <i class="ri-linkedin-line me-2"></i>LinkedIn
+                    </a>
+                    {% endif %}
+                    {% if profile_user.social_twitter %}
+                    <a href="{{ profile_user.social_twitter }}" class="btn btn-outline-secondary btn-sm text-start" target="_blank">
+                        <i class="ri-twitter-line me-2"></i>Twitter
+                    </a>
+                    {% endif %}
+                    {% if profile_user.social_github %}
+                    <a href="{{ profile_user.social_github }}" class="btn btn-outline-secondary btn-sm text-start" target="_blank">
+                        <i class="ri-github-line me-2"></i>GitHub
+                    </a>
+                    {% endif %}
                 </div>
-                
-                <div class="activity-feed">
-                    {% for activity in profile_user.get_recent_activities %}
-                        <div class="activity-item">
-                            <div class="activity-icon">
-                                <i class="{{ activity.icon }}"></i>
-                            </div>
-                            <div class="activity-content">
-                                <p class="activity-text">{{ activity.description }}</p>
-                                <span class="activity-time">{{ activity.timestamp|timesince }} ago</span>
-                            </div>
-                        </div>
-                    {% empty %}
-                        <div class="text-center text-muted py-4">
-                            <i class="ri-calendar-line fs-2 mb-2"></i>
-                            <p>No recent activity</p>
-                        </div>
+            </div>
+            {% endif %}
+
+            <!-- Badges -->
+            {% if badges %}
+            <div class="widget-card mb-4">
+                <h3 class="h5 mb-3">Achievements</h3>
+                <div class="d-flex flex-wrap gap-2">
+                    {% for badge in badges %}
+                    <div class="badge bg-primary-light text-primary p-2" data-tippy-content="{{ badge.description }}">
+                        <i class="{{ badge.icon }} me-1"></i>{{ badge.name }}
+                    </div>
                     {% endfor %}
                 </div>
             </div>
+            {% endif %}
         </div>
 
-        <!-- Sidebar -->
-        <div class="col-lg-4">
-            <!-- Badges -->
+        <!-- Right Column -->
+        <div class="col-lg-8">
+            <!-- Recent Activity -->
             <div class="widget-card mb-4">
-                <h3 class="card-title">Achievements</h3>
-                <div class="badges-grid">
-                    {% for badge in badges %}
-                        <div class="badge-item" data-tippy-content="{{ badge.description }}">
-                            <div class="badge-icon">
-                                <i class="{{ badge.icon }}"></i>
-                            </div>
-                            <span class="badge-name">{{ badge.name }}</span>
+                <h3 class="h5 mb-3">Recent Activity</h3>
+                <div class="timeline">
+                    {% for activity in recent_activities %}
+                    <div class="timeline-item">
+                        <div class="timeline-icon bg-primary">
+                            <i class="ri-{{ activity.icon }}-line"></i>
                         </div>
+                        <div class="timeline-content">
+                            <p class="mb-1">{{ activity.description }}</p>
+                            <small class="text-muted">{{ activity.timestamp|timesince }} ago</small>
+                        </div>
+                    </div>
                     {% empty %}
-                        <p class="text-muted">No badges earned yet</p>
+                    <p class="text-muted text-center my-4">No recent activity</p>
                     {% endfor %}
                 </div>
             </div>
-
-            <!-- Institution Profile -->
-            {% if institution_profile %}
-                <div class="widget-card mb-4">
-                    <h3 class="card-title">Institution Details</h3>
-                    <div class="institution-info">
-                        <p><i class="ri-building-line"></i> {{ institution_profile.name }}</p>
-                        <p><i class="ri-map-pin-line"></i> {{ institution_profile.location }}</p>
-                        <p><i class="ri-global-line"></i> {{ institution_profile.website }}</p>
-                    </div>
-                </div>
-            {% endif %}
-
-            <!-- Research Interests -->
-            {% if profile_user.research_interests.exists %}
-                <div class="widget-card">
-                    <h3 class="card-title">Research Interests</h3>
-                    <div class="interests-tags">
-                        {% for interest in profile_user.research_interests.all %}
-                            <span class="interest-tag">{{ interest.name }}</span>
-                        {% endfor %}
-                    </div>
-                </div>
-            {% endif %}
         </div>
     </div>
 </div>
-
-<style>
-    .profile-container {
-        max-width: 1200px;
-        margin: 0 auto;
-    }
-
-    .profile-header {
-        position: relative;
-        overflow: hidden;
-        padding: 0;
-    }
-
-    .profile-cover {
-        height: 200px;
-        position: relative;
-    }
-
-    .profile-avatar-wrapper {
-        position: absolute;
-        bottom: -60px;
-        left: 30px;
-    }
-
-    .profile-avatar {
-        width: 120px;
-        height: 120px;
-        border-radius: 50%;
-        border: 4px solid var(--surface);
-        box-shadow: var(--shadow-lg);
-    }
-
-    .verified-badge {
-        position: absolute;
-        bottom: 0;
-        right: 0;
-        background: var(--primary);
-        color: white;
-        width: 24px;
-        height: 24px;
-        border-radius: 50%;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        border: 2px solid var(--surface);
-    }
-
-    .profile-info {
-        padding: 80px 30px 30px;
-    }
-
-    .profile-name {
-        margin: 0;
-        font-size: 1.75rem;
-        font-weight: 600;
-    }
-
-    .profile-username {
-        color: var(--text-2);
-        margin: 0.25rem 0;
-    }
-
-    .profile-badges {
-        display: flex;
-        gap: 0.5rem;
-        margin-top: 0.5rem;
-    }
-
-    .badge {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.25rem;
-        padding: 0.5rem 0.75rem;
-        border-radius: var(--radius);
-    }
-
-    .profile-stats {
-        display: flex;
-        gap: 2rem;
-        margin-top: 1.5rem;
-        padding-top: 1.5rem;
-        border-top: 1px solid var(--border);
-    }
-
-    .stat-item {
-        text-align: center;
-    }
-
-    .stat-value {
-        display: block;
-        font-size: 1.5rem;
-        font-weight: 600;
-        color: var(--primary);
-    }
-
-    .stat-label {
-        color: var(--text-2);
-        font-size: 0.875rem;
-    }
-
-    .profile-bio {
-        margin-top: 1.5rem;
-        color: var(--text-2);
-        line-height: 1.6;
-    }
-
-    .activity-feed {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .activity-item {
-        display: flex;
-        gap: 1rem;
-        padding: 1rem;
-        border-radius: var(--radius);
-        background: var(--surface-2);
-        transition: all 0.2s ease;
-    }
-
-    .activity-item:hover {
-        transform: translateX(4px);
-        background: var(--surface-3);
-    }
-
-    .activity-icon {
-        width: 40px;
-        height: 40px;
-        border-radius: var(--radius);
-        background: var(--primary);
-        color: white;
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.25rem;
-    }
-
-    .activity-time {
-        color: var(--text-2);
-        font-size: 0.875rem;
-    }
-
-    .badges-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
-        gap: 1rem;
-        margin-top: 1rem;
-    }
-
-    .badge-item {
-        text-align: center;
-        cursor: pointer;
-    }
-
-    .badge-icon {
-        width: 48px;
-        height: 48px;
-        margin: 0 auto;
-        background: var(--surface-2);
-        border-radius: var(--radius);
-        display: flex;
-        align-items: center;
-        justify-content: center;
-        font-size: 1.5rem;
-        color: var(--primary);
-        transition: all 0.2s ease;
-    }
-
-    .badge-item:hover .badge-icon {
-        transform: translateY(-2px);
-        background: var(--primary);
-        color: white;
-    }
-
-    .badge-name {
-        display: block;
-        margin-top: 0.5rem;
-        font-size: 0.75rem;
-        color: var(--text-2);
-    }
-
-    .interests-tags {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-        margin-top: 1rem;
-    }
-
-    .interest-tag {
-        padding: 0.5rem 0.75rem;
-        background: var(--surface-2);
-        border-radius: var(--radius);
-        font-size: 0.875rem;
-        color: var(--text-2);
-        transition: all 0.2s ease;
-    }
-
-    .interest-tag:hover {
-        background: var(--primary);
-        color: white;
-    }
-
-    .card-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        margin: 0;
-    }
-
-    .institution-info {
-        margin-top: 1rem;
-    }
-
-    .institution-info p {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-bottom: 0.5rem;
-        color: var(--text-2);
-    }
-</style>
+{% endblock %}
 
 {% block extra_js %}
 <script>
-    // Follow/Unfollow functionality
-    document.querySelectorAll('.follow-btn').forEach(btn => {
-        btn.addEventListener('click', async () => {
-            const username = btn.dataset.username;
-            btn.innerHTML = 'Loading...'; // Show loading state
+document.querySelectorAll('.follow-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const username = this.dataset.username;
+        try {
+            const response = await fetch(`/accounts/${username}/follow/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                },
+            });
+            const data = await response.json();
             
-            try {
-                const response = await fetch(`/accounts/follow/${username}/`, {
-                    method: 'POST',
-                    headers: {
-                        'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-                    }
-                });
-                const data = await response.json();
-
-                if (data.is_following) {
-                    btn.innerHTML = '<i class="ri-user-unfollow-line"></i> Unfollow';
-                } else {
-                    btn.innerHTML = '<i class="ri-user-follow-line"></i> Follow';
-                }
-            } catch (error) {
-                console.error('Error:', error);
-                alert('Unable to follow/unfollow at this time. Please try again later.');
-                btn.innerHTML = btn.innerHTML.includes('Unfollow') ? 'Unfollow' : 'Follow'; // Revert button text
+            if (data.is_following) {
+                this.innerHTML = '<i class="ri-user-unfollow-line me-1"></i>Unfollow';
+            } else {
+                this.innerHTML = '<i class="ri-user-follow-line me-1"></i>Follow';
             }
-        });
+        } catch (error) {
+            console.error('Error:', error);
+        }
     });
-
-    // Initialize tooltips
-    tippy('[data-tippy-content]', {
-        placement: 'top',
-        animation: 'scale'
-    });
+});
 </script>
-{% endblock %}
 {% endblock %}

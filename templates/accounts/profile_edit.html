@@ -1,449 +1,220 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
 {% load static %}
 
-{% block title %}Edit Profile | PulseConnect{% endblock %}
-
-{% block page_title %}Edit Profile{% endblock %}
+{% block title %}Edit Profile - PulseConnect{% endblock %}
 
 {% block content %}
-<div class="profile-edit-container">
-    <form method="POST" enctype="multipart/form-data" id="profile-edit-form">
-        {% csrf_token %}
-        
-        <!-- Profile Picture Section -->
-        <div class="widget-card mb-4">
-            <div class="d-flex justify-content-between align-items-center mb-4">
-                <h3 class="card-title">Profile Picture</h3>
-                <div class="form-check form-switch">
-                    <input class="form-check-input" type="checkbox" id="showAvatarPublic" 
-                           name="show_avatar_public" {% if user.show_avatar_public %}checked{% endif %}>
-                    <label class="form-check-label" for="showAvatarPublic">Show publicly</label>
-                </div>
-            </div>
-            
-            <div class="avatar-upload">
-                <div class="avatar-preview">
-                    <img src="{{ user.profile.avatar.url|default:'https://via.placeholder.com/150' }}" 
-                         alt="Profile Picture" id="avatarPreview">
-                    <div class="avatar-overlay">
-                        <i class="ri-camera-line"></i>
-                        <span>Change Photo</span>
-                    </div>
-                </div>
-                <input type="file" name="avatar" id="avatarInput" accept="image/*" class="d-none">
-            </div>
-        </div>
+<div class="container-fluid">
+    <div class="row">
+        <div class="col-lg-8 mx-auto">
+            <div class="widget-card">
+                <h2 class="mb-4">Edit Profile</h2>
 
-        <!-- Basic Information -->
-        <div class="widget-card mb-4">
-            <h3 class="card-title mb-4">Basic Information</h3>
-            
-            <div class="row g-4">
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label class="form-label">First Name</label>
-                        <input type="text" class="form-control" name="first_name" 
-                               value="{{ user.first_name }}" required>
-                    </div>
-                </div>
-                
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label class="form-label">Last Name</label>
-                        <input type="text" class="form-control" name="last_name" 
-                               value="{{ user.last_name }}" required>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label class="form-label">Username</label>
-                        <input type="text" class="form-control" name="username" 
-                               value="{{ user.username }}" required>
-                    </div>
-                </div>
-
-                <div class="col-md-6">
-                    <div class="form-group">
-                        <label class="form-label">Email</label>
-                        <input type="email" class="form-control" name="email" 
-                               value="{{ user.email }}" required>
-                    </div>
-                </div>
-
-                <div class="col-12">
-                    <div class="form-group">
-                        <label class="form-label">Bio</label>
-                        <textarea class="form-control" name="bio" rows="4">{{ user.bio }}</textarea>
-                        <div class="form-text">Brief description about yourself</div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Professional Information -->
-        <div class="widget-card mb-4">
-            <h3 class="card-title mb-4">Professional Information</h3>
-            
-            <div class="row g-4">
-                {% if user.user_type == 'researcher' %}
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="form-label">Institution</label>
-                            <input type="text" class="form-control" name="institution" 
-                                   value="{{ user.institution }}">
+                <form method="POST" enctype="multipart/form-data" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Profile Picture -->
+                    <div class="mb-4 text-center">
+                        <div class="position-relative d-inline-block">
+                            <img src="{% if user.profile_picture %}{{ user.profile_picture.url }}{% else %}https://via.placeholder.com/150{% endif %}" 
+                                 alt="Profile Picture"
+                                 class="rounded-circle mb-3"
+                                 style="width: 150px; height: 150px; object-fit: cover;">
+                            <label for="{{ form.profile_picture.id_for_label }}" 
+                                   class="btn btn-sm btn-primary position-absolute bottom-0 end-0">
+                                <i class="ri-camera-line"></i>
+                            </label>
                         </div>
+                        {{ form.profile_picture }}
                     </div>
 
-                    <div class="col-md-6">
-                        <div class="form-group">
-                            <label class="form-label">Field of Study</label>
-                            <input type="text" class="form-control" name="field_of_study" 
-                                   value="{{ user.field_of_study }}">
-                        </div>
-                    </div>
-
-                    <div class="col-12">
-                        <div class="form-group">
-                            <label class="form-label">Research Interests</label>
-                            <input type="text" class="form-control" id="interestsInput" 
-                                   placeholder="Add interests (press Enter to add)">
-                            <div class="interests-container mt-2" id="interestsContainer">
-                                {% for interest in user.research_interests.all %}
-                                    <span class="interest-tag">
-                                        {{ interest.name }}
-                                        <i class="ri-close-line remove-interest"></i>
-                                        <input type="hidden" name="interests[]" value="{{ interest.name }}">
-                                    </span>
-                                {% endfor %}
+                    <!-- Basic Information -->
+                    <div class="mb-4">
+                        <h3 class="h5 mb-3">Basic Information</h3>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.first_name.id_for_label }}" class="form-label">First Name</label>
+                                {{ form.first_name }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.last_name.id_for_label }}" class="form-label">Last Name</label>
+                                {{ form.last_name }}
                             </div>
                         </div>
-                    </div>
-                {% endif %}
-
-                {% if institution_form %}
-                    <div class="col-12">
-                        <hr class="my-4">
-                        <h4 class="mb-3">Institution Details</h4>
                         
-                        <div class="row g-4">
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Institution Name</label>
-                                    {{ institution_form.name }}
-                                </div>
-                            </div>
+                        <div class="mb-3">
+                            <label for="{{ form.email.id_for_label }}" class="form-label">Email</label>
+                            {{ form.email }}
+                        </div>
 
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Institution Type</label>
-                                    {{ institution_form.institution_type }}
-                                </div>
-                            </div>
+                        <div class="mb-3">
+                            <label for="{{ form.bio.id_for_label }}" class="form-label">Bio</label>
+                            {{ form.bio }}
+                        </div>
+                    </div>
 
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Location</label>
-                                    {{ institution_form.location }}
-                                </div>
+                    <!-- Professional Information -->
+                    <div class="mb-4">
+                        <h3 class="h5 mb-3">Professional Information</h3>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.institution.id_for_label }}" class="form-label">Institution</label>
+                                {{ form.institution }}
                             </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ form.field_of_study.id_for_label }}" class="form-label">Field of Study</label>
+                                {{ form.field_of_study }}
+                            </div>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <label for="{{ form.location.id_for_label }}" class="form-label">Location</label>
+                            {{ form.location }}
+                        </div>
+                    </div>
 
-                            <div class="col-md-6">
-                                <div class="form-group">
-                                    <label class="form-label">Website</label>
-                                    {{ institution_form.website }}
-                                </div>
+                    <!-- Social Links -->
+                    <div class="mb-4">
+                        <h3 class="h5 mb-3">Social Links</h3>
+                        <div class="mb-3">
+                            <label for="{{ form.website.id_for_label }}" class="form-label">Website</label>
+                            {{ form.website }}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.social_linkedin.id_for_label }}" class="form-label">LinkedIn</label>
+                                {{ form.social_linkedin }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.social_twitter.id_for_label }}" class="form-label">Twitter</label>
+                                {{ form.social_twitter }}
+                            </div>
+                            <div class="col-md-4 mb-3">
+                                <label for="{{ form.social_github.id_for_label }}" class="form-label">GitHub</label>
+                                {{ form.social_github }}
                             </div>
                         </div>
                     </div>
-                {% endif %}
+
+                    <!-- Notification Settings -->
+                    <div class="mb-4">
+                        <h3 class="h5 mb-3">Notification Settings</h3>
+                        <div class="form-check mb-2">
+                            {{ form.email_notifications }}
+                            <label class="form-check-label" for="{{ form.email_notifications.id_for_label }}">
+                                Email Notifications
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            {{ form.poll_notifications }}
+                            <label class="form-check-label" for="{{ form.poll_notifications.id_for_label }}">
+                                Poll Notifications
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            {{ form.comment_notifications }}
+                            <label class="form-check-label" for="{{ form.comment_notifications.id_for_label }}">
+                                Comment Notifications
+                            </label>
+                        </div>
+                    </div>
+
+                    <!-- Privacy Settings -->
+                    <div class="mb-4">
+                        <h3 class="h5 mb-3">Privacy Settings</h3>
+                        <div class="form-check mb-2">
+                            {{ form.public_profile }}
+                            <label class="form-check-label" for="{{ form.public_profile.id_for_label }}">
+                                Public Profile
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            {{ form.show_email }}
+                            <label class="form-check-label" for="{{ form.show_email.id_for_label }}">
+                                Show Email
+                            </label>
+                        </div>
+                    </div>
+
+                    {% if institution_form %}
+                    <!-- Institution Profile -->
+                    <div class="mb-4">
+                        <h3 class="h5 mb-3">Institution Details</h3>
+                        <div class="mb-3">
+                            <label for="{{ institution_form.institution_name.id_for_label }}" class="form-label">
+                                Institution Name
+                            </label>
+                            {{ institution_form.institution_name }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ institution_form.institution_type.id_for_label }}" class="form-label">
+                                Institution Type
+                            </label>
+                            {{ institution_form.institution_type }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ institution_form.description.id_for_label }}" class="form-label">
+                                Description
+                            </label>
+                            {{ institution_form.description }}
+                        </div>
+                        <div class="row">
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ institution_form.established_year.id_for_label }}" class="form-label">
+                                    Established Year
+                                </label>
+                                {{ institution_form.established_year }}
+                            </div>
+                            <div class="col-md-6 mb-3">
+                                <label for="{{ institution_form.phone.id_for_label }}" class="form-label">
+                                    Phone
+                                </label>
+                                {{ institution_form.phone }}
+                            </div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ institution_form.address.id_for_label }}" class="form-label">
+                                Address
+                            </label>
+                            {{ institution_form.address }}
+                        </div>
+                        <div class="mb-3">
+                            <label for="{{ institution_form.logo.id_for_label }}" class="form-label">
+                                Logo
+                            </label>
+                            {{ institution_form.logo }}
+                        </div>
+                    </div>
+                    {% endif %}
+
+                    <!-- Accessibility Settings -->
+                    <div class="mb-4">
+                        <h3 class="h5 mb-3">Accessibility Settings</h3>
+                        <div class="form-check mb-2">
+                            {{ accessibility_form.high_contrast }}
+                            <label class="form-check-label" for="{{ accessibility_form.high_contrast.id_for_label }}">
+                                High Contrast Mode
+                            </label>
+                        </div>
+                        <div class="form-check mb-2">
+                            {{ accessibility_form.large_text }}
+                            <label class="form-check-label" for="{{ accessibility_form.large_text.id_for_label }}">
+                                Large Text
+                            </label>
+                        </div>
+                    </div>
+
+                    <div class="text-end">
+                        <a href="{% url 'accounts:profile' user.username %}" class="btn btn-outline-secondary me-2">
+                            Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ri-save-line me-1"></i>Save Changes
+                        </button>
+                    </div>
+                </form>
             </div>
         </div>
-
-        <!-- Privacy Settings -->
-        <div class="widget-card mb-4">
-            <h3 class="card-title mb-4">Privacy Settings</h3>
-            
-            <div class="privacy-settings">
-                <div class="privacy-option">
-                    <div>
-                        <h4>Public Profile</h4>
-                        <p class="text-muted">Make your profile visible to everyone</p>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="publicProfile" 
-                               name="public_profile" {% if user.public_profile %}checked{% endif %}>
-                    </div>
-                </div>
-
-                <div class="privacy-option">
-                    <div>
-                        <h4>Show Email</h4>
-                        <p class="text-muted">Display your email address on your profile</p>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="showEmail" 
-                               name="show_email" {% if user.show_email %}checked{% endif %}>
-                    </div>
-                </div>
-
-                <div class="privacy-option">
-                    <div>
-                        <h4>Activity Status</h4>
-                        <p class="text-muted">Show when you're active on PulseConnect</p>
-                    </div>
-                    <div class="form-check form-switch">
-                        <input class="form-check-input" type="checkbox" id="showActivity" 
-                               name="show_activity" {% if user.show_activity %}checked{% endif %}>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Accessibility Settings -->
-        <div class="widget-card mb-4">
-            <h3 class="card-title mb-4">Accessibility Settings</h3>
-            
-            {{ accessibility_form.as_div }}
-        </div>
-
-        <!-- Form Actions -->
-        <div class="form-actions">
-            <button type="submit" class="btn btn-primary">
-                <i class="ri-save-line"></i> Save Changes
-            </button>
-            <a href="{% url 'accounts:profile' user.username %}" class="btn btn-outline-secondary">
-                <i class="ri-arrow-left-line"></i> Cancel
-            </a>
-        </div>
-    </form>
+    </div>
 </div>
-
-<style>
-    .profile-edit-container {
-        max-width: 1000px;
-        margin: 0 auto;
-    }
-
-    .form-group {
-        margin-bottom: 1rem;
-    }
-
-    .form-label {
-        font-weight: 500;
-        margin-bottom: 0.5rem;
-        color: var(--text);
-    }
-
-    .form-control {
-        background-color: var(--surface-2);
-        border: 1px solid var(--border);
-        color: var(--text);
-        border-radius: var(--radius);
-        padding: 0.75rem 1rem;
-        transition: all 0.2s ease;
-    }
-
-    .form-control:focus {
-        background-color: var(--surface);
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-
-    .avatar-upload {
-        display: flex;
-        justify-content: center;
-        margin: 2rem 0;
-    }
-
-    .avatar-preview {
-        position: relative;
-        width: 150px;
-        height: 150px;
-        border-radius: 50%;
-        overflow: hidden;
-        cursor: pointer;
-    }
-
-    .avatar-preview img {
-        width: 100%;
-        height: 100%;
-        object-fit: cover;
-    }
-
-    .avatar-overlay {
-        position: absolute;
-        top: 0;
-        left: 0;
-        width: 100%;
-        height: 100%;
-        background: rgba(0, 0, 0, 0.5);
-        display: flex;
-        flex-direction: column;
-        align-items: center;
-        justify-content: center;
-        color: white;
-        opacity: 0;
-        transition: opacity 0.2s ease;
-    }
-
-    .avatar-preview:hover .avatar-overlay {
-        opacity: 1;
-    }
-
-    .avatar-overlay i {
-        font-size: 2rem;
-        margin-bottom: 0.5rem;
-    }
-
-    .interests-container {
-        display: flex;
-        flex-wrap: wrap;
-        gap: 0.5rem;
-    }
-
-    .interest-tag {
-        display: inline-flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 0.75rem;
-        background: var(--surface-2);
-        border-radius: var(--radius);
-        font-size: 0.875rem;
-        color: var(--text-2);
-        transition: all 0.2s ease;
-    }
-
-    .interest-tag:hover {
-        background: var(--surface-3);
-    }
-
-    .remove-interest {
-        cursor: pointer;
-        transition: color 0.2s ease;
-    }
-
-    .remove-interest:hover {
-        color: var(--danger);
-    }
-
-    .privacy-settings {
-        display: flex;
-        flex-direction: column;
-        gap: 1.5rem;
-    }
-
-    .privacy-option {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        padding: 1rem;
-        background: var(--surface-2);
-        border-radius: var(--radius);
-        transition: all 0.2s ease;
-    }
-
-    .privacy-option:hover {
-        background: var(--surface-3);
-    }
-
-    .privacy-option h4 {
-        font-size: 1rem;
-        margin: 0 0 0.25rem;
-    }
-
-    .privacy-option p {
-        margin: 0;
-        font-size: 0.875rem;
-    }
-
-    .form-check-input {
-        width: 3rem;
-        height: 1.5rem;
-        cursor: pointer;
-    }
-
-    .form-actions {
-        display: flex;
-        gap: 1rem;
-        margin-top: 2rem;
-    }
-
-    .form-text {
-        font-size: 0.875rem;
-        color: var(--text-2);
-        margin-top: 0.25rem;
-    }
-</style>
-
-{% block extra_js %}
-<script>
-    // Avatar preview functionality
-    const avatarInput = document.getElementById('avatarInput');
-    const avatarPreview = document.getElementById('avatarPreview');
-    const avatarUpload = document.querySelector('.avatar-preview');
-
-    avatarUpload.addEventListener('click', () => avatarInput.click());
-
-    avatarInput.addEventListener('change', (e) => {
-        const file = e.target.files[0];
-        if (file) {
-            const reader = new FileReader();
-            reader.onload = (e) => {
-                avatarPreview.src = e.target.result;
-            };
-            reader.readAsDataURL(file);
-        }
-    });
-
-    // Research interests functionality
-    const interestsInput = document.getElementById('interestsInput');
-    const interestsContainer = document.getElementById('interestsContainer');
-
-    interestsInput?.addEventListener('keydown', (e) => {
-        if (e.key === 'Enter') {
-            e.preventDefault();
-            const value = e.target.value.trim();
-            if (value) {
-                addInterest(value);
-                e.target.value = '';
-            }
-        }
-    });
-
-    function addInterest(value) {
-        const tag = document.createElement('span');
-        tag.className = 'interest-tag';
-        tag.innerHTML = `
-            ${value}
-            <i class="ri-close-line remove-interest"></i>
-            <input type="hidden" name="interests[]" value="${value}">
-        `;
-        
-        tag.querySelector('.remove-interest').addEventListener('click', () => {
-            tag.remove();
-        });
-        
-        interestsContainer.appendChild(tag);
-    }
-
-    // Remove interest tags
-    document.querySelectorAll('.remove-interest').forEach(btn => {
-        btn.addEventListener('click', () => {
-            btn.closest('.interest-tag').remove();
-        });
-    });
-
-    // Form validation
-    const form = document.getElementById('profile-edit-form');
-    form.addEventListener('submit', (e) => {
-        e.preventDefault();
-        
-        // Add your validation logic here
-        
-        // If validation passes, submit the form
-        form.submit();
-    });
-</script>
-{% endblock %}
 {% endblock %}
