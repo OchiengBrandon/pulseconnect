@@ -1,345 +1,584 @@
-{% extends 'base.html' %}
-{% load i18n %}
+{% extends "base.html" %}
 {% load static %}
+{% load i18n %}
 
-{% block extra_css %}
-<link href="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/css/select2.min.css" rel="stylesheet" />
-<style>
-    .question-container {
-        background: #f8f9fa;
-        border-radius: 8px;
-        padding: 20px;
-        margin-bottom: 20px;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    }
-
-    .choices-container {
-        padding-left: 20px;
-        margin-top: 10px;
-    }
-
-    .numeric-fields {
-        display: none;
-    }
-
-    .delete-question {
-        color: #dc3545;
-        cursor: pointer;
-    }
-
-    .required-asterisk {
-        color: #dc3545;
-        margin-left: 4px;
-    }
-
-    .form-section {
-        margin-bottom: 30px;
-    }
-
-    .question-type-help {
-        font-size: 0.875rem;
-        color: #6c757d;
-        margin-top: 5px;
-    }
-
-    .choices-list {
-        list-style: none;
-        padding: 0;
-    }
-
-    .choice-item {
-        margin-bottom: 10px;
-    }
-
-    .add-choice-btn {
-        margin-top: 10px;
-    }
-</style>
-{% endblock %}
+{% block title %}{% trans "Create New Poll" %}{% endblock %}
 
 {% block content %}
+{% load custom_tags %}
 <div class="container py-4">
-    <h1 class="mb-4">{% trans "Create New Poll" %}</h1>
-
-    <form method="post" id="poll-form" class="needs-validation" novalidate>
-        {% csrf_token %}
-
-        <!-- Poll Details Section -->
-        <div class="card mb-4">
-            <div class="card-header">
-                <h5 class="mb-0">{% trans "Poll Details" %}</h5>
-            </div>
-            <div class="card-body">
-                {% if form.errors %}
-                <div class="alert alert-danger">
-                    {% trans "Please correct the errors below." %}
-                </div>
-                {% endif %}
-
-                <div class="row">
-                    <div class="col-md-6">
+    <div class="row">
+        <div class="col-12">
+            <h1 class="mb-4">{% trans "Create New Poll" %}</h1>
+            
+            <form method="post" id="poll-form" class="needs-validation" novalidate>
+                {% csrf_token %}
+                
+                <div class="card mb-4">
+                    <div class="card-header">
+                        <h4>{% trans "Poll Details" %}</h4>
+                    </div>
+                    <div class="card-body">
+                        {% if form.non_field_errors %}
+                            <div class="alert alert-danger">
+                                {{ form.non_field_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-8">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+                                {{ form.title|add_class:"form-control" }}
+                                {% if form.title.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.title.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
+                                {{ form.category|add_class:"form-select" }}
+                                {% if form.category.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.category.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                        
                         <div class="mb-3">
-                            <label for="{{ form.title.id_for_label }}" class="form-label">
-                                {% trans "Title" %}<span class="required-asterisk">*</span>
-                            </label>
-                            {{ form.title }}
-                            {% if form.title.errors %}
-                            <div class="invalid-feedback">{{ form.title.errors }}</div>
+                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                            {{ form.description|add_class:"form-control" }}
+                            {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
                             {% endif %}
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.category.id_for_label }}" class="form-label">
-                                {% trans "Category" %}
-                            </label>
-                            {{ form.category }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <label for="{{ form.poll_type.id_for_label }}" class="form-label">{{ form.poll_type.label }}</label>
+                                {{ form.poll_type|add_class:"form-select" }}
+                                {% if form.poll_type.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.poll_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.start_date.id_for_label }}" class="form-label">{{ form.start_date.label }}</label>
+                                {{ form.start_date|add_class:"form-control" }}
+                                {% if form.start_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.start_date.errors }}</div>
+                                {% endif %}
+                            </div>
+                            <div class="col-md-4">
+                                <label for="{{ form.end_date.id_for_label }}" class="form-label">{{ form.end_date.label }}</label>
+                                {{ form.end_date|add_class:"form-control" }}
+                                <small class="text-muted">{% trans "Optional. Leave blank for no end date." %}</small>
+                                {% if form.end_date.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.end_date.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="mb-3">
-                    <label for="{{ form.description.id_for_label }}" class="form-label">
-                        {% trans "Description" %}
-                    </label>
-                    {{ form.description }}
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.start_date.id_for_label }}" class="form-label">
-                                {% trans "Start Date" %}
-                            </label>
-                            {{ form.start_date }}
+                        
+                        <div id="institution-field" class="mb-3" style="display: none;">
+                            <label for="{{ form.restricted_to_institution.id_for_label }}" class="form-label">{{ form.restricted_to_institution.label }}</label>
+                            {{ form.restricted_to_institution|add_class:"form-control" }}
+                            {% if form.restricted_to_institution.errors %}
+                                <div class="invalid-feedback d-block">{{ form.restricted_to_institution.errors }}</div>
+                            {% endif %}
                         </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.end_date.id_for_label }}" class="form-label">
-                                {% trans "End Date" %}
-                            </label>
-                            {{ form.end_date }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-12">
+                                <label for="{{ form.tags.id_for_label }}" class="form-label">{{ form.tags.label }}</label>
+                                {{ form.tags|add_class:"form-control" }}
+                                <small class="text-muted">{% trans "Enter tags separated by commas" %}</small>
+                                {% if form.tags.errors %}
+                                    <div class="invalid-feedback d-block">{{ form.tags.errors }}</div>
+                                {% endif %}
+                            </div>
                         </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.poll_type.id_for_label }}" class="form-label">
-                                {% trans "Poll Type" %}
-                            </label>
-                            {{ form.poll_type }}
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label for="{{ form.tags.id_for_label }}" class="form-label">
-                                {% trans "Tags" %}
-                            </label>
-                            {{ form.tags }}
-                        </div>
-                    </div>
-                </div>
-
-                <div class="row">
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.allow_comments }}
-                            <label class="form-check-label" for="{{ form.allow_comments.id_for_label }}">
-                                {% trans "Allow Comments" %}
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.allow_sharing }}
-                            <label class="form-check-label" for="{{ form.allow_sharing.id_for_label }}">
-                                {% trans "Allow Sharing" %}
-                            </label>
-                        </div>
-                    </div>
-                    <div class="col-md-4">
-                        <div class="form-check">
-                            {{ form.restricted_to_institution }}
-                            <label class="form-check-label" for="{{ form.restricted_to_institution.id_for_label }}">
-                                {% trans "Restrict to Institution" %}
-                            </label>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Questions Section -->
-        <div class="card mb-4">
-            <div class="card-header d-flex justify-content-between align-items-center">
-                <h5 class="mb-0">{% trans "Questions" %}</h5>
-                <button type="button" class="btn btn-primary btn-sm" id="add-question">
-                    {% trans "Add Question" %}
-                </button>
-            </div>
-            <div class="card-body">
-                {{ question_formset.management_form }}
-                <div id="questions-container">
-                    {% for question_form in question_formset %}
-                    <div class="question-container">
-                        {{ question_form.id }}
-                        <div class="mb-3">
-                            <label class="form-label">{% trans "Question Text" %}<span class="required-asterisk">*</span></label>
-                            {{ question_form.text }}
-                        </div>
-                        <div class="row">
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{% trans "Question Type" %}</label>
-                                    {{ question_form.question_type }}
+                        
+                        <div class="row mb-3">
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.is_featured|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
+                                        {{ form.is_featured.label }}
+                                    </label>
                                 </div>
                             </div>
-                            <div class="col-md-6">
-                                <div class="mb-3">
-                                    <label class="form-label">{% trans "Order" %}</label>
-                                    {{ question_form.order }}
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.allow_comments|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.allow_comments.id_for_label }}">
+                                        {{ form.allow_comments.label }}
+                                    </label>
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-check">
+                                    {{ form.allow_sharing|add_class:"form-check-input" }}
+                                    <label class="form-check-label" for="{{ form.allow_sharing.id_for_label }}">
+                                        {{ form.allow_sharing.label }}
+                                    </label>
                                 </div>
                             </div>
                         </div>
-                        <div class="numeric-fields">
-                            <div class="row">
-                                <div class="col-md-4">
-                                    {{ question_form.min_value }}
-                                </div>
-                                <div class="col-md-4">
-                                    {{ question_form.max_value }}
-                                </div>
-                                <div class="col-md-4">
-                                    {{ question_form.step_value }}
-                                </div>
-                            </div>
-                        </div>
-                        <div class="choices-container">
-                            <div class="choices-list"></div>
-                            <button type="button" class="btn btn-outline-secondary btn-sm add-choice-btn">
-                                {% trans "Add Choice" %}
-                            </button>
-                        </div>
-                        <div class="form-check mt-3">
-                            {{ question_form.is_required }}
-                            <label class="form-check-label">
-                                {% trans "Required" %}
-                            </label>
-                        </div>
-                        <button type="button" class="btn btn-danger btn-sm mt-3 delete-question">
-                            {% trans "Delete Question" %}
+                    </div>
+                </div>
+                
+                <!-- Questions Section -->
+                <div class="card mb-4">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h4>{% trans "Questions" %}</h4>
+                        <button type="button" class="btn btn-outline-primary" id="add-question">
+                            <i class="fas fa-plus"></i> {% trans "Add Question" %}
                         </button>
                     </div>
-                    {% endfor %}
+                    <div class="card-body">
+                        {{ question_formset.management_form }}
+                        
+                        {% if question_formset.non_form_errors %}
+                            <div class="alert alert-danger">
+                                {{ question_formset.non_form_errors }}
+                            </div>
+                        {% endif %}
+                        
+                        <div id="questions-container">
+                            {% for question_form in question_formset %}
+                                <div class="question-form mb-4 p-3 border rounded">
+                                    <div class="d-flex justify-content-between mb-2">
+                                        <h5>{% trans "Question" %} #<span class="question-number">{{ forloop.counter }}</span></h5>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-question">
+                                            <i class="fas fa-trash"></i> {% trans "Remove" %}
+                                        </button>
+                                    </div>
+                                    
+                                    {{ question_form.id }}
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-8">
+                                            <label for="{{ question_form.text.id_for_label }}" class="form-label">{% trans "Question Text" %}</label>
+                                            {{ question_form.text|add_class:"form-control" }}
+                                            {% if question_form.text.errors %}
+                                                <div class="invalid-feedback d-block">{{ question_form.text.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="{{ question_form.question_type.id_for_label }}" class="form-label">{% trans "Question Type" %}</label>
+                                            <select name="{{ question_form.question_type.name }}" id="{{ question_form.question_type.id_for_label }}" class="form-select question-type-select">
+                                                {% for type in question_types %}
+                                                    <option value="{{ type.id }}" data-requires-choices="{{ type.requires_choices|yesno:'true,false' }}">{{ type.name }}</option>
+                                                {% endfor %}
+                                            </select>
+                                            {% if question_form.question_type.errors %}
+                                                <div class="invalid-feedback d-block">{{ question_form.question_type.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <div class="row mb-3">
+                                        <div class="col-md-4">
+                                            <div class="form-check">
+                                                {{ question_form.is_required|add_class:"form-check-input" }}
+                                                <label class="form-check-label" for="{{ question_form.is_required.id_for_label }}">
+                                                    {% trans "Required" %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                        <div class="col-md-2">
+                                            <label for="{{ question_form.order.id_for_label }}" class="form-label">{% trans "Order" %}</label>
+                                            {{ question_form.order|add_class:"form-control" }}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Rating and Slider specific fields -->
+                                    <div class="row mb-3 numeric-fields" style="display: none;">
+                                        <div class="col-md-4">
+                                            <label for="{{ question_form.min_value.id_for_label }}" class="form-label">{% trans "Min Value" %}</label>
+                                            {{ question_form.min_value|add_class:"form-control" }}
+                                            {% if question_form.min_value.errors %}
+                                                <div class="invalid-feedback d-block">{{ question_form.min_value.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4">
+                                            <label for="{{ question_form.max_value.id_for_label }}" class="form-label">{% trans "Max Value" %}</label>
+                                            {{ question_form.max_value|add_class:"form-control" }}
+                                            {% if question_form.max_value.errors %}
+                                                <div class="invalid-feedback d-block">{{ question_form.max_value.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="col-md-4 step-value-field">
+                                            <label for="{{ question_form.step_value.id_for_label }}" class="form-label">{% trans "Step Value" %}</label>
+                                            {{ question_form.step_value|add_class:"form-control" }}
+                                            {% if question_form.step_value.errors %}
+                                                <div class="invalid-feedback d-block">{{ question_form.step_value.errors }}</div>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Choice options for multiple choice and single choice -->
+                                    <div class="choices-container" style="display: none;">
+                                        <h6 class="mt-3">{% trans "Choices" %}</h6>
+                                        <div class="choices-list">
+                                            <!-- Initial empty choices will be added by JS -->
+                                            <div class="choice-item row mb-2">
+                                                <div class="col-10">
+                                                    <input type="text" class="form-control choice-text" 
+                                                           name="question_{{ question_form.prefix }}_choices" 
+                                                           placeholder="{% trans 'Enter choice text' %}">
+                                                </div>
+                                                <div class="col-2">
+                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-choice">
+                                                        <i class="fas fa-times"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                        </div>
+                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2 add-choice">
+                                            <i class="fas fa-plus"></i> {% trans "Add Choice" %}
+                                        </button>
+                                    </div>
+                                    
+                                    <!-- Advanced settings as JSON -->
+                                    <div class="mt-3">
+                                        <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" 
+                                           href="#settings-{{ question_form.prefix }}" role="button">
+                                            {% trans "Advanced Settings" %}
+                                        </a>
+                                        <div class="collapse mt-2" id="settings-{{ question_form.prefix }}">
+                                            <div class="card card-body bg-light">
+                                                <label for="{{ question_form.settings.id_for_label }}" class="form-label">{% trans "Settings (JSON)" %}</label>
+                                                {{ question_form.settings|add_class:"form-control" }}
+                                                <small class="text-muted">{% trans "Optional. Advanced settings in JSON format." %}</small>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    {% for hidden_field in question_form.hidden_fields %}
+                                        {{ hidden_field }}
+                                    {% endfor %}
+                                </div>
+                            {% endfor %}
+                        </div>
+                        
+                        {% if question_formset.forms|length == 0 %}
+                            <div class="alert alert-info">
+                                {% trans "Add questions to your poll using the button above." %}
+                            </div>
+                        {% endif %}
+                    </div>
                 </div>
-            </div>
+                
+                <div class="d-flex justify-content-between">
+                    <a href="{% url 'polls:poll_list' %}" class="btn btn-outline-secondary">
+                        <i class="fas fa-arrow-left"></i> {% trans "Cancel" %}
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-save"></i> {% trans "Create Poll" %}
+                    </button>
+                </div>
+            </form>
         </div>
-
-        <div class="d-flex justify-content-between">
-            <a href="{% url 'polls:poll_list' %}" class="btn btn-secondary">
-                {% trans "Cancel" %}
-            </a>
-            <button type="submit" class="btn btn-primary">
-                {% trans "Create Poll" %}
-            </button>
-        </div>
-    </form>
+    </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/select2@4.1.0-rc.0/dist/js/select2.min.js"></script>
 <script>
-    $(document).ready(function() {
-        // Initialize Select2 for tags
-        $('.select2-tags').select2({
-            tags: true,
-            tokenSeparators: [',', ' ']
-        });
-
-        // Question type change handler
-        function handleQuestionTypeChange(questionContainer) {
-            const questionType = $(questionContainer).find('[name$="-question_type"]').val();
-            const numericFields = $(questionContainer).find('.numeric-fields');
-            const choicesContainer = $(questionContainer).find('.choices-container');
-
-            numericFields.hide();
-            choicesContainer.hide();
-
-            if (questionType === 'rating' || questionType === 'numeric') {
-                numericFields.show();
-            } else if (questionType === 'single_choice' || questionType === 'multiple_choice') {
-                choicesContainer.show();
+    document.addEventListener('DOMContentLoaded', function() {
+        // Poll type change handler - show/hide institution field
+        const pollTypeSelect = document.getElementById('{{ form.poll_type.id_for_label }}');
+        const institutionField = document.getElementById('institution-field');
+        
+        pollTypeSelect.addEventListener('change', function() {
+            if (this.value === 'institution') {
+                institutionField.style.display = 'block';
+            } else {
+                institutionField.style.display = 'none';
             }
+        });
+        
+        // Initialize institution field visibility
+        if (pollTypeSelect.value === 'institution') {
+            institutionField.style.display = 'block';
         }
-
-        // Initialize existing questions
-        $('.question-container').each(function() {
-            handleQuestionTypeChange(this);
-        });
-
-        // Add question handler
-        $('#add-question').click(function() {
-            const totalForms = $('#id_question_set-TOTAL_FORMS');
-            const newIndex = parseInt(totalForms.val());
-            const template = $('.question-container').first().clone();
-
-            // Clear values and update indices
-            template.find('input, textarea, select').each(function() {
-                const name = $(this).attr('name').replace('-0-', `-${newIndex}-`);
-                $(this).attr('name', name).attr('id', `id_${name}`).val('');
-            });
-
-            $('#questions-container').append(template);
-            totalForms.val(newIndex + 1);
-
-            // Initialize the new question
-            handleQuestionTypeChange(template);
-        });
-
-        // Delete question handler
-        $(document).on('click', '.delete-question', function() {
-            $(this).closest('.question-container').remove();
-        });
-
-        // Question type change event
-        $(document).on('change', '[name$="-question_type"]', function() {
-            handleQuestionTypeChange($(this).closest('.question-container'));
-        });
-
-        // Add choice handler
-        $(document).on('click', '.add-choice-btn', function() {
-            const choicesList = $(this).siblings('.choices-list');
-            const choiceTemplate = `
-                <div class="choice-item input-group mb-2">
-                    <input type="text" class="form-control" name="choice_text" placeholder="{% trans "Enter choice text" %}">
-                    <button type="button" class="btn btn-outline-danger delete-choice">×</button>
-                </div>
-            `;
-            choicesList.append(choiceTemplate);
-        });
-
-        // Delete choice handler
-        $(document).on('click', '.delete-choice', function() {
-            $(this).closest('.choice-item').remove();
-        });
-
-        // Form submission handler
-        $('#poll-form').submit(function(e) {
-            // Collect choices data
-            $('.question-container').each(function(index) {
-                const questionType = $(this).find('[name$="-question_type"]').val();
-                if (questionType === 'single_choice' || questionType === 'multiple_choice') {
-                    const choices = [];
-                    $(this).find('.choice-item input').each(function() {
-                        choices.push($(this).val());
-                    });
-                    $(this).append(`<input type="hidden" name="question_${index}_choices" value="${choices.join('|')}">`);
+        
+        // Question formset management
+        const questionsContainer = document.getElementById('questions-container');
+        const addQuestionBtn = document.getElementById('add-question');
+        const totalFormsInput = document.getElementById('id_{{ question_formset.prefix }}-TOTAL_FORMS');
+        let formCount = parseInt(totalFormsInput.value);
+        
+        // Function to update form indices
+        function updateFormIndices() {
+            const questionForms = questionsContainer.querySelectorAll('.question-form');
+            questionForms.forEach((form, index) => {
+                form.querySelector('.question-number').textContent = index + 1;
+                
+                // Update order field with the new index if it's the default value
+                const orderInput = form.querySelector('input[name$="-order"]');
+                if (orderInput && (orderInput.value === '' || orderInput.value === '0')) {
+                    orderInput.value = index;
                 }
             });
+        }
+        
+        // Function to add a new question form
+        addQuestionBtn.addEventListener('click', function() {
+            // Clone the first form (empty template)
+            let newForm;
+            if (questionsContainer.querySelector('.question-form')) {
+                newForm = questionsContainer.querySelector('.question-form').cloneNode(true);
+                
+                // Clear values from the cloned form
+                newForm.querySelectorAll('input[type="text"], textarea').forEach(input => {
+                    input.value = '';
+                });
+                
+                // Reset checkboxes
+                newForm.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
+                    checkbox.checked = checkbox.defaultChecked;
+                });
+                
+                // Reset hidden ID field
+                const idField = newForm.querySelector('input[name$="-id"]');
+                if (idField) idField.value = '';
+            } else {
+                // Create a completely new form if there's no template
+                newForm = document.createElement('div');
+                newForm.className = 'question-form mb-4 p-3 border rounded';
+                newForm.innerHTML = `
+                    <div class="d-flex justify-content-between mb-2">
+                        <h5>{% trans "Question" %} #<span class="question-number">1</span></h5>
+                        <button type="button" class="btn btn-sm btn-outline-danger delete-question">
+                            <i class="fas fa-trash"></i> {% trans "Remove" %}
+                        </button>
+                    </div>
+                    
+                    <input type="hidden" name="{{ question_formset.prefix }}-${formCount}-id" id="id_{{ question_formset.prefix }}-${formCount}-id">
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-8">
+                            <label class="form-label">{% trans "Question Text" %}</label>
+                            <textarea name="{{ question_formset.prefix }}-${formCount}-text" class="form-control" rows="3" required></textarea>
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{% trans "Question Type" %}</label>
+                            <select name="{{ question_formset.prefix }}-${formCount}-question_type" class="form-select question-type-select">
+                                {% for type in question_types %}
+                                    <option value="{{ type.id }}" data-requires-choices="{{ type.requires_choices|yesno:'true,false' }}">{{ type.name }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3">
+                        <div class="col-md-4">
+                            <div class="form-check">
+                                <input type="checkbox" name="{{ question_formset.prefix }}-${formCount}-is_required" class="form-check-input" checked>
+                                <label class="form-check-label">{% trans "Required" %}</label>
+                            </div>
+                        </div>
+                        <div class="col-md-2">
+                            <label class="form-label">{% trans "Order" %}</label>
+                            <input type="number" name="{{ question_formset.prefix }}-${formCount}-order" class="form-control" value="${formCount}">
+                        </div>
+                    </div>
+                    
+                    <div class="row mb-3 numeric-fields" style="display: none;">
+                        <div class="col-md-4">
+                            <label class="form-label">{% trans "Min Value" %}</label>
+                            <input type="number" name="{{ question_formset.prefix }}-${formCount}-min_value" class="form-control">
+                        </div>
+                        <div class="col-md-4">
+                            <label class="form-label">{% trans "Max Value" %}</label>
+                            <input type="number" name="{{ question_formset.prefix }}-${formCount}-max_value" class="form-control">
+                        </div>
+                        <div class="col-md-4 step-value-field">
+                            <label class="form-label">{% trans "Step Value" %}</label>
+                            <input type="number" name="{{ question_formset.prefix }}-${formCount}-step_value" class="form-control" step="0.1">
+                        </div>
+                    </div>
+                    
+                    <div class="choices-container" style="display: none;">
+                        <h6 class="mt-3">{% trans "Choices" %}</h6>
+                        <div class="choices-list">
+                            <div class="choice-item row mb-2">
+                                <div class="col-10">
+                                    <input type="text" class="form-control choice-text" 
+                                           name="question_{{ question_formset.prefix }}-${formCount}_choices" 
+                                           placeholder="{% trans 'Enter choice text' %}">
+                                </div>
+                                <div class="col-2">
+                                    <button type="button" class="btn btn-sm btn-outline-danger remove-choice">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2 add-choice">
+                            <i class="fas fa-plus"></i> {% trans "Add Choice" %}
+                        </button>
+                    </div>
+                    
+                    <div class="mt-3">
+                        <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" 
+                           href="#settings-{{ question_formset.prefix }}-${formCount}" role="button">
+                            {% trans "Advanced Settings" %}
+                        </a>
+                        <div class="collapse mt-2" id="settings-{{ question_formset.prefix }}-${formCount}">
+                            <div class="card card-body bg-light">
+                                <label class="form-label">{% trans "Settings (JSON)" %}</label>
+                                <textarea name="{{ question_formset.prefix }}-${formCount}-settings" class="form-control json-settings" rows="3"></textarea>
+                                <small class="text-muted">{% trans "Optional. Advanced settings in JSON format." %}</small>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            // Update form indices
+            const formRegex = new RegExp('{{ question_formset.prefix }}-\\d+', 'g');
+            newForm.innerHTML = newForm.innerHTML.replace(formRegex, `{{ question_formset.prefix }}-${formCount}`);
+            
+            // Add the new form to the container
+            questionsContainer.appendChild(newForm);
+            
+            // Increment form count
+            formCount++;
+            totalFormsInput.value = formCount;
+            
+            // Update question numbers
+            updateFormIndices();
+            
+            // Re-attach event handlers
+            attachQuestionEventHandlers();
+        });
+        
+        // Function to remove a question form
+        function attachQuestionEventHandlers() {
+            // Delete question buttons
+            document.querySelectorAll('.delete-question').forEach(button => {
+                button.addEventListener('click', function() {
+                    const form = this.closest('.question-form');
+                    form.remove();
+                    
+                    // Update form count and indices
+                    formCount--;
+                    totalFormsInput.value = formCount;
+                    updateFormIndices();
+                });
+            });
+            
+            // Question type change handlers
+            document.querySelectorAll('.question-type-select').forEach(select => {
+                select.addEventListener('change', function() {
+                    const form = this.closest('.question-form');
+                    const numericFields = form.querySelector('.numeric-fields');
+                    const choicesContainer = form.querySelector('.choices-container');
+                    const stepValueField = form.querySelector('.step-value-field');
+                    const option = this.options[this.selectedIndex];
+                    const requiresChoices = option.getAttribute('data-requires-choices') === 'true';
+                    
+                    // Get the selected question type (this needs to be adjusted based on your actual types)
+                    const selectedType = this.options[this.selectedIndex].text.toLowerCase();
+                    const isRating = selectedType.includes('rating');
+                    const isSlider = selectedType.includes('slider');
+                    
+                    // Show/hide numeric fields
+                    if (isRating || isSlider) {
+                        numericFields.style.display = 'flex';
+                        stepValueField.style.display = isSlider ? 'block' : 'none';
+                    } else {
+                        numericFields.style.display = 'none';
+                    }
+                    
+                    // Show/hide choices
+                    if (requiresChoices) {
+                        choicesContainer.style.display = 'block';
+                    } else {
+                        choicesContainer.style.display = 'none';
+                    }
+                });
+                
+                // Trigger change to initialize UI
+                select.dispatchEvent(new Event('change'));
+            });
+            
+            // Add choice button handlers
+            document.querySelectorAll('.add-choice').forEach(button => {
+                button.addEventListener('click', function() {
+                    const form = this.closest('.question-form');
+                    const choicesList = form.querySelector('.choices-list');
+                    const choiceItem = choicesList.querySelector('.choice-item').cloneNode(true);
+                    
+                    // Clear the input value
+                    choiceItem.querySelector('input').value = '';
+                    
+                    // Add remove button handler
+                    choiceItem.querySelector('.remove-choice').addEventListener('click', function() {
+                        if (choicesList.querySelectorAll('.choice-item').length > 1) {
+                            this.closest('.choice-item').remove();
+                        }
+                    });
+                    
+                    choicesList.appendChild(choiceItem);
+                });
+            });
+            
+            // Remove choice button handlers
+            document.querySelectorAll('.remove-choice').forEach(button => {
+                button.addEventListener('click', function() {
+                    const choicesList = this.closest('.choices-list');
+                    if (choicesList.querySelectorAll('.choice-item').length > 1) {
+                        this.closest('.choice-item').remove();
+                    }
+                });
+            });
+        }
+        
+        // Initial setup
+        attachQuestionEventHandlers();
+        
+        // If no questions exist, add one by default
+        if (formCount === 0) {
+            addQuestionBtn.click();
+        }
+        
+        // Form validation before submit
+        document.getElementById('poll-form').addEventListener('submit', function(e) {
+            let isValid = true;
+            
+            // Check if at least one question exists
+            if (questionsContainer.querySelectorAll('.question-form').length === 0) {
+                alert("{% trans 'Please add at least one question to your poll' %}");
+                isValid = false;
+            }
+            
+            // Check that questions with required choices have at least two choices
+            document.querySelectorAll('.question-form').forEach(form => {
+                const questionTypeSelect = form.querySelector('.question-type-select');
+                const option = questionTypeSelect.options[questionTypeSelect.selectedIndex];
+                const requiresChoices = option.getAttribute('data-requires-choices') === 'true';
+                
+                if (requiresChoices) {
+                    const choiceInputs = form.querySelectorAll('.choice-text');
+                    let validChoicesCount = 0;
+                    
+                    choiceInputs.forEach(input => {
+                        if (input.value.trim() !== '') {
+                            validChoicesCount++;
+                        }
+                    });
+                    
+                    if (validChoicesCount < 2) {
+                        const questionNum = form.querySelector('.question-number').textContent;
+                        alert(`{% trans "Question" %} #${questionNum} {% trans "requires at least two valid choices" %}`);
+                        isValid = false;
+                    }
+                }
+            });
+            
+            if (!isValid) {
+                e.preventDefault();
+            }
         });
     });
 </script>
