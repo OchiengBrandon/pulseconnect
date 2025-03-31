@@ -1,6 +1,7 @@
 import os
 from pathlib import Path
 from django.utils.translation import gettext_lazy as _
+from decouple import config, Csv
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -84,18 +85,19 @@ TEMPLATES = [
 WSGI_APPLICATION = 'pulseconnect.wsgi.application'
 ASGI_APPLICATION = 'pulseconnect.asgi.application'
 
-# Database configuration
+
+
+# Database configuration for MySQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql' if os.getenv('USE_MYSQL', 'False') == 'True' else 'django.db.backends.sqlite3',
-        'NAME': os.getenv('MYSQL_DATABASE', 'pulseconnect') if os.getenv('USE_MYSQL', 'False') == 'True' else os.path.join(BASE_DIR, 'db.sqlite3'),
-        'USER': os.getenv('MYSQL_USER', 'root') if os.getenv('USE_MYSQL', 'False') == 'True' else '',
-        'PASSWORD': os.getenv('MYSQL_PASSWORD', 'Brandon') if os.getenv('USE_MYSQL', 'False') == 'True' else '',
-        'HOST': os.getenv('MYSQL_HOST', 'localhost') if os.getenv('USE_MYSQL', 'False') == 'True' else '',
-        'PORT': os.getenv('MYSQL_PORT', '3306') if os.getenv('USE_MYSQL', 'False') == 'True' else '',
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('MYSQL_DATABASE', default='pulseconnect'),
+        'USER': config('MYSQL_USER', default='root'),
+        'PASSWORD': config('MYSQL_PASSWORD', default='Brandon'),
+        'HOST': config('MYSQL_HOST', default='localhost'),
+        'PORT': int(config('MYSQL_PORT', default=3306)),
     }
 }
-
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
 
