@@ -1,51 +1,282 @@
-<!-- templates/gamification/leaderboard.html -->
 {% extends 'base.html' %}
+
+{% block title %}Leaderboards - PulseConnect{% endblock %}
+
+{% block page_title %}Leaderboards{% endblock %}
 {% load custom_filters %}
-{% load static %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <h1 class="text-3xl font-bold mb-8">Leaderboards</h1>
+<div class="leaderboard-container">
+    <!-- Time Period Filter -->
+    <div class="filter-bar mb-4">
+        <div class="btn-group">
+            <a href="?period=weekly" class="btn btn-outline-primary {% if selected_period == 'weekly' %}active{% endif %}">
+                <i class="ri-calendar-line me-2"></i>Weekly
+            </a>
+            <a href="?period=monthly" class="btn btn-outline-primary {% if selected_period == 'monthly' %}active{% endif %}">
+                <i class="ri-calendar-check-line me-2"></i>Monthly
+            </a>
+            <a href="?period=all_time" class="btn btn-outline-primary {% if selected_period == 'all_time' %}active{% endif %}">
+                <i class="ri-time-line me-2"></i>All Time
+            </a>
+        </div>
+    </div>
 
-    <div class="grid grid-cols-1 md:grid-cols-2 gap-8">
+    <!-- Leaderboards Grid -->
+    <div class="leaderboard-grid">
         {% for leaderboard in leaderboards %}
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <div class="flex justify-between items-center mb-4">
-                <h2 class="text-2xl font-bold">{{ leaderboard.title }}</h2>
-                <span class="text-sm text-gray-600">{{ leaderboard.get_time_period_display }}</span>
+        <div class="widget-card leaderboard-card">
+            <div class="leaderboard-header">
+                <div class="d-flex align-items-center gap-3">
+                    <div class="leaderboard-icon">
+                        <i class="{{ leaderboard.icon_class|default:'ri-trophy-line' }}"></i>
+                    </div>
+                    <div>
+                        <h3 class="h5 mb-1">{{ leaderboard.title }}</h3>
+                        <p class="text-muted small mb-0">{{ leaderboard.description }}</p>
+                    </div>
+                </div>
+                
+                {% if user.is_authenticated %}
+                <div class="user-rank-badge">
+                    {% with stats=user_stats|get_item:leaderboard.id %}
+                    {% if stats.rank %}
+                        <span class="rank">#{{ stats.rank }}</span>
+                        <span class="score">{{ stats.score }} pts</span>
+                    {% else %}
+                        <span class="not-ranked">Not Ranked</span>
+                    {% endif %}
+                    {% endwith %}
+                </div>
+                {% endif %}
             </div>
 
-            <div class="space-y-4">
+            <div class="leaderboard-list">
                 {% for leader in leaderboard.leaders %}
-                <div class="flex items-center {% if leader.id == user.id %}bg-blue-50{% endif %} p-2 rounded">
-                    <span class="w-8 text-center font-bold {% if forloop.counter <= 3 %}text-gold{% endif %}">
-                        {{ forloop.counter }}
-                    </span>
-                    <div class="flex-1">
-                        <span class="font-medium">{{ leader.username }}</span>
-                        {% if leader.id == user.id %}
-                        <span class="text-sm text-blue-600">(You)</span>
+                <div class="leaderboard-item {% if leader.user == request.user %}highlight{% endif %}">
+                    <div class="rank">
+                        {% if forloop.counter <= 3 %}
+                        <div class="trophy-icon rank-{{ forloop.counter }}">
+                            <i class="ri-trophy-fill"></i>
+                        </div>
+                        {% else %}
+                        #{{ forloop.counter }}
                         {% endif %}
                     </div>
-                    <span class="font-bold">{{ leader.score }}</span>
+                    
+                    <div class="user-info">
+                        <img src="{{ leader.profile_picture|default:'https://via.placeholder.com/40' }}" 
+                             alt="{{ leader.username }}" 
+                             class="user-avatar">
+                        <div class="details">
+                            <span class="username">{{ leader.username }}</span>
+                            <span class="level">Level {{ leader.level|default:1 }}</span>
+                        </div>
+                    </div>
+                    
+                    <div class="score">
+                        <span class="points">{{ leader.score }}</span>
+                        <span class="label">points</span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state">
+                    <i class="ri-user-search-line"></i>
+                    <p>No participants yet</p>
                 </div>
                 {% endfor %}
             </div>
-
-            {% if user.is_authenticated %}
-            <div class="mt-6 pt-4 border-t">
-                <div class="text-sm text-gray-600">
-                    Your Rank: 
-                    {% if user_ranks|get_item:leaderboard.id %}
-                        #{{ user_ranks|get_item:leaderboard.id }}
-                    {% else %}
-                        Not ranked
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
         </div>
         {% endfor %}
     </div>
 </div>
+
+<style>
+.leaderboard-container {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+.leaderboard-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(400px, 1fr));
+    gap: 2rem;
+}
+
+.leaderboard-card {
+    height: 100%;
+    display: flex;
+    flex-direction: column;
+}
+
+.leaderboard-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.leaderboard-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius);
+    background-color: var(--primary);
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.user-rank-badge {
+    padding: 0.5rem 1rem;
+    border-radius: var(--radius);
+    background-color: var(--surface-2);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    min-width: 100px;
+}
+
+.user-rank-badge .rank {
+    font-size: 1.25rem;
+    font-weight: 600;
+    color: var(--primary);
+}
+
+.user-rank-badge .score {
+    font-size: 0.875rem;
+    color: var(--text-2);
+}
+
+.leaderboard-item {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    border-radius: var(--radius);
+    margin-bottom: 0.5rem;
+    transition: all 0.2s ease;
+}
+
+.leaderboard-item:hover {
+    background-color: var(--surface-2);
+}
+
+.leaderboard-item.highlight {
+    background-color: var(--primary);
+    color: white;
+}
+
+.leaderboard-item .rank {
+    width: 40px;
+    text-align: center;
+    font-weight: 600;
+}
+
+.trophy-icon {
+    font-size: 1.5rem;
+}
+
+.trophy-icon.rank-1 { color: #FFD700; }
+.trophy-icon.rank-2 { color: #C0C0C0; }
+.trophy-icon.rank-3 { color: #CD7F32; }
+
+.user-info {
+    flex: 1;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    margin: 0 1rem;
+}
+
+.user-avatar {
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    object-fit: cover;
+}
+
+.details {
+    display: flex;
+    flex-direction: column;
+}
+
+.username {
+    font-weight: 500;
+}
+
+.level {
+    font-size: 0.875rem;
+    color: var(--text-2);
+}
+
+.highlight .level {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.score {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.score .points {
+    font-weight: 600;
+    font-size: 1.125rem;
+}
+
+.score .label {
+    font-size: 0.75rem;
+    color: var(--text-2);
+}
+
+.highlight .score .label {
+    color: rgba(255, 255, 255, 0.8);
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: var(--text-2);
+}
+
+.empty-state i {
+    font-size: 3rem;
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .leaderboard-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .user-info {
+        margin: 0 0.5rem;
+    }
+    
+    .details {
+        max-width: 120px;
+    }
+    
+    .username {
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+    }
+}
+</style>
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    // Add smooth animations for rank changes
+    const leaderboardItems = document.querySelectorAll('.leaderboard-item');
+    leaderboardItems.forEach((item, index) => {
+        item.style.animation = `slideIn 0.3s ease forwards ${index * 0.1}s`;
+    });
+});
+</script>
+{% endblock %}
 {% endblock %}

@@ -1,98 +1,467 @@
-<!-- templates/gamification/rewards_home.html -->
 {% extends 'base.html' %}
-{% load static %}
+
+{% block title %}Rewards & Achievements - PulseConnect{% endblock %}
+
+{% block page_title %}Rewards & Achievements{% endblock %}
 
 {% block content %}
-<div class="container mx-auto px-4 py-8">
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        <!-- User Points Card -->
-        {% if user.is_authenticated %}
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-2xl font-bold mb-4">Your Points</h2>
-            <div class="space-y-2">
-                <div class="flex justify-between">
-                    <span>Total Points:</span>
-                    <span class="font-bold">{{ user_points.total_points }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Poll Points:</span>
-                    <span>{{ user_points.poll_creation_points|add:user_points.poll_participation_points }}</span>
-                </div>
-                <div class="flex justify-between">
-                    <span>Discussion Points:</span>
-                    <span>{{ user_points.discussion_points }}</span>
-                </div>
-                <!-- Add more point categories -->
+<div class="rewards-dashboard">
+    <!-- Quick Navigation Cards -->
+    <div class="quick-nav-grid mb-4">
+        <a href="{% url 'gamification:leaderboard' %}" class="quick-nav-card">
+            <div class="icon-wrapper purple">
+                <i class="ri-trophy-line"></i>
             </div>
-            <a href="{% url 'gamification:points_history' %}" 
-               class="mt-4 inline-block bg-blue-500 text-white px-4 py-2 rounded hover:bg-blue-600">
-                View History
-            </a>
-        </div>
-        {% endif %}
+            <h3>Leaderboard</h3>
+            <p>View rankings and compete</p>
+            <span class="arrow-icon"><i class="ri-arrow-right-line"></i></span>
+        </a>
 
-        <!-- Recent Badges -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-2xl font-bold mb-4">Recent Badges</h2>
-            <div class="grid grid-cols-2 gap-4">
-                {% for badge_award in user_badges|slice:":4" %}
-                <div class="text-center">
-                    <div class="w-16 h-16 mx-auto mb-2 bg-gray-200 rounded-full flex items-center justify-center">
-                        <i class="{{ badge_award.badge.icon }} text-2xl"></i>
+        <a href="{% url 'gamification:badge_list' %}" class="quick-nav-card">
+            <div class="icon-wrapper green">
+                <i class="ri-medal-line"></i>
+            </div>
+            <h3>All Badges</h3>
+            <p>Discover achievements</p>
+            <span class="arrow-icon"><i class="ri-arrow-right-line"></i></span>
+        </a>
+
+        <a href="{% url 'gamification:user_badges' %}" class="quick-nav-card">
+            <div class="icon-wrapper blue">
+                <i class="ri-award-line"></i>
+            </div>
+            <h3>My Badges</h3>
+            <p>View your collection</p>
+            <span class="arrow-icon"><i class="ri-arrow-right-line"></i></span>
+        </a>
+
+        <a href="{% url 'gamification:points_history' %}" class="quick-nav-card">
+            <div class="icon-wrapper orange">
+                <i class="ri-history-line"></i>
+            </div>
+            <h3>Points History</h3>
+            <p>Track your progress</p>
+            <span class="arrow-icon"><i class="ri-arrow-right-line"></i></span>
+        </a>
+    </div>
+
+    <!-- Points Stats -->
+    <div class="stats-grid mb-4">
+        <div class="stat-card" data-tippy-content="Your total earned points">
+            <div class="stat-icon purple">
+                <i class="ri-coins-line"></i>
+            </div>
+            <div>
+                <h3 class="h6 text-muted mb-1">Total Points</h3>
+                <h2 class="h4 mb-0" id="totalPoints">{{ user_points.total_points|default:"0" }}</h2>
+            </div>
+        </div>
+        
+        <div class="stat-card" data-tippy-content="Points earned this week">
+            <div class="stat-icon green">
+                <i class="ri-line-chart-line"></i>
+            </div>
+            <div>
+                <h3 class="h6 text-muted mb-1">Weekly Points</h3>
+                <h2 class="h4 mb-0">+{{ weekly_points|default:"0" }}</h2>
+            </div>
+        </div>
+        
+        <div class="stat-card" data-tippy-content="Your current rank">
+            <div class="stat-icon blue">
+                <i class="ri-trophy-line"></i>
+            </div>
+            <div>
+                <h3 class="h6 text-muted mb-1">Global Rank</h3>
+                <h2 class="h4 mb-0">#{{ global_rank|default:"--" }}</h2>
+            </div>
+        </div>
+    </div>
+
+    <div class="row g-4">
+        <!-- Points History Chart -->
+        <div class="col-lg-8">
+            <div class="widget-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="h5 mb-0">Points Activity</h3>
+                    <div class="btn-group">
+                        <button class="btn btn-sm btn-outline-primary active" data-period="week">Week</button>
+                        <button class="btn btn-sm btn-outline-primary" data-period="month">Month</button>
+                        <a href="{% url 'gamification:points_history' %}" class="btn btn-sm btn-outline-primary">
+                            View All
+                            <i class="ri-arrow-right-line ms-1"></i>
+                        </a>
                     </div>
-                    <p class="text-sm">{{ badge_award.badge.name }}</p>
                 </div>
-                {% endfor %}
+                <canvas id="pointsChart" height="300"></canvas>
             </div>
-            <a href="{% url 'gamification:badge_list' %}" 
-               class="mt-4 inline-block bg-purple-500 text-white px-4 py-2 rounded hover:bg-purple-600">
-                View All Badges
-            </a>
         </div>
 
-        <!-- Leaderboard Preview -->
-        <div class="bg-white rounded-lg shadow-lg p-6">
-            <h2 class="text-2xl font-bold mb-4">Top Contributors</h2>
-            {% for leaderboard in leaderboards %}
-            <div class="mb-6">
-                <h3 class="text-lg font-semibold mb-2">{{ leaderboard.title }}</h3>
-                <div class="space-y-2">
-                    {% for leader in leaderboard.get_leaders|slice:":5" %}
-                    <div class="flex justify-between items-center">
-                        <div class="flex items-center">
-                            <span class="w-6 text-center">{{ forloop.counter }}</span>
-                            <span>{{ leader.username }}</span>
+        <!-- Recent Achievements -->
+        <div class="col-lg-4">
+            <div class="widget-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="h5 mb-0">Recent Achievements</h3>
+                    <a href="{% url 'gamification:user_badges' %}" class="btn btn-link btn-sm text-decoration-none">
+                        View All
+                        <i class="ri-arrow-right-line ms-1"></i>
+                    </a>
+                </div>
+                
+                <div class="achievements-list">
+                    {% for award in recent_achievements %}
+                    <div class="achievement-card" data-tippy-content="{{ award.badge.description }}">
+                        <div class="achievement-icon" style="background-color: {{ award.badge.color|default:'var(--primary)' }}">
+                            <i class="{{ award.badge.icon_class }}"></i>
                         </div>
-                        <span class="font-bold">{{ leader.score }}</span>
+                        <div class="achievement-info">
+                            <h4 class="h6 mb-1">{{ award.badge.name }}</h4>
+                            <p class="small text-muted mb-0">{{ award.awarded_at|timesince }} ago</p>
+                        </div>
+                        <a href="{% url 'gamification:badge_detail' award.badge.id %}" class="achievement-link">
+                            <i class="ri-arrow-right-s-line"></i>
+                        </a>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="ri-medal-line mb-2"></i>
+                        <p>No achievements yet</p>
+                        <a href="{% url 'gamification:badge_list' %}" class="btn btn-sm btn-primary mt-2">
+                            Discover Badges
+                        </a>
                     </div>
                     {% endfor %}
                 </div>
             </div>
-            {% endfor %}
-            <a href="{% url 'gamification:leaderboard' %}" 
-               class="mt-4 inline-block bg-green-500 text-white px-4 py-2 rounded hover:bg-green-600">
-                View Full Leaderboard
-            </a>
+        </div>
+
+        <!-- Next Badges Progress -->
+        <div class="col-12">
+            <div class="widget-card">
+                <div class="d-flex justify-content-between align-items-center mb-4">
+                    <h3 class="h5 mb-0">Next Achievements</h3>
+                    <a href="{% url 'gamification:badge_list' %}" class="btn btn-link btn-sm text-decoration-none">
+                        View All Badges
+                        <i class="ri-arrow-right-line ms-1"></i>
+                    </a>
+                </div>
+                
+                <div class="next-badges-grid">
+                    {% for progress in badge_progress %}
+                    <div class="badge-progress-card">
+                        <div class="badge-icon" style="background-color: {{ progress.badge.color|default:'var(--primary)' }}">
+                            <i class="{{ progress.badge.icon_class }}"></i>
+                        </div>
+                        <div class="badge-details">
+                            <div class="d-flex justify-content-between align-items-start mb-2">
+                                <div>
+                                    <h4 class="h6 mb-1">{{ progress.badge.name }}</h4>
+                                    <p class="small text-muted mb-0">{{ progress.badge.description }}</p>
+                                </div>
+                                <span class="progress-percentage">{{ progress.percentage }}%</span>
+                            </div>
+                            <div class="progress" style="height: 6px;">
+                                <div class="progress-bar" role="progressbar" 
+                                     style="width: {{ progress.percentage }}%"
+                                     aria-valuenow="{{ progress.percentage }}" 
+                                     aria-valuemin="0" 
+                                     aria-valuemax="100"></div>
+                            </div>
+                            <p class="small text-muted mt-2">
+                                {{ progress.current }}/{{ progress.required }} {{ progress.badge.requirement_type|title }}
+                            </p>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="ri-award-line mb-2"></i>
+                        <p>All badges achieved!</p>
+                        <a href="{% url 'gamification:badge_list' %}" class="btn btn-sm btn-primary mt-2">
+                            View All Badges
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
-<!-- Points Update Script -->
+<style>
+.rewards-dashboard {
+    max-width: 1400px;
+    margin: 0 auto;
+}
+
+/* Quick Navigation Cards */
+.quick-nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.quick-nav-card {
+    background-color: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    text-decoration: none;
+    color: var(--text);
+    position: relative;
+    transition: all 0.3s ease;
+}
+
+.quick-nav-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-lg);
+    color: var(--text);
+}
+
+.quick-nav-card .icon-wrapper {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+    color: white;
+    margin-bottom: 1rem;
+}
+
+.quick-nav-card .icon-wrapper.purple { background-color: var(--primary); }
+.quick-nav-card .icon-wrapper.green { background-color: var(--success); }
+.quick-nav-card .icon-wrapper.blue { background-color: #3b82f6; }
+.quick-nav-card .icon-wrapper.orange { background-color: var(--warning); }
+
+.quick-nav-card h3 {
+    font-size: 1.125rem;
+    margin-bottom: 0.5rem;
+}
+
+.quick-nav-card p {
+    font-size: 0.875rem;
+    color: var(--text-2);
+    margin-bottom: 0;
+}
+
+.quick-nav-card .arrow-icon {
+    position: absolute;
+    top: 1.5rem;
+    right: 1.5rem;
+    opacity: 0;
+    transition: all 0.3s ease;
+}
+
+.quick-nav-card:hover .arrow-icon {
+    opacity: 1;
+    transform: translateX(5px);
+}
+
+/* Stats Cards */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1rem;
+}
+
+.stat-card {
+    background-color: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: all 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+/* Achievement Cards */
+.achievements-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.achievement-card {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--radius);
+    background-color: var(--surface-2);
+    transition: all 0.2s ease;
+}
+
+.achievement-card:hover {
+    transform: translateX(5px);
+    background-color: var(--surface-3);
+}
+
+.achievement-icon {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+    font-size: 1.25rem;
+}
+
+.achievement-link {
+    margin-left: auto;
+    color: var(--text-2);
+    transition: all 0.2s ease;
+}
+
+.achievement-link:hover {
+    color: var(--primary);
+}
+
+/* Next Badges Grid */
+.next-badges-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+}
+
+.badge-progress-card {
+    display: flex;
+    gap: 1rem;
+    padding: 1rem;
+    border-radius: var(--radius);
+    background-color: var(--surface-2);
+    transition: all 0.2s ease;
+}
+
+.badge-progress-card:hover {
+    background-color: var(--surface-3);
+}
+
+.badge-details {
+    flex: 1;
+}
+
+.progress-percentage {
+    font-weight: 600;
+    color: var(--primary);
+}
+
+/* Empty States */
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: var(--text-2);
+}
+
+.empty-state i {
+    font-size: 2.5rem;
+    display: block;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .quick-nav-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .next-badges-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    function updatePoints() {
-        fetch('{% url "gamification:api_points" %}')
-            .then(response => response.json())
-            .then(data => {
-                // Update points display
-                document.getElementById('total-points').textContent = data.total_points;
-                // Update other point categories...
-            })
-            .catch(error => console.error('Error fetching points:', error));
+document.addEventListener('DOMContentLoaded', () => {
+    // Initialize tooltips
+    tippy('[data-tippy-content]');
+    
+    // Points History Chart
+    const ctx = document.getElementById('pointsChart').getContext('2d');
+    const pointsData = JSON.parse('{{ point_history|safe|escapejs }}');
+
+    new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: pointsData.map(d => new Date(d.date).toLocaleDateString()),
+            datasets: [{
+                label: 'Points Earned',
+                data: pointsData.map(d => d.total),
+                borderColor: '#6366f1',
+                backgroundColor: 'rgba(99, 102, 241, 0.1)',
+                fill: true,
+                tension: 0.4
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    grid: {
+                        display: false
+                    }
+                },
+                x: {
+                    grid: {
+                        display: false
+                    }
+                }
+            }
+        }
+    });
+
+    // Real-time points update
+    async function updatePoints() {
+        try {
+            const response = await fetch("{% url 'gamification:api_points' %}");
+            const data = await response.json();
+            document.getElementById('totalPoints').textContent = data.total_points;
+        } catch (error) {
+            console.error('Error updating points:', error);
+        }
     }
 
-    // Update points every 60 seconds
-    setInterval(updatePoints, 60000);
+    // Update points every 30 seconds
+    setInterval(updatePoints, 30000);
+
+    // Period Selector for Chart
+    document.querySelectorAll('[data-period]').forEach(button => {
+        button.addEventListener('click', async (e) => {
+            // Remove active class from all buttons
+            e.target.parentElement.querySelectorAll('.btn').forEach(btn => {
+                btn.classList.remove('active');
+            });
+            // Add active class to clicked button
+            e.target.classList.add('active');
+
+            try {
+                const period = e.target.dataset.period;
+                const response = await fetch(`{% url 'gamification:api_points' %}?period=${period}`);
+                const data = await response.json();
+                // Update chart data...
+            } catch (error) {
+                console.error('Error updating chart:', error);
+            }
+        });
+    });
 });
 </script>
+{% endblock %}
 {% endblock %}
