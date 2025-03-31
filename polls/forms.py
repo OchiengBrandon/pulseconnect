@@ -22,9 +22,10 @@ class PollCategoryForm(forms.ModelForm):
         }
 
 
+
 class PollForm(forms.ModelForm):
     tags = TagField(required=False, help_text=_("Comma-separated tags"))
-    
+
     class Meta:
         model = Poll
         fields = [
@@ -40,9 +41,9 @@ class PollForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
-        self.creator = kwargs.pop('creator', None)
+        self.user = kwargs.pop('user', None)  # Change 'creator' to 'user' here
         super().__init__(*args, **kwargs)
-        
+
         # Conditionally show/hide restricted_to_institution based on poll_type
         self.fields['restricted_to_institution'].widget.attrs['data-show-if-poll-type'] = 'institution'
     
@@ -68,9 +69,9 @@ class PollForm(forms.ModelForm):
     
     def save(self, commit=True):
         instance = super().save(commit=False)
-        if self.creator and not instance.pk:  # Only set creator on new polls
-            instance.creator = self.creator
-            
+        if self.user and not instance.pk:  # Only set user on new polls
+            instance.creator = self.user  # Assuming 'creator' field exists
+         
         if commit:
             instance.save()
             self.save_m2m()  # Required for tags
@@ -108,14 +109,18 @@ class QuestionForm(forms.ModelForm):
         question_type = cleaned_data.get('question_type')
         
         if question_type:
-            # Ensure question type object is fetched from DB
+            # Convert ID to model instance if needed
             if isinstance(question_type, int):
-                question_type = QuestionType.objects.get(id=question_type)
-                
-            # If the question type requires choices, we'll validate in the formset
+                try:
+                    question_type = QuestionType.objects.get(id=question_type)
+                except QuestionType.DoesNotExist:
+                    self.add_error('question_type', _('Invalid question type selected'))
+                    return cleaned_data
             
-            # For rating questions, ensure min and max are provided
-            if question_type.slug in ['rating', 'slider']:
+            # Type-specific validation
+            type_slug = getattr(question_type, 'slug', '')
+            
+            if type_slug in ['rating', 'slider']:
                 min_value = cleaned_data.get('min_value')
                 max_value = cleaned_data.get('max_value')
                 
@@ -125,11 +130,12 @@ class QuestionForm(forms.ModelForm):
                 if max_value is None:
                     self.add_error('max_value', _('Required for this question type'))
                 
-                if min_value is not None and max_value is not None and min_value >= max_value:
-                    self.add_error('max_value', _('Maximum value must be greater than minimum value'))
+                if min_value is not None and max_value is not None:
+                    if min_value >= max_value:
+                        self.add_error('max_value', _('Maximum value must be greater than minimum value'))
                 
                 # For slider, ensure step is provided
-                if question_type.slug == 'slider' and not cleaned_data.get('step_value'):
+                if type_slug == 'slider' and not cleaned_data.get('step_value'):
                     self.add_error('step_value', _('Required for slider questions'))
         
         return cleaned_data
