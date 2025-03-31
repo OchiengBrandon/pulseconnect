@@ -1,0 +1,130 @@
+{% extends 'base.html' %}
+
+{% block title %}Points History - PulseConnect{% endblock %}
+
+{% block page_title %}Your Points History{% endblock %}
+
+{% block content %}
+<div class="points-history-dashboard">
+    <h1>Your Points History</h1>
+    <div class="total-points">
+        <h2>Total Points: <strong>{{ total_points.total_points }}</strong></h2>
+    </div>
+
+    <h2>Point Breakdown</h2>
+    <div class="point-breakdown">
+        <ul>
+            {% for type in point_breakdown %}
+                <li>{{ type.transaction_type }}: <strong>{{ type.total }}</strong> points</li>
+            {% endfor %}
+        </ul>
+    </div>
+
+    <h2>Transaction History</h2>
+    <div class="transaction-table">
+        <table class="table">
+            <thead>
+                <tr>
+                    <th>Date</th>
+                    <th>Transaction Type</th>
+                    <th>Points</th>
+                    <th>Description</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for transaction in transactions %}
+                <tr>
+                    <td>{{ transaction.created_at|date:"F j, Y, g:i a" }}</td>
+                    <td>{{ transaction.transaction_type }}</td>
+                    <td>{{ transaction.points }}</td>
+                    <td>{{ transaction.description }}</td>
+                </tr>
+                {% empty %}
+                <tr>
+                    <td colspan="4">No point transactions found.</td>
+                </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    </div>
+
+    {% if is_paginated %}
+    <div class="pagination">
+        <span class="step-links">
+            {% if page_obj.has_previous %}
+                <a href="?page=1">&laquo; First</a>
+                <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            {% endif %}
+
+            <span class="current">
+                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+            </span>
+
+            {% if page_obj.has_next %}
+                <a href="?page={{ page_obj.next_page_number }}">Next</a>
+                <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+            {% endif %}
+        </span>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+.points-history-dashboard {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+.total-points {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.point-breakdown {
+    margin-bottom: 20px;
+}
+
+.point-breakdown ul {
+    list-style: none;
+    padding: 0;
+}
+
+.point-breakdown li {
+    padding: 8px 0;
+    border-bottom: 1px solid #ddd;
+}
+
+.transaction-table {
+    margin-top: 20px;
+}
+
+.table {
+    width: 100%;
+    border-collapse: collapse;
+    margin-top: 20px;
+}
+
+.table th, .table td {
+    border: 1px solid #ddd;
+    padding: 8px;
+}
+
+.table th {
+    background-color: #f2f2f2;
+    text-align: left;
+}
+
+.pagination {
+    margin-top: 20px;
+    text-align: center;
+}
+
+.pagination a {
+    margin: 0 5px;
+    text-decoration: none;
+    color: var(--primary);
+}
+</style>
+
+{% endblock %}

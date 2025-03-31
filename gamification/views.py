@@ -77,7 +77,7 @@ class RewardsHomeView(LoginRequiredMixin, TemplateView):
             if badge.requirement_type == 'polls_created':
                 current_count = self.request.user.created_polls.count()
             elif badge.requirement_type == 'polls_participated':
-                current_count = self.request.user.poll_responses.values('poll').distinct().count()
+                current_count = self.request.user.poll_responses.values('question_id').distinct().count()
             elif badge.requirement_type == 'points_earned':
                 try:
                     current_count = UserPoints.objects.get(user=self.request.user).total_points
@@ -178,7 +178,7 @@ class BadgeListView(ListView):
         if badge.requirement_type == 'polls_created':
             current_count = self.request.user.created_polls.count()
         elif badge.requirement_type == 'polls_participated':
-            current_count = self.request.user.poll_responses.values('poll').distinct().count()
+            current_count = self.request.user.poll_responses.values('question_id').distinct().count()
         elif badge.requirement_type == 'points_earned':
             try:
                 current_count = UserPoints.objects.get(user=self.request.user).total_points
