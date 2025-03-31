@@ -7,6 +7,7 @@ from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 )
 from django.contrib import messages
+from django.contrib.messages.views import SuccessMessageMixin
 from django.utils.translation import gettext_lazy as _
 from django.utils import timezone
 from django.db.models import Count, Q
@@ -128,6 +129,15 @@ class PollDetailView(DetailView):
         return context
 
 
+from django.views.generic.edit import CreateView
+from django.db import transaction
+from django.contrib import messages
+from django.urls import reverse
+from django.http import JsonResponse
+from .models import Poll, QuestionType, Choice, InstitutionProfile
+from .forms import PollForm, QuestionFormSet
+from django.utils.translation import gettext as _
+
 class PollCreateView(CreateView):
     model = Poll
     form_class = PollForm
@@ -137,6 +147,16 @@ class PollCreateView(CreateView):
         kwargs = super().get_form_kwargs()
         kwargs['creator'] = self.request.user
         return kwargs
+    
+    def get_initial(self):
+        initial = super().get_initial()
+        # Check if the user has an associated InstitutionProfile
+        try:
+            institution = InstitutionProfile.objects.get(user=self.request.user)
+            initial['restricted_to_institution'] = institution.pk  # Autofill the institution field
+        except InstitutionProfile.DoesNotExist:
+            pass  # User does not have an associated InstitutionProfile
+        return initial
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -240,20 +260,22 @@ class PollCreateView(CreateView):
                     return JsonResponse({'error': 'Question type not found'}, status=404)
         
         return JsonResponse({'error': 'Invalid request'}, status=400)
-    
+
+        
 @method_decorator(login_required, name='dispatch')
-class PollUpdateView(UserPassesTestMixin, UpdateView):
+class PollUpdateView(UserPassesTestMixin, SuccessMessageMixin, UpdateView):
     model = Poll
     form_class = PollForm
     template_name = 'polls/poll_update.html'
-    
+    success_message = _('Poll updated successfully!')
+
     def test_func(self):
         poll = self.get_object()
         return self.request.user == poll.creator
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['user'] = self.request.user
+        kwargs['creator'] = self.request.user  # Ensure this matches the PollForm
         return kwargs
     
     def get_context_data(self, **kwargs):
@@ -305,14 +327,13 @@ class PollUpdateView(UserPassesTestMixin, UpdateView):
                                     order=i
                                 )
             
-            messages.success(self.request, _('Poll updated successfully!'))
+            messages.success(self.request, self.success_message)
             return redirect(self.get_success_url())
         else:
             return self.form_invalid(form)
     
     def get_success_url(self):
         return reverse('polls:detail', kwargs={'slug': self.object.slug})
-
 
 @method_decorator(login_required, name='dispatch')
 class PollDeleteView(UserPassesTestMixin, DeleteView):
@@ -325,32 +346,46 @@ class PollDeleteView(UserPassesTestMixin, DeleteView):
         return self.request.user == poll.creator
 
 
+from django.contrib.auth.decorators import login_required
+from django.shortcuts import get_object_or_404, redirect, render
+from django.contrib import messages
+from django.utils.translation import gettext_lazy as _
+
 @login_required
 def submit_poll_response(request, slug):
     poll = get_object_or_404(Poll, slug=slug, status='active')
-    
-    # Check if user has already responded
+
+    # Check if the user has already responded
     if PollResponse.objects.filter(question__poll=poll, user=request.user).exists():
         messages.error(request, _('You have already responded to this poll.'))
         return redirect('polls:detail', slug=slug)
-    
-    # Check if poll is restricted to an institution
+
+    # Check if the poll is restricted to an institution
     if poll.poll_type == 'institution' and request.user.institution != poll.restricted_to_institution:
         messages.error(request, _('This poll is restricted to members of a specific institution.'))
         return redirect('polls:list')
-    
+
     if request.method == 'POST':
         form = PollResponseForm(request.POST, poll=poll, user=request.user)
+        
         if form.is_valid():
             form.save()
             messages.success(request, _('Your response has been recorded. Thank you for participating!'))
             return redirect('polls:results', slug=slug)
     else:
         form = PollResponseForm(poll=poll, user=request.user)
-    
+
+    # Prepare rating ranges for questions of type 'rating' or 'slider'
+    rating_ranges = {
+        question.id: range(question.min_value, question.max_value + 1)
+        for question in poll.questions.all()
+        if question.question_type.slug in ['rating', 'slider']
+    }
+
     return render(request, 'polls/poll_respond.html', {
         'form': form,
-        'poll': poll
+        'poll': poll,
+        'rating_ranges': rating_ranges,  # Pass the ranges to the template
     })
 
 

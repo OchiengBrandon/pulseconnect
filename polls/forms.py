@@ -3,6 +3,8 @@ from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 from taggit.forms import TagField
 
+from accounts.models import InstitutionProfile
+
 from .models import (
     Poll, 
     PollCategory, 
@@ -20,6 +22,7 @@ class PollCategoryForm(forms.ModelForm):
         widgets = {
             'description': forms.Textarea(attrs={'rows': 4}),
         }
+
 
 
 
@@ -41,11 +44,22 @@ class PollForm(forms.ModelForm):
         }
     
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('user', None)  # Change 'creator' to 'user' here
+        self.user = kwargs.pop('creator', None)  # Change 'creator' to 'user' here
         super().__init__(*args, **kwargs)
+
+        # Populate the restricted_to_institution field with institutions
+        self.fields['restricted_to_institution'].queryset = InstitutionProfile.objects.all()
 
         # Conditionally show/hide restricted_to_institution based on poll_type
         self.fields['restricted_to_institution'].widget.attrs['data-show-if-poll-type'] = 'institution'
+
+        # Autofill the restricted_to_institution if the user is associated with one
+        if self.user:
+            try:
+                institution = InstitutionProfile.objects.get(user=self.user)
+                self.initial['restricted_to_institution'] = institution.pk  # Autofill if applicable
+            except InstitutionProfile.DoesNotExist:
+                pass  # User does not have an associated InstitutionProfile
     
     def clean(self):
         cleaned_data = super().clean()
@@ -183,17 +197,13 @@ class PollCommentForm(forms.ModelForm):
         return instance
 
 
+
 class PollResponseForm(forms.Form):
-    """
-    A dynamic form created based on a poll's questions.
-    This form is generated programmatically in views - not a standard ModelForm.
-    """
     def __init__(self, *args, **kwargs):
         self.poll = kwargs.pop('poll')
         self.user = kwargs.pop('user')
         super().__init__(*args, **kwargs)
-        
-        # Add a field for each question in the poll
+
         for question in self.poll.questions.all().order_by('order'):
             field_name = f'question_{question.id}'
             question_type = question.question_type.slug
@@ -259,7 +269,7 @@ class PollResponseForm(forms.Form):
                     }),
                     required=question.is_required
                 )
-    
+
     def save(self):
         """Save user responses to all questions in this poll"""
         if not self.is_valid():
@@ -273,13 +283,11 @@ class PollResponseForm(forms.Form):
                 question_id = int(field_name.split('_')[1])
                 question = Question.objects.get(id=question_id)
                 
-                # Convert response to string (JSON for multiple choice)
                 if question.question_type.slug == 'multiple_choice':
                     response_data = str(list(response_value))
                 else:
                     response_data = str(response_value)
                 
-                # Create or update response
                 response, created = PollResponse.objects.update_or_create(
                     question=question,
                     user=self.user,

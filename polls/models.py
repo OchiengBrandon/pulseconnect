@@ -7,6 +7,8 @@ from taggit.managers import TaggableManager
 import uuid
 import json
 
+from accounts.models import InstitutionProfile
+
 class PollCategory(models.Model):
     name = models.CharField(max_length=100, verbose_name=_('Name'))
     slug = models.SlugField(unique=True, verbose_name=_('Slug'))
@@ -80,9 +82,11 @@ class Poll(models.Model):
     is_featured = models.BooleanField(default=False, verbose_name=_('Featured'))
     allow_comments = models.BooleanField(default=True, verbose_name=_('Allow Comments'))
     allow_sharing = models.BooleanField(default=True, verbose_name=_('Allow Sharing'))
-    restricted_to_institution = models.CharField(
-        max_length=100, 
-        blank=True, 
+    restricted_to_institution = models.ForeignKey(
+        InstitutionProfile,  # Reference to the InstitutionProfile model
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
         verbose_name=_('Restricted to Institution')
     )
 

@@ -19,7 +19,7 @@
                 {% endif %}
             </div>
             <div class="progress-wrapper">
-                <div class="progress-text">Question <span id="currentQuestion">1</span> of {{ response_form|length }}</div>
+                <div class="progress-text">Question <span id="currentQuestion">1</span> of {{ poll.questions.count }}</div>
                 <div class="progress-bar">
                     <div class="progress" id="progressBar" style="width: 0%"></div>
                 </div>
@@ -52,76 +52,77 @@
         {% csrf_token %}
         
         <div class="questions-container">
-            {% for field in response_form %}
+            {% for question in poll.questions.all %}
             <div class="question-card" data-question="{{ forloop.counter }}" {% if not forloop.first %}style="display: none;"{% endif %}>
                 <div class="question-header">
                     <span class="question-number">Question {{ forloop.counter }}</span>
-                    {% if field.field.required %}
+                    {% if question.is_required %}
                     <span class="required-badge">Required</span>
                     {% endif %}
                 </div>
 
                 <div class="question-content">
-                    <label class="question-label">{{ field.label }}</label>
+                    <label class="question-label">{{ question.text }}</label>
                     
                     <div class="answer-container">
-                        {% if field.field.widget.input_type == 'radio' %}
+                        {% if question.question_type.slug == 'single_choice' %}
                             <div class="radio-options">
-                                {% for choice in field %}
+                                {% for choice in question.choices.all %}
                                 <label class="radio-option">
-                                    {{ choice.tag }}
+                                    <input type="radio" name="question_{{ question.id }}" value="{{ choice.id }}">
                                     <div class="option-content">
-                                        <span class="option-text">{{ choice.choice_label }}</span>
-                                        <div class="option-indicator"></div>
+                                        <span class="option-text">{{ choice.text }}</span>
                                     </div>
                                 </label>
                                 {% endfor %}
                             </div>
                         
-                        {% elif field.field.widget.input_type == 'checkbox' %}
+                        {% elif question.question_type.slug == 'multiple_choice' %}
                             <div class="checkbox-options">
-                                {% for choice in field %}
+                                {% for choice in question.choices.all %}
                                 <label class="checkbox-option">
-                                    {{ choice.tag }}
+                                    <input type="checkbox" name="question_{{ question.id }}" value="{{ choice.id }}">
                                     <div class="option-content">
-                                        <span class="option-text">{{ choice.choice_label }}</span>
-                                        <div class="option-indicator"></div>
+                                        <span class="option-text">{{ choice.text }}</span>
                                     </div>
                                 </label>
                                 {% endfor %}
                             </div>
                         
-                        {% elif field.field.widget.input_type == 'range' %}
-                            <div class="range-container">
-                                <div class="range-wrapper">
-                                    {{ field }}
-                                    <div class="range-labels">
-                                        <span>{{ field.field.min_value }}</span>
-                                        <span>{{ field.field.max_value }}</span>
-                                    </div>
-                                </div>
-                                <div class="range-value">
-                                    <span id="rangeValue{{ forloop.counter }}">5</span>
-                                </div>
-                            </div>
-                        
-                        {% else %}
+                        {% elif question.question_type.slug == 'open_ended' %}
                             <div class="input-wrapper">
-                                {{ field }}
+                                <textarea name="question_{{ question.id }}" rows="3" title="Provide your response" placeholder="Type your answer here..."></textarea>
                             </div>
+
+                        {% elif question.question_type.slug == 'rating' %}
+                            <div class="radio-options">
+                                {% for question_id, range_values in rating_ranges %}
+                                    {% if question.id == question_id %}
+                                        {% for i in range_values %}
+                                        <label class="radio-option">
+                                            <input type="radio" name="question_{{ question.id }}" value="{{ i }}">
+                                            <span>{{ i }}</span>
+                                        </label>
+                                        {% endfor %}
+                                    {% endif %}
+                                {% endfor %}
+                            </div>
+
+                        {% elif question.question_type.slug == 'slider' %}
+                            <input type="range" name="question_{{ question.id }}" min="{{ question.min_value }}" max="{{ question.max_value }}" step="{{ question.step_value }}">
                         {% endif %}
 
-                        {% if field.help_text %}
+                        {% if question.help_text %}
                         <div class="help-text">
                             <i class="ri-information-line"></i>
-                            <span>{{ field.help_text }}</span>
+                            <span>{{ question.help_text }}</span>
                         </div>
                         {% endif %}
 
-                        {% if field.errors %}
+                        {% if question.errors %}
                         <div class="error-message">
                             <i class="ri-error-warning-line"></i>
-                            <span>{{ field.errors|join:", " }}</span>
+                            <span>{{ question.errors|join:", " }}</span>
                         </div>
                         {% endif %}
                     </div>
@@ -154,440 +155,440 @@
 </div>
 
 <style>
-:root {
-    --primary-gradient: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-    --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-    --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-    --input-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
-}
-
-.response-container {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 2rem;
-}
-
-/* Overview Card */
-.overview-card {
-    background: var(--surface);
-    border-radius: 20px;
-    padding: 1.5rem;
-    margin-bottom: 2rem;
-    box-shadow: var(--card-shadow);
-}
-
-.poll-status-bar {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-    padding-bottom: 1.5rem;
-    border-bottom: 1px solid var(--border);
-}
-
-.status-indicator {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.5rem 1rem;
-    border-radius: 20px;
-    font-size: 0.875rem;
-}
-
-.status-indicator.active {
-    background: rgba(16, 185, 129, 0.1);
-    color: #10b981;
-}
-
-.status-indicator.inactive {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-}
-
-.progress-wrapper {
-    display: flex;
-    flex-direction: column;
-    gap: 0.5rem;
-    min-width: 200px;
-}
-
-.progress-text {
-    font-size: 0.875rem;
-    color: var(--text-2);
-    text-align: right;
-}
-
-.progress-bar {
-    height: 6px;
-    background: var(--surface-2);
-    border-radius: 3px;
-    overflow: hidden;
-}
-
-.progress {
-    height: 100%;
-    background: var(--primary-gradient);
-    transition: var(--transition-smooth);
-}
-
-.poll-meta {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-}
-
-.creator-info {
-    display: flex;
-    align-items: center;
-    gap: 1rem;
-}
-
-.creator-avatar {
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    object-fit: cover;
-}
-
-.meta-text {
-    display: flex;
-    flex-direction: column;
-    gap: 0.25rem;
-}
-
-.poll-title {
-    font-size: 1.25rem;
-    font-weight: 600;
-    color: var(--text);
-    margin: 0;
-}
-
-.creator-name {
-    font-size: 0.875rem;
-    color: var(--text-2);
-    margin: 0;
-}
-
-/* Question Cards */
-.question-card {
-    background: var(--surface);
-    border-radius: 20px;
-    padding: 2rem;
-    margin-bottom: 1rem;
-    box-shadow: var(--card-shadow);
-    transition: var(--transition-smooth);
-}
-
-.question-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-bottom: 1.5rem;
-}
-
-.question-number {
-    font-size: 0.875rem;
-    color: var(--text-2);
-    font-weight: 500;
-}
-
-.required-badge {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-    padding: 0.25rem 0.75rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-}
-
-.question-label {
-    display: block;
-    font-size: 1.125rem;
-    font-weight: 500;
-    color: var(--text);
-    margin-bottom: 1.5rem;
-}
-
-/* Form Elements */
-.radio-options, .checkbox-options {
-    display: flex;
-    flex-direction: column;
-    gap: 1rem;
-}
-
-.radio-option, .checkbox-option {
-    background: var(--surface-2);
-    border-radius: 12px;
-    padding: 1rem;
-    cursor: pointer;
-    transition: var(--transition-smooth);
-}
-
-.radio-option:hover, .checkbox-option:hover {
-    background: var(--surface-3);
-}
-
-.option-content {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.option-text {
-    margin-left: 0.5rem;
-}
-
-.option-indicator {
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    border: 2px solid var(--border);
-    transition: var(--transition-smooth);
-}
-
-input[type="radio"]:checked + .option-content .option-indicator,
-input[type="checkbox"]:checked + .option-content .option-indicator {
-    background: var(--primary-gradient);
-    border-color: var(--primary);
-}
-
-.range-container {
-    padding: 1rem 0;
-}
-
-.range-wrapper {
-    position: relative;
-    padding: 1rem 0;
-}
-
-input[type="range"] {
-    width: 100%;
-    height: 6px;
-    -webkit-appearance: none;
-    background: var(--surface-2);
-    border-radius: 3px;
-    outline: none;
-}
-
-input[type="range"]::-webkit-slider-thumb {
-    -webkit-appearance: none;
-    width: 20px;
-    height: 20px;
-    border-radius: 50%;
-    background: var(--primary-gradient);
-    cursor: pointer;
-    box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-}
-
-.range-labels {
-    display: flex;
-    justify-content: space-between;
-    margin-top: 0.5rem;
-    color: var(--text-2);
-    font-size: 0.875rem;
-}
-
-.range-value {
-    text-align: center;
-    font-weight: 500;
-    color: var(--text);
-    margin-top: 1rem;
-}
-
-.input-wrapper {
-    background: var(--surface-2);
-    border-radius: 12px;
-    padding: 0.5rem;
-}
-
-textarea, input[type="text"] {
-    width: 100%;
-    padding: 1rem;
-    border: none;
-    background: transparent;
-    color: var(--text);
-    font-size: 1rem;
-    resize: vertical;
-    min-height: 100px;
-}
-
-/* Footer Buttons */
-.question-footer {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    margin-top: 2rem;
-}
-
-.btn-previous, .btn-next, .btn-submit {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    padding: 0.75rem 1.5rem;
-    border-radius: 12px;
-    font-weight: 500;
-    transition: var(--transition-smooth);
-    border: none;
-    cursor: pointer;
-}
-
-.btn-previous {
-    background: var(--surface-2);
-    color: var(--text);
-}
-
-.btn-next, .btn-submit {
-    background: var(--primary-gradient);
-    color: white;
-}
-
-.btn-previous:hover {
-    background: var(--surface-3);
-}
-
-.btn-next:hover, .btn-submit:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-}
-
-/* Helper Elements */
-.help-text, .error-message {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    margin-top: 1rem;
-    padding: 0.75rem;
-    border-radius: 8px;
-    font-size: 0.875rem;
-}
-
-.help-text {
-    background: rgba(99, 102, 241, 0.1);
-    color: var(--primary);
-}
-
-.error-message {
-    background: rgba(239, 68, 68, 0.1);
-    color: #ef4444;
-}
-
-/* Responsive Design */
-@media (max-width: 768px) {
+    :root {
+        --primary-gradient: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
+        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
+        --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        --input-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
+    }
+    
     .response-container {
-        padding: 1rem;
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 2rem;
     }
-
-    .poll-meta {
-        flex-direction: column;
-        gap: 1rem;
-    }
-
-    .poll-status-bar {
-        flex-direction: column;
-        gap: 1rem;
-        align-items: stretch;
-    }
-
-    .question-card {
+    
+    /* Overview Card */
+    .overview-card {
+        background: var(--surface);
+        border-radius: 20px;
         padding: 1.5rem;
+        margin-bottom: 2rem;
+        box-shadow: var(--card-shadow);
     }
-}
+    
+    .poll-status-bar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+        padding-bottom: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+    
+    .status-indicator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: 20px;
+        font-size: 0.875rem;
+    }
+    
+    .status-indicator.active {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+    
+    .status-indicator.inactive {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+    
+    .progress-wrapper {
+        display: flex;
+        flex-direction: column;
+        gap: 0.5rem;
+        min-width: 200px;
+    }
+    
+    .progress-text {
+        font-size: 0.875rem;
+        color: var(--text-2);
+        text-align: right;
+    }
+    
+    .progress-bar {
+        height: 6px;
+        background: var(--surface-2);
+        border-radius: 3px;
+        overflow: hidden;
+    }
+    
+    .progress {
+        height: 100%;
+        background: var(--primary-gradient);
+        transition: var(--transition-smooth);
+    }
+    
+    .poll-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: flex-start;
+    }
+    
+    .creator-info {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+    }
+    
+    .creator-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+    
+    .meta-text {
+        display: flex;
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .poll-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--text);
+        margin: 0;
+    }
+    
+    .creator-name {
+        font-size: 0.875rem;
+        color: var(--text-2);
+        margin: 0;
+    }
+    
+    /* Question Cards */
+    .question-card {
+        background: var(--surface);
+        border-radius: 20px;
+        padding: 2rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--card-shadow);
+        transition: var(--transition-smooth);
+    }
+    
+    .question-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1.5rem;
+    }
+    
+    .question-number {
+        font-size: 0.875rem;
+        color: var(--text-2);
+        font-weight: 500;
+    }
+    
+    .required-badge {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+        padding: 0.25rem 0.75rem;
+        border-radius: 12px;
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+    
+    .question-label {
+        display: block;
+        font-size: 1.125rem;
+        font-weight: 500;
+        color: var(--text);
+        margin-bottom: 1.5rem;
+    }
+    
+    /* Form Elements */
+    .radio-options, .checkbox-options {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .radio-option, .checkbox-option {
+        background: var(--surface-2);
+        border-radius: 12px;
+        padding: 1rem;
+        cursor: pointer;
+        transition: var(--transition-smooth);
+    }
+    
+    .radio-option:hover, .checkbox-option:hover {
+        background: var(--surface-3);
+    }
+    
+    .option-content {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .option-text {
+        margin-left: 0.5rem;
+    }
+    
+    .option-indicator {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid var(--border);
+        transition: var(--transition-smooth);
+    }
+    
+    input[type="radio"]:checked + .option-content .option-indicator,
+    input[type="checkbox"]:checked + .option-content .option-indicator {
+        background: var(--primary-gradient);
+        border-color: var(--primary);
+    }
+    
+    .range-container {
+        padding: 1rem 0;
+    }
+    
+    .range-wrapper {
+        position: relative;
+        padding: 1rem 0;
+    }
+    
+    input[type="range"] {
+        width: 100%;
+        height: 6px;
+        -webkit-appearance: none;
+        background: var(--surface-2);
+        border-radius: 3px;
+        outline: none;
+    }
+    
+    input[type="range"]::-webkit-slider-thumb {
+        -webkit-appearance: none;
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        background: var(--primary-gradient);
+        cursor: pointer;
+        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
+    }
+    
+    .range-labels {
+        display: flex;
+        justify-content: space-between;
+        margin-top: 0.5rem;
+        color: var(--text-2);
+        font-size: 0.875rem;
+    }
+    
+    .range-value {
+        text-align: center;
+        font-weight: 500;
+        color: var(--text);
+        margin-top: 1rem;
+    }
+    
+    .input-wrapper {
+        background: var(--surface-2);
+        border-radius: 12px;
+        padding: 0.5rem;
+    }
+    
+    textarea, input[type="text"] {
+        width: 100%;
+        padding: 1rem;
+        border: none;
+        background: transparent;
+        color: var(--text);
+        font-size: 1rem;
+        resize: vertical;
+        min-height: 100px;
+    }
+    
+    /* Footer Buttons */
+    .question-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-top: 2rem;
+    }
+    
+    .btn-previous, .btn-next, .btn-submit {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.75rem 1.5rem;
+        border-radius: 12px;
+        font-weight: 500;
+        transition: var(--transition-smooth);
+        border: none;
+        cursor: pointer;
+    }
+    
+    .btn-previous {
+        background: var(--surface-2);
+        color: var(--text);
+    }
+    
+    .btn-next, .btn-submit {
+        background: var(--primary-gradient);
+        color: white;
+    }
+    
+    .btn-previous:hover {
+        background: var(--surface-3);
+    }
+    
+    .btn-next:hover, .btn-submit:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
+    }
+    
+    /* Helper Elements */
+    .help-text, .error-message {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        margin-top: 1rem;
+        padding: 0.75rem;
+        border-radius: 8px;
+        font-size: 0.875rem;
+    }
+    
+    .help-text {
+        background: rgba(99, 102, 241, 0.1);
+        color: var(--primary);
+    }
+    
+    .error-message {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+    
+    /* Responsive Design */
+    @media (max-width: 768px) {
+        .response-container {
+            padding: 1rem;
+        }
+    
+        .poll-meta {
+            flex-direction: column;
+            gap: 1rem;
+        }
+    
+        .poll-status-bar {
+            flex-direction: column;
+            gap: 1rem;
+            align-items: stretch;
+        }
+    
+        .question-card {
+            padding: 1.5rem;
+        }
+    }
 </style>
 
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    updateProgress(1);
-    
-    // Range input handlers
-    document.querySelectorAll('input[type="range"]').forEach(range => {
-        const valueDisplay = document.getElementById(`rangeValue${range.closest('.question-card').dataset.question}`);
+    document.addEventListener('DOMContentLoaded', function() {
+        updateProgress(1);
         
-        range.addEventListener('input', (e) => {
-            valueDisplay.textContent = e.target.value;
+        // Range input handlers
+        document.querySelectorAll('input[type="range"]').forEach(range => {
+            const valueDisplay = document.getElementById(`rangeValue${range.closest('.question-card').dataset.question}`);
+            
+            range.addEventListener('input', (e) => {
+                valueDisplay.textContent = e.target.value;
+            });
         });
     });
-});
-
-function updateProgress(currentQuestionNum) {
-    const totalQuestions = {{ response_form|length }};
-    const progress = (currentQuestionNum / totalQuestions) * 100;
     
-    document.getElementById('currentQuestion').textContent = currentQuestionNum;
-    document.getElementById('progressBar').style.width = `${progress}%`;
-}
-
-function nextQuestion(currentNum) {
-    const currentQuestion = document.querySelector(`[data-question="${currentNum}"]`);
-    const nextQuestion = document.querySelector(`[data-question="${currentNum + 1}"]`);
+    function updateProgress(currentQuestionNum) {
+        const totalQuestions = {{ poll.questions.count }};
+        const progress = (currentQuestionNum / totalQuestions) * 100;
+        
+        document.getElementById('currentQuestion').textContent = currentQuestionNum;
+        document.getElementById('progressBar').style.width = `${progress}%`;
+    }
     
-    if (validateQuestion(currentQuestion)) {
+    function nextQuestion(currentNum) {
+        const currentQuestion = document.querySelector(`[data-question="${currentNum}"]`);
+        const nextQuestion = document.querySelector(`[data-question="${currentNum + 1}"]`);
+        
+        if (validateQuestion(currentQuestion)) {
+            currentQuestion.style.display = 'none';
+            nextQuestion.style.display = 'block';
+            updateProgress(currentNum + 1);
+            
+            nextQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        }
+    }
+    
+    function previousQuestion(currentNum) {
+        const currentQuestion = document.querySelector(`[data-question="${currentNum}"]`);
+        const previousQuestion = document.querySelector(`[data-question="${currentNum - 1}"]`);
+        
         currentQuestion.style.display = 'none';
-        nextQuestion.style.display = 'block';
-        updateProgress(currentNum + 1);
+        previousQuestion.style.display = 'block';
+        updateProgress(currentNum - 1);
         
-        nextQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
+        previousQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
     }
-}
-
-function previousQuestion(currentNum) {
-    const currentQuestion = document.querySelector(`[data-question="${currentNum}"]`);
-    const previousQuestion = document.querySelector(`[data-question="${currentNum - 1}"]`);
     
-    currentQuestion.style.display = 'none';
-    previousQuestion.style.display = 'block';
-    updateProgress(currentNum - 1);
+    function validateQuestion(questionElement) {
+        const required = questionElement.querySelector('.required-badge');
+        if (!required) return true;
+        
+        const inputs = questionElement.querySelectorAll('input, textarea');
+        let valid = false;
+        
+        inputs.forEach(input => {
+            if (input.type === 'radio' || input.type === 'checkbox') {
+                if (input.checked) valid = true;
+            } else {
+                if (input.value.trim()) valid = true;
+            }
+        });
+        
+        if (!valid) {
+            const errorDiv = questionElement.querySelector('.error-message') || document.createElement('div');
+            errorDiv.className = 'error-message';
+            errorDiv.innerHTML = '<i class="ri-error-warning-line"></i><span>This question requires an answer</span>';
+            
+            if (!questionElement.querySelector('.error-message')) {
+                questionElement.querySelector('.answer-container').appendChild(errorDiv);
+            }
+        }
+        
+        return valid;
+    }
     
-    previousQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
-}
-
-function validateQuestion(questionElement) {
-    const required = questionElement.querySelector('.required-badge');
-    if (!required) return true;
-    
-    const inputs = questionElement.querySelectorAll('input, textarea');
-    let valid = false;
-    
-    inputs.forEach(input => {
-        if (input.type === 'radio' || input.type === 'checkbox') {
-            if (input.checked) valid = true;
+    // Form submission handler
+    document.getElementById('responseForm').addEventListener('submit', function(e) {
+        e.preventDefault();
+        
+        const allQuestions = document.querySelectorAll('.question-card');
+        let allValid = true;
+        
+        allQuestions.forEach(question => {
+            if (!validateQuestion(question)) {
+                allValid = false;
+                question.style.display = 'block';
+            }
+        });
+        
+        if (allValid) {
+            this.submit();
         } else {
-            if (input.value.trim()) valid = true;
+            const firstInvalid = document.querySelector('.error-message').closest('.question-card');
+            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'start' });
         }
     });
-    
-    if (!valid) {
-        const errorDiv = questionElement.querySelector('.error-message') || document.createElement('div');
-        errorDiv.className = 'error-message';
-        errorDiv.innerHTML = '<i class="ri-error-warning-line"></i><span>This question requires an answer</span>';
-        
-        if (!questionElement.querySelector('.error-message')) {
-            questionElement.querySelector('.answer-container').appendChild(errorDiv);
-        }
-    }
-    
-    return valid;
-}
-
-// Form submission handler
-document.getElementById('responseForm').addEventListener('submit', function(e) {
-    e.preventDefault();
-    
-    const allQuestions = document.querySelectorAll('.question-card');
-    let allValid = true;
-    
-    allQuestions.forEach(question => {
-        if (!validateQuestion(question)) {
-            allValid = false;
-            question.style.display = 'block';
-        }
-    });
-    
-    if (allValid) {
-        this.submit();
-    } else {
-        const firstInvalid = document.querySelector('.error-message').closest('.question-card');
-        firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-});
 </script>
 {% endblock %}
