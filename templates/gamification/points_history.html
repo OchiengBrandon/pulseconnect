@@ -2,129 +2,348 @@
 
 {% block title %}Points History - PulseConnect{% endblock %}
 
-{% block page_title %}Your Points History{% endblock %}
-
 {% block content %}
-<div class="points-history-dashboard">
-    <h1>Your Points History</h1>
-    <div class="total-points">
-        <h2>Total Points: <strong>{{ total_points.total_points }}</strong></h2>
+<style>
+    .points-dashboard {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 2rem;
+    }
+
+    /* Stats Cards */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 3rem;
+    }
+
+    .stat-card {
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        padding: 1.5rem;
+        border: 1px solid var(--border);
+        transition: all 0.3s ease;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-5px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .stat-header {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+        background: linear-gradient(135deg, var(--primary-light) 0%, var(--primary) 100%);
+        color: white;
+    }
+
+    .stat-value {
+        font-size: 2rem;
+        font-weight: 700;
+        color: var(--text);
+        margin-bottom: 0.5rem;
+    }
+
+    .stat-label {
+        color: var(--text-2);
+        font-size: 0.9rem;
+    }
+
+    /* Breakdown Section */
+    .breakdown-section {
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        margin-bottom: 2rem;
+        border: 1px solid var(--border);
+    }
+
+    .breakdown-title {
+        font-size: 1.25rem;
+        font-weight: 600;
+        margin-bottom: 1.5rem;
+        color: var(--text);
+    }
+
+    .breakdown-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 1rem;
+    }
+
+    .breakdown-item {
+        padding: 1rem;
+        border-radius: var(--radius);
+        background: var(--surface-2);
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        transition: all 0.3s ease;
+    }
+
+    .breakdown-item:hover {
+        transform: translateX(5px);
+        background: var(--surface-3);
+    }
+
+    /* Transactions Table */
+    .transactions-section {
+        background: var(--surface);
+        border-radius: var(--radius-lg);
+        padding: 2rem;
+        border: 1px solid var(--border);
+    }
+
+    .table-container {
+        overflow-x: auto;
+    }
+
+    .transactions-table {
+        width: 100%;
+        border-collapse: separate;
+        border-spacing: 0;
+    }
+
+    .transactions-table th {
+        background: var(--surface-2);
+        padding: 1rem;
+        font-weight: 600;
+        text-align: left;
+        color: var(--text);
+    }
+
+    .transactions-table td {
+        padding: 1rem;
+        border-bottom: 1px solid var(--border);
+        color: var(--text-2);
+    }
+
+    .transactions-table tr:hover td {
+        background: var(--surface-2);
+    }
+
+    .transaction-type {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.5rem;
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        font-size: 0.9rem;
+    }
+
+    .points-value {
+        font-weight: 600;
+        color: var(--primary);
+    }
+
+    .points-positive {
+        color: var(--success);
+    }
+
+    .points-negative {
+        color: var(--danger);
+    }
+
+    /* Pagination */
+    .pagination-container {
+        display: flex;
+        justify-content: center;
+        margin-top: 2rem;
+        gap: 0.5rem;
+    }
+
+    .pagination-button {
+        padding: 0.5rem 1rem;
+        border-radius: var(--radius);
+        background: var(--surface-2);
+        color: var(--text);
+        border: 1px solid var(--border);
+        transition: all 0.3s ease;
+    }
+
+    .pagination-button:hover {
+        background: var(--primary);
+        color: white;
+    }
+
+    .pagination-button.active {
+        background: var(--primary);
+        color: white;
+    }
+
+    .pagination-button.disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+
+    /* Empty State */
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+    }
+
+    .empty-state-icon {
+        font-size: 3rem;
+        color: var(--text-2);
+        margin-bottom: 1rem;
+    }
+
+    .empty-state-text {
+        color: var(--text-2);
+        margin-bottom: 1.5rem;
+    }
+</style>
+
+<div class="points-dashboard">
+    <!-- Stats Grid -->
+    <div class="stats-grid">
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="ri-coin-line"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ total_points.total_points }}</div>
+                    <div class="stat-label">Total Points</div>
+                </div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="ri-arrow-up-circle-line"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ point_breakdown.0.total|default:"0" }}</div>
+                    <div class="stat-label">Points Earned This Month</div>
+                </div>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-header">
+                <div class="stat-icon">
+                    <i class="ri-medal-line"></i>
+                </div>
+                <div>
+                    <div class="stat-value">{{ user.rank|default:"Rookie" }}</div>
+                    <div class="stat-label">Current Rank</div>
+                </div>
+            </div>
+        </div>
     </div>
 
-    <h2>Point Breakdown</h2>
-    <div class="point-breakdown">
-        <ul>
+    <!-- Breakdown Section -->
+    <div class="breakdown-section">
+        <h2 class="breakdown-title">Points Breakdown</h2>
+        <div class="breakdown-grid">
             {% for type in point_breakdown %}
-                <li>{{ type.transaction_type }}: <strong>{{ type.total }}</strong> points</li>
+            <div class="breakdown-item">
+                <span>{{ type.transaction_type }}</span>
+                <strong>{{ type.total }} points</strong>
+            </div>
             {% endfor %}
-        </ul>
+        </div>
     </div>
 
-    <h2>Transaction History</h2>
-    <div class="transaction-table">
-        <table class="table">
-            <thead>
-                <tr>
-                    <th>Date</th>
-                    <th>Transaction Type</th>
-                    <th>Points</th>
-                    <th>Description</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for transaction in transactions %}
-                <tr>
-                    <td>{{ transaction.created_at|date:"F j, Y, g:i a" }}</td>
-                    <td>{{ transaction.transaction_type }}</td>
-                    <td>{{ transaction.points }}</td>
-                    <td>{{ transaction.description }}</td>
-                </tr>
-                {% empty %}
-                <tr>
-                    <td colspan="4">No point transactions found.</td>
-                </tr>
-                {% endfor %}
-            </tbody>
-        </table>
-    </div>
+    <!-- Transactions Section -->
+    <div class="transactions-section">
+        <h2 class="breakdown-title">Transaction History</h2>
+        
+        {% if transactions %}
+        <div class="table-container">
+            <table class="transactions-table">
+                <thead>
+                    <tr>
+                        <th>Date</th>
+                        <th>Type</th>
+                        <th>Points</th>
+                        <th>Description</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for transaction in transactions %}
+                    <tr>
+                        <td>{{ transaction.created_at|date:"M j, Y, g:i a" }}</td>
+                        <td>
+                            <span class="transaction-type">
+                                <i class="ri-exchange-line"></i>
+                                {{ transaction.transaction_type }}
+                            </span>
+                        </td>
+                        <td class="points-value {% if transaction.points > 0 %}points-positive{% else %}points-negative{% endif %}">
+                            {% if transaction.points > 0 %}+{% endif %}{{ transaction.points }}
+                        </td>
+                        <td>{{ transaction.description }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
 
-    {% if is_paginated %}
-    <div class="pagination">
-        <span class="step-links">
+        {% if is_paginated %}
+        <div class="pagination-container">
             {% if page_obj.has_previous %}
-                <a href="?page=1">&laquo; First</a>
-                <a href="?page={{ page_obj.previous_page_number }}">Previous</a>
+            <a href="?page=1" class="pagination-button">
+                <i class="ri-arrow-left-double-line"></i>
+            </a>
+            <a href="?page={{ page_obj.previous_page_number }}" class="pagination-button">
+                <i class="ri-arrow-left-line"></i>
+            </a>
             {% endif %}
 
-            <span class="current">
-                Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}.
+            <span class="pagination-button active">
+                {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
             </span>
 
             {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}">Next</a>
-                <a href="?page={{ page_obj.paginator.num_pages }}">Last &raquo;</a>
+            <a href="?page={{ page_obj.next_page_number }}" class="pagination-button">
+                <i class="ri-arrow-right-line"></i>
+            </a>
+            <a href="?page={{ page_obj.paginator.num_pages }}" class="pagination-button">
+                <i class="ri-arrow-right-double-line"></i>
+            </a>
             {% endif %}
-        </span>
+        </div>
+        {% endif %}
+
+        {% else %}
+        <div class="empty-state">
+            <i class="ri-history-line empty-state-icon"></i>
+            <h3>No Transactions Yet</h3>
+            <p class="empty-state-text">Start participating in the community to earn points!</p>
+        </div>
+        {% endif %}
     </div>
-    {% endif %}
 </div>
 
-<style>
-.points-history-dashboard {
-    max-width: 800px;
-    margin: 0 auto;
-    padding: 20px;
-}
-
-.total-points {
-    text-align: center;
-    margin-bottom: 20px;
-}
-
-.point-breakdown {
-    margin-bottom: 20px;
-}
-
-.point-breakdown ul {
-    list-style: none;
-    padding: 0;
-}
-
-.point-breakdown li {
-    padding: 8px 0;
-    border-bottom: 1px solid #ddd;
-}
-
-.transaction-table {
-    margin-top: 20px;
-}
-
-.table {
-    width: 100%;
-    border-collapse: collapse;
-    margin-top: 20px;
-}
-
-.table th, .table td {
-    border: 1px solid #ddd;
-    padding: 8px;
-}
-
-.table th {
-    background-color: #f2f2f2;
-    text-align: left;
-}
-
-.pagination {
-    margin-top: 20px;
-    text-align: center;
-}
-
-.pagination a {
-    margin: 0 5px;
-    text-decoration: none;
-    color: var(--primary);
-}
-</style>
-
+<script>
+    // Add fade-in animation for cards
+    document.addEventListener('DOMContentLoaded', () => {
+        const cards = document.querySelectorAll('.stat-card, .breakdown-section, .transactions-section');
+        cards.forEach((card, index) => {
+            card.style.opacity = '0';
+            card.style.transform = 'translateY(20px)';
+            setTimeout(() => {
+                card.style.transition = 'all 0.5s ease';
+                card.style.opacity = '1';
+                card.style.transform = 'translateY(0)';
+            }, index * 100);
+        });
+    });
+</script>
 {% endblock %}
