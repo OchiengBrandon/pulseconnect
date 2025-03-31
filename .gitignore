@@ -1,0 +1,98 @@
+# Django settings
+*.pyc
+*.pyo
+__pycache__/
+
+# Environment variables
+.env
+.venv/
+venv/
+env/
+env.bak/
+env.*
+*.env
+
+# Pytest and coverage
+.coverage
+coverage.xml
+*.cover
+*.py,cover
+
+# Migrations
+*/migrations/*
+!*/migrations/__init__.py
+
+# SQLite database
+db.sqlite3
+
+# Log files
+*.log
+
+# Static files
+staticfiles/
+static/
+*.static/
+*.css.map
+*.scssc
+
+# Media files
+media/
+
+# Jupyter Notebook files
+.ipynb_checkpoints/
+*.ipynb
+
+# IDE-specific files
+.idea/
+*.sublime-project
+*.sublime-workspace
+*.vscode/
+*.code-workspace
+
+# Python virtual environment
+.vscode/
+.pyo
+*.egg-info/
+dist/
+build/
+.eggs/
+
+# Caching
+__pycache__/
+.cache/
+*.tgz
+*.tar.gz
+
+# Python egg files
+*.egg
+*.egg-info/
+MANIFEST
+
+# Miscellaneous
+*.DS_Store
+Thumbs.db
+*.swp
+*.swo
+
+# Test results
+nosetests.xml
+test-results/
+*.html
+*.xml
+
+# Celery beat schedule file
+celerybeat.pid
+
+# Celery worker logs
+celerybeat-schedule
+
+# SQLite database files
+*.sqlite3
+
+# Docker
+docker-compose.yml
+Dockerfile
+*.dockerfile
+
+# Github Actions
+.github/

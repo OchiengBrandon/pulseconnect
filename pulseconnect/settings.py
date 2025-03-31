@@ -6,10 +6,10 @@ from django.utils.translation import gettext_lazy as _
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = 'django-insecure-pulseconnect-replace-with-env-variable'
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-pulseconnect-replace-with-env-variable')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
 
 ALLOWED_HOSTS = ['localhost', '127.0.0.1']
 
@@ -83,15 +83,16 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'pulseconnect.wsgi.application'
 ASGI_APPLICATION = 'pulseconnect.asgi.application'
-# Database
+
+# Database configuration
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',  # Change to MySQL backend
-        'NAME': 'pulseconnect',                  # Your database name
-        'USER': 'root',               # Replace with your MySQL username
-        'PASSWORD': 'Brandon',       # Replace with your MySQL password
-        'HOST': 'localhost',                     # Or '127.0.0.1'
-        'PORT': '3306',                          # Default MySQL port
+        'ENGINE': 'django.db.backends.mysql' if os.getenv('USE_MYSQL', 'False') == 'True' else 'django.db.backends.sqlite3',
+        'NAME': os.getenv('MYSQL_DATABASE', 'pulseconnect') if os.getenv('USE_MYSQL', 'False') == 'True' else os.path.join(BASE_DIR, 'db.sqlite3'),
+        'USER': os.getenv('MYSQL_USER', 'root') if os.getenv('USE_MYSQL', 'False') == 'True' else '',
+        'PASSWORD': os.getenv('MYSQL_PASSWORD', 'Brandon') if os.getenv('USE_MYSQL', 'False') == 'True' else '',
+        'HOST': os.getenv('MYSQL_HOST', 'localhost') if os.getenv('USE_MYSQL', 'False') == 'True' else '',
+        'PORT': os.getenv('MYSQL_PORT', '3306') if os.getenv('USE_MYSQL', 'False') == 'True' else '',
     }
 }
 
@@ -185,8 +186,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = 'brand254ke@gmail.com'
-EMAIL_HOST_PASSWORD = 'vdst pufq vglf jcnd'
+EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'brand254ke@gmail.com')  # Use environment variable for email user
+EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'your_email_password')  # Use environment variable for email password
 DEFAULT_FROM_EMAIL = 'PulseConnect <noreply@pulseconnect.org>'
 
 # Login URLs

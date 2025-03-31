@@ -14,7 +14,7 @@ urlpatterns = [
     path('collaborate/', include('collaboration.urls')),
     path('rewards/', include('gamification.urls')),
     # path('api/', include('api.urls')),
-    path('dashboard/', TemplateView.as_view(template_name="dashboard.html"), name='dashboard'),
+    path('dashboard/', TemplateView.as_view(template_name="home.html"), name='dashboard'),
     path('ckeditor/', include('ckeditor_uploader.urls')),
 ]
 
