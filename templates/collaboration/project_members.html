@@ -1,0 +1,186 @@
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+
+{% block title %}{% trans "Project Members" %} - {{ project.title }}{% endblock %}
+
+{% block content %}
+<div class="container py-4">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{% url 'collaboration:project_list' %}">{% trans "Projects" %}</a></li>
+            <li class="breadcrumb-item"><a href="{% url 'collaboration:project_detail' pk=project.pk %}">{{ project.title }}</a></li>
+            <li class="breadcrumb-item active" aria-current="page">{% trans "Members" %}</li>
+        </ol>
+    </nav>
+
+    <div class="card shadow-sm">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="h4 mb-0">{% trans "Project Members" %}</h2>
+            <a href="{% url 'collaboration:project_detail' pk=project.pk %}" class="btn btn-outline-secondary btn-sm">
+                {% trans "Back to Project" %}
+            </a>
+        </div>
+        <div class="card-body">
+            <div class="table-responsive">
+                <table class="table table-hover">
+                    <thead>
+                        <tr>
+                            <th>{% trans "User" %}</th>
+                            <th>{% trans "Role" %}</th>
+                            <th>{% trans "Edit Permission" %}</th>
+                            <th>{% trans "Invite Permission" %}</th>
+                            <th>{% trans "Joined" %}</th>
+                            {% if can_edit %}
+                            <th>{% trans "Actions" %}</th>
+                            {% endif %}
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for membership in memberships %}
+                        <tr>
+                            <td>
+                                <div class="d-flex align-items-center">
+                                    <img src="{{ membership.user.get_avatar_url }}" alt="{{ membership.user.username }}" class="avatar rounded-circle me-2" width="32" height="32">
+                                    <div>
+                                        <div class="fw-bold">{{ membership.user.get_full_name|default:membership.user.username }}</div>
+                                        <div class="text-muted small">{{ membership.user.email }}</div>
+                                        {% if membership.user == project.owner %}
+                                        <span class="badge bg-primary">{% trans "Owner" %}</span>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </td>
+                            <td>{{ membership.get_role_display }}</td>
+                            <td>
+                                {% if membership.can_edit %}
+                                <span class="badge bg-success">{% trans "Yes" %}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{% trans "No" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>
+                                {% if membership.can_invite %}
+                                <span class="badge bg-success">{% trans "Yes" %}</span>
+                                {% else %}
+                                <span class="badge bg-secondary">{% trans "No" %}</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ membership.created_at|date:"M d, Y" }}</td>
+                            {% if can_edit and membership.user != project.owner and request.user == project.owner %}
+                            <td>
+                                <div class="dropdown">
+                                    <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ membership.pk }}" data-bs-toggle="dropdown" aria-expanded="false">
+                                        {% trans "Actions" %}
+                                    </button>
+                                    <ul class="dropdown-menu" aria-labelledby="dropdownMenuButton{{ membership.pk }}">
+                                        <li>
+                                            <button type="button" class="dropdown-item" data-bs-toggle="modal" data-bs-target="#editMemberModal{{ membership.pk }}">
+                                                {% trans "Edit Role" %}
+                                            </button>
+                                        </li>
+                                        <li>
+                                            <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#removeMemberModal{{ membership.pk }}">
+                                                {% trans "Remove" %}
+                                            </button>
+                                        </li>
+                                    </ul>
+                                </div>
+
+                                <!-- Edit Member Modal -->
+                                <div class="modal fade" id="editMemberModal{{ membership.pk }}" tabindex="-1" aria-labelledby="editMemberModalLabel{{ membership.pk }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <form method="post" action="{% url 'collaboration:update_member_role' project_pk=project.pk user_pk=membership.user.pk %}">
+                                                {% csrf_token %}
+                                                <div class="modal-header">
+                                                    <h5 class="modal-title" id="editMemberModalLabel{{ membership.pk }}">{% trans "Edit Member Role" %}</h5>
+                                                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                                </div>
+                                                <div class="modal-body">
+                                                    <div class="mb-3">
+                                                        <label for="role" class="form-label">{% trans "Role" %}</label>
+                                                        <select name="role" id="role" class="form-select">
+                                                            <option value="coordinator" {% if membership.role == 'coordinator' %}selected{% endif %}>{% trans "Coordinator" %}</option>
+                                                            <option value="researcher" {% if membership.role == 'researcher' %}selected{% endif %}>{% trans "Researcher" %}</option>
+                                                            <option value="assistant" {% if membership.role == 'assistant' %}selected{% endif %}>{% trans "Assistant" %}</option>
+                                                            <option value="viewer" {% if membership.role == 'viewer' %}selected{% endif %}>{% trans "Viewer" %}</option>
+                                                        </select>
+                                                    </div>
+                                                    <div class="form-check mb-3">
+                                                        <input class="form-check-input" type="checkbox" name="can_edit" id="can_edit{{ membership.pk }}" {% if membership.can_edit %}checked{% endif %}>
+                                                        <label class="form-check-label" for="can_edit{{ membership.pk }}">
+                                                            {% trans "Can edit project" %}
+                                                        </label>
+                                                    </div>
+                                                    <div class="form-check mb-3">
+                                                        <input class="form-check-input" type="checkbox" name="can_invite" id="can_invite{{ membership.pk }}" {% if membership.can_invite %}checked{% endif %}>
+                                                        <label class="form-check-label" for="can_invite{{ membership.pk }}">
+                                                            {% trans "Can invite others" %}
+                                                        </label>
+                                                    </div>
+                                                </div>
+                                                <div class="modal-footer">
+                                                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                                                    <button type="submit" class="btn btn-primary">{% trans "Save Changes" %}</button>
+                                                </div>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Remove Member Modal -->
+                                <div class="modal fade" id="removeMemberModal{{ membership.pk }}" tabindex="-1" aria-labelledby="removeMemberModalLabel{{ membership.pk }}" aria-hidden="true">
+                                    <div class="modal-dialog">
+                                        <div class="modal-content">
+                                            <div class="modal-header">
+                                                <h5 class="modal-title" id="removeMemberModalLabel{{ membership.pk }}">{% trans "Remove Member" %}</h5>
+                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                                            </div>
+                                            <div class="modal-body">
+                                                <p>{% trans "Are you sure you want to remove this member from the project?" %}</p>
+                                                <div class="alert alert-warning">
+                                                    <strong>{{ membership.user.get_full_name|default:membership.user.username }}</strong> {% trans "will lose access to this project." %}
+                                                </div>
+                                            </div>
+                                            <div class="modal-footer">
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
+                                                <form method="post" action="{% url 'collaboration:remove_member' project_pk=project.pk user_pk=membership.user.pk %}">
+                                                    {% csrf_token %}
+                                                    <button type="submit" class="btn btn-danger">{% trans "Remove" %}</button>
+                                                </form>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </td>
+                            {% elif can_edit %}
+                            <td>
+                                <span class="text-muted">{% trans "No actions available" %}</span>
+                            </td>
+                            {% endif %}
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="{% if can_edit %}6{% else %}5{% endif %}" class="text-center py-4">
+                                {% trans "No members found" %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <div class="card-footer">
+            <div class="d-flex justify-content-between align-items-center">
+                <span>{% trans "Total Members" %}: {{ memberships|length }}</span>
+                {% if can_edit %}
+                <a href="{% url 'collaboration:project_invitations' pk=project.pk %}" class="btn btn-primary">
+                    <i class="bi bi-person-plus"></i> {% trans "Invite Members" %}
+                </a>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}  
