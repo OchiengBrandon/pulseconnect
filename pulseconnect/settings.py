@@ -188,8 +188,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = os.getenv('EMAIL_HOST_USER', 'brand254ke@gmail.com')  # Use environment variable for email user
-EMAIL_HOST_PASSWORD = os.getenv('EMAIL_HOST_PASSWORD', 'your_email_password')  # Use environment variable for email password
+EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='pulseconnectorg@gmail.com')  # Use environment variable for email user
+EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='jzoj gngj dhdh qaal')  # Use environment variable for email password
 DEFAULT_FROM_EMAIL = 'PulseConnect <noreply@pulseconnect.org>'
 
 # Login URLs

@@ -104,7 +104,47 @@ def verify_email(request, token):
 
 
 def verification_sent(request):
-    return render(request, 'accounts/verification_sent.html')
+    return render(request, 'accounts/email/verification_sent.html')
+
+@login_required
+def resend_verification(request):
+    user = request.user
+    verification = get_object_or_404(UserVerification, user=user)
+
+    # Check if the user is already verified
+    if verification.is_verified:
+        messages.info(request, _('Your account is already verified.'))
+        return redirect('accounts:profile', username=user.username)
+
+    # Generate a new token and expiry
+    token = get_random_string(64)
+    expiry = timezone.now() + timezone.timedelta(days=3)
+    verification.verification_token = token
+    verification.token_expiry = expiry
+    verification.save()
+
+    # Send the verification email again
+    verification_url = request.build_absolute_uri(
+        reverse_lazy('accounts:verify', kwargs={'token': token})
+    )
+    context = {
+        'user': user,
+        'verification_url': verification_url,
+    }
+    email_subject = _('Verify your PulseConnect account')
+    email_body = render_to_string('accounts/email/verification_email.html', context)
+
+    send_mail(
+        email_subject,
+        email_body,
+        'noreply@pulseconnect.org',
+        [user.email],
+        html_message=email_body,
+        fail_silently=False,
+    )
+
+    messages.success(request, _('A new verification email has been sent to your email address.'))
+    return redirect('accounts:profile', username=user.username)
 
 
 class ProfileDetailView(DetailView):

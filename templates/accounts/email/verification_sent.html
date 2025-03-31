@@ -1,11 +1,11 @@
-{% extends 'base.html' %}
+{% extends 'accounts/base.html' %}
 
 {% block title %}Verification Email Sent - PulseConnect{% endblock %}
 
 {% block content %}
 <div class="min-h-screen flex items-center justify-center py-12 px-4 sm:px-6 lg:px-8">
     <div class="max-w-md w-full">
-        <div class="card backdrop-blur-lg bg-opacity-30 text-center">
+        <div class="form-container">
             <div class="animate__animated animate__fadeIn">
                 <!-- Email sent animation -->
                 <div class="w-24 h-24 mx-auto mb-6 relative">
@@ -21,7 +21,7 @@
                     </div>
                 </div>
 
-                <h2 class="text-3xl font-bold mb-4">Check Your Email</h2>
+                <h2 class="form-title">Check Your Email</h2>
                 
                 <p class="mb-6 opacity-80">
                     We've sent a verification link to your email address. 
@@ -40,7 +40,7 @@
                     </div>
 
                     <button type="button" id="resendButton" 
-                            class="btn-secondary w-full"
+                            class="btn btn-primary w-full py-2 mt-4 transition duration-300 ease-in-out transform hover:scale-105"
                             data-countdown="60">
                         Resend Verification Email
                     </button>
@@ -49,7 +49,7 @@
                 <div class="mt-8 pt-6 border-t border-gray-200 dark:border-gray-700">
                     <p class="text-sm">
                         Need help? 
-                        <a href="{% url 'contact' %}" class="text-accent hover:underline">
+                        <a href="{% url 'accounts:signup' %}" class="text-accent hover:underline">
                             Contact Support
                         </a>
                     </p>
@@ -108,7 +108,7 @@
                 // Show success message
                 const successMessage = document.createElement('div');
                 successMessage.className = 
-                    'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg ' +
+                    'fixed top-4 right-4 bg-green-500 text-white px-6 py-3 rounded-lg shadow-lg ' +
                     'animate__animated animate__fadeInRight';
                 successMessage.textContent = 'Verification email sent successfully!';
                 document.body.appendChild(successMessage);
@@ -129,7 +129,7 @@
             // Show error message
             const errorMessage = document.createElement('div');
             errorMessage.className = 
-                'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg ' +
+                'fixed top-4 right-4 bg-red-500 text-white px-6 py-3 rounded-lg shadow-lg ' +
                 'animate__animated animate__fadeInRight';
             errorMessage.textContent = 'Failed to resend verification email. Please try again later.';
             document.body.appendChild(errorMessage);
