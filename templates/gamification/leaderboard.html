@@ -65,7 +65,7 @@
                     </div>
                     
                     <div class="user-info">
-                        <img src="{{ leader.profile_picture|default:'https://via.placeholder.com/40' }}" 
+                        <img src="{{ leader.profile_picture.url|default:'https://via.placeholder.com/40' }}" 
                              alt="{{ leader.username }}" 
                              class="user-avatar">
                         <div class="details">

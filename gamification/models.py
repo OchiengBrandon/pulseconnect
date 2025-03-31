@@ -4,6 +4,8 @@ from django.conf import settings
 from django.utils import timezone
 from django.db.models.signals import post_save
 from django.dispatch import receiver
+from django.db.models import Sum, Count
+from django.contrib.auth import get_user_model
 
 class Badge(models.Model):
     """Badges that users can earn"""
@@ -216,45 +218,40 @@ class Leaderboard(models.Model):
     def __str__(self):
         return f"{self.title} ({self.get_time_period_display()})"
     
-    def get_leaders(self):
-        """Get the leaders for this leaderboard"""
-        from django.db.models import Sum, Count
-        from django.contrib.auth import get_user_model
-        User = get_user_model()
+    def get_leaders(self, time_period=None):
+        """Get the leaders for this leaderboard, optionally based on a provided time period."""
+        User = get_user_model()  # Dynamically get the User model
         
-        # Get time filter
+        # Determine the applicable time period
+        if time_period is None:
+            time_period = self.time_period
+        
+        # Get time filter based on the selected time period
         time_filter = None
-        if self.time_period == 'this_month':
+        if time_period == 'this_month':
             time_filter = timezone.now().replace(day=1, hour=0, minute=0, second=0, microsecond=0)
-        elif self.time_period == 'this_week':
-            # Get the start of the week (Sunday)
+        elif time_period == 'this_week':
             today = timezone.now().date()
             time_filter = timezone.now().replace(
                 day=today.day - today.weekday(),
                 hour=0, minute=0, second=0, microsecond=0
             )
-            if time_filter > timezone.now():
-                # If we went into the future, go back 7 days
-                time_filter = time_filter - timezone.timedelta(days=7)
-        elif self.time_period == 'today':
+        elif time_period == 'today':
             time_filter = timezone.now().replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Get the appropriate queryset based on leaderboard type
+
+        # Query based on leaderboard type
         if self.leaderboard_type == 'overall':
             if time_filter:
-                # For time-filtered overall points, we need to sum transactions
                 leaders = User.objects.annotate(
                     score=Sum('point_transactions__points', 
                               filter=models.Q(point_transactions__created_at__gte=time_filter))
                 ).filter(score__gt=0).order_by('-score')[:self.max_entries]
             else:
-                # For all-time, we can use the pre-calculated total
                 leaders = User.objects.annotate(
                     score=models.F('points__total_points')
                 ).filter(score__gt=0).order_by('-score')[:self.max_entries]
         
         elif self.leaderboard_type == 'polls':
-            # Count polls created
             if time_filter:
                 leaders = User.objects.annotate(
                     score=Count('created_polls', 
@@ -266,7 +263,6 @@ class Leaderboard(models.Model):
                 ).filter(score__gt=0).order_by('-score')[:self.max_entries]
         
         elif self.leaderboard_type == 'discussions':
-            # Count discussions created
             if time_filter:
                 leaders = User.objects.annotate(
                     score=Count('discussions', 
@@ -278,7 +274,6 @@ class Leaderboard(models.Model):
                 ).filter(score__gt=0).order_by('-score')[:self.max_entries]
         
         elif self.leaderboard_type == 'comments':
-            # Count comments made
             if time_filter:
                 leaders = User.objects.annotate(
                     score=Count('comments', 
@@ -290,7 +285,6 @@ class Leaderboard(models.Model):
                 ).filter(score__gt=0).order_by('-score')[:self.max_entries]
         
         elif self.leaderboard_type == 'volunteer':
-            # Count volunteer signups
             if time_filter:
                 leaders = User.objects.annotate(
                     score=Count('interested_opportunities', 
