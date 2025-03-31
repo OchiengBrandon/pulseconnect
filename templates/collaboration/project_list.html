@@ -1,0 +1,190 @@
+<!-- collaboration/project_list.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}Research Projects - PulseConnect{% endblock %}
+
+{% block page_title %}Research Projects{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Filters and Search -->
+    <div class="widget-card mb-4">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <div class="search-bar mb-0">
+                    <i class="ri-search-line search-icon"></i>
+                    <input type="text" name="q" value="{{ search_query }}" 
+                           class="search-input" placeholder="Search projects...">
+                </div>
+            </div>
+            <div class="col-md-3">
+                <select name="status" class="form-select">
+                    <option value="">All Status</option>
+                    {% for status, label in status_choices %}
+                        <option value="{{ status }}" {% if status == status_filter %}selected{% endif %}>
+                            {{ label }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+            <div class="col-md-3">
+                <select name="involvement" class="form-select">
+                    <option value="">All Projects</option>
+                    <option value="owner" {% if involvement == 'owner' %}selected{% endif %}>My Projects</option>
+                    <option value="member" {% if involvement == 'member' %}selected{% endif %}>Member Of</option>
+                    <option value="public" {% if involvement == 'public' %}selected{% endif %}>Public Projects</option>
+                </select>
+            </div>
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="ri-filter-3-line me-2"></i> Filter
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Projects Grid -->
+    <div class="row g-4">
+        <!-- Create Project Card -->
+        <div class="col-md-4">
+            <a href="{% url 'collaboration:project_create' %}" class="text-decoration-none">
+                <div class="widget-card h-100 d-flex align-items-center justify-content-center" 
+                     style="min-height: 250px; border-style: dashed;">
+                    <div class="text-center">
+                        <i class="ri-add-line" style="font-size: 3rem; color: var(--primary);"></i>
+                        <h4 class="mt-3 mb-0">Create New Project</h4>
+                        <p class="text-muted">Start a new research collaboration</p>
+                    </div>
+                </div>
+            </a>
+        </div>
+
+        <!-- Project Cards -->
+        {% for project in projects %}
+        <div class="col-md-4">
+            <div class="widget-card h-100">
+                <div class="d-flex justify-content-between mb-3">
+                    <span class="badge" style="background-color: {% if project.status == 'active' %}var(--success){% elif project.status == 'pending' %}var(--warning){% else %}var(--danger){% endif %}">
+                        {{ project.get_status_display }}
+                    </span>
+                    <div class="dropdown">
+                        <button class="btn btn-icon" data-bs-toggle="dropdown">
+                            <i class="ri-more-2-fill"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li><a class="dropdown-item" href="{% url 'collaboration:project_detail' project.pk %}">
+                                <i class="ri-eye-line me-2"></i> View Details
+                            </a></li>
+                            {% if project.owner == request.user %}
+                            <li><a class="dropdown-item" href="{% url 'collaboration:project_update' project.pk %}">
+                                <i class="ri-edit-line me-2"></i> Edit Project
+                            </a></li>
+                            <li><hr class="dropdown-divider"></li>
+                            <li><a class="dropdown-item text-danger" href="{% url 'collaboration:project_delete' project.pk %}">
+                                <i class="ri-delete-bin-line me-2"></i> Delete Project
+                            </a></li>
+                            {% endif %}
+                        </ul>
+                    </div>
+                </div>
+
+                <h4 class="mb-2">{{ project.title }}</h4>
+                <p class="text-muted mb-3">{{ project.description|truncatewords:30 }}</p>
+
+                <div class="d-flex align-items-center mb-3">
+                    <img src="{% if project.owner.profile_picture %}{{ project.owner.profile_picture.url }}{% else %}https://via.placeholder.com/32{% endif %}" 
+                         alt="{{ project.owner.get_full_name }}"
+                         class="rounded-circle me-2"
+                         style="width: 32px; height: 32px; object-fit: cover;">
+                    <div>
+                        <small class="d-block">Project Owner</small>
+                        <strong>{{ project.owner.get_full_name }}</strong>
+                    </div>
+                </div>
+
+                <div class="progress mb-3" style="height: 8px;">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: {{ project.progress }}%; background-color: var(--primary);"
+                         aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-team-line me-2"></i>
+                        <span>{{ project.members.count }} Members</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="ri-calendar-line me-2"></i>
+                        <span>{{ project.created_at|date:"M d, Y" }}</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="widget-card text-center py-5">
+                <i class="ri-folder-open-line" style="font-size: 3rem; color: var(--text-2);"></i>
+                <h4 class="mt-3">No Projects Found</h4>
+                <p class="text-muted">Try adjusting your search or filter criteria</p>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="mt-4">
+        <ul class="pagination justify-content-center">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if involvement %}&involvement={{ involvement }}{% endif %}">
+                    <i class="ri-arrow-left-s-line"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if involvement %}&involvement={{ involvement }}{% endif %}">
+                    {{ num }}
+                </a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if search_query %}&q={{ search_query }}{% endif %}{% if status_filter %}&status={{ status_filter }}{% endif %}{% if involvement %}&involvement={{ involvement }}{% endif %}">
+                    <i class="ri-arrow-right-s-line"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    tippy('[data-tippy-content]', {
+        placement: 'bottom'
+    });
+
+    // Add hover effect to project cards
+    document.querySelectorAll('.widget-card').forEach(card => {
+        card.addEventListener('mouseenter', () => {
+            card.style.transform = 'translateY(-5px)';
+            card.style.boxShadow = 'var(--shadow-lg)';
+        });
+
+        card.addEventListener('mouseleave', () => {
+            card.style.transform = 'none';
+            card.style.boxShadow = 'var(--shadow)';
+        });
+    });
+</script>
+{% endblock %}

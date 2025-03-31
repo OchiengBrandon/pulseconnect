@@ -1,0 +1,302 @@
+<!-- collaboration/project_form.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{% if form.instance.pk %}Edit Project{% else %}Create Project{% endif %} - PulseConnect{% endblock %}
+
+{% block page_title %}{% if form.instance.pk %}Edit Project{% else %}Create Project{% endif %}{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <div class="row justify-content-center">
+        <div class="col-lg-8">
+            <div class="widget-card">
+                <form method="post" class="needs-validation" novalidate>
+                    {% csrf_token %}
+                    
+                    <!-- Title -->
+                    <div class="mb-4">
+                        <label class="form-label">Project Title <span class="text-danger">*</span></label>
+                        <input type="text" name="title" 
+                               class="form-control {% if form.title.errors %}is-invalid{% endif %}"
+                               value="{{ form.title.value|default:'' }}"
+                               title="Enter the project title"
+                               placeholder="Enter the project title"
+                               required>
+                        {% if form.title.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.title.errors|join:", " }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Choose a clear and descriptive title for your research project</div>
+                    </div>
+
+                    <!-- Description -->
+                    <div class="mb-4">
+                        <label class="form-label">Project Description <span class="text-danger">*</span></label>
+                        <textarea name="description" 
+                                  class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                                  rows="4" 
+                                  required>{{ form.description.value|default:'' }}</textarea>
+                        {% if form.description.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.description.errors|join:", " }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Provide a detailed description of your research project</div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Start Date -->
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">Start Date <span class="text-danger">*</span></label>
+                            <input type="date" name="start_date"
+                                   class="form-control {% if form.start_date.errors %}is-invalid{% endif %}"
+                                   value="{{ form.start_date.value|date:'Y-m-d'|default:'' }}"
+                                   required>
+                            {% if form.start_date.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.start_date.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- End Date -->
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">End Date <span class="text-danger">*</span></label>
+                            <input type="date" name="end_date"
+                                   class="form-control {% if form.end_date.errors %}is-invalid{% endif %}"
+                                   value="{{ form.end_date.value|date:'Y-m-d'|default:'' }}"
+                                   required>
+                            {% if form.end_date.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.end_date.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+
+                    <div class="row">
+                        <!-- Status -->
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">Project Status <span class="text-danger">*</span></label>
+                            <select name="status" 
+                                    class="form-select {% if form.status.errors %}is-invalid{% endif %}"
+                                    required>
+                                {% for value, label in form.fields.status.choices %}
+                                <option value="{{ value }}" 
+                                        {% if form.status.value == value %}selected{% endif %}>
+                                    {{ label }}
+                                </option>
+                                {% endfor %}
+                            </select>
+                            {% if form.status.errors %}
+                            <div class="invalid-feedback">
+                                {{ form.status.errors|join:", " }}
+                            </div>
+                            {% endif %}
+                        </div>
+
+                        <!-- Visibility -->
+                        <div class="col-md-6 mb-4">
+                            <label class="form-label">Project Visibility</label>
+                            <div class="form-check form-switch">
+                                <input type="checkbox" name="is_public" 
+                                       class="form-check-input"
+                                       id="isPublic"
+                                       {% if form.is_public.value %}checked{% endif %}>
+                                <label class="form-check-label" for="isPublic">Make project public</label>
+                            </div>
+                            <div class="form-text">Public projects are visible to all users</div>
+                        </div>
+                    </div>
+
+                    <!-- Categories -->
+                    <div class="mb-4">
+                        <label class="form-label">Categories</label>
+                        <div class="row g-2">
+                            {% for value, label in form.fields.categories.choices %}
+                            <div class="col-auto">
+                                <div class="form-check">
+                                    <input type="checkbox" name="categories" 
+                                           value="{{ value }}"
+                                           class="form-check-input"
+                                           id="category_{{ value }}"
+                                           {% if value in form.categories.value %}checked{% endif %}>
+                                    <label class="form-check-label" for="category_{{ value }}">
+                                        {{ label }}
+                                    </label>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </div>
+                        {% if form.categories.errors %}
+                        <div class="invalid-feedback d-block">
+                            {{ form.categories.errors|join:", " }}
+                        </div>
+                        {% endif %}
+                    </div>
+
+                    <!-- Tags -->
+                    <div class="mb-4">
+                        <label class="form-label">Tags</label>
+                        <input type="text" name="tags"
+                               class="form-control {% if form.tags.errors %}is-invalid{% endif %}"
+                               value="{{ form.tags.value|default:'' }}"
+                               placeholder="Enter tags separated by commas">
+                        {% if form.tags.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.tags.errors|join:", " }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Add relevant tags to help others find your project</div>
+                    </div>
+
+                    <!-- Funding Information -->
+                    <div class="mb-4">
+                        <label class="form-label">Funding Information</label>
+                        <textarea name="funding_info"
+                                  class="form-control {% if form.funding_info.errors %}is-invalid{% endif %}"
+                                  rows="2">{{ form.funding_info.value|default:'' }}</textarea>
+                        {% if form.funding_info.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.funding_info.errors|join:", " }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">Optional: Include any funding or grant information</div>
+                    </div>
+
+                    <!-- Project Requirements -->
+                    <div class="mb-4">
+                        <label class="form-label">Project Requirements</label>
+                        <textarea name="requirements"
+                                  class="form-control {% if form.requirements.errors %}is-invalid{% endif %}"
+                                  rows="3">{{ form.requirements.value|default:'' }}</textarea>
+                        {% if form.requirements.errors %}
+                        <div class="invalid-feedback">
+                            {{ form.requirements.errors|join:", " }}
+                        </div>
+                        {% endif %}
+                        <div class="form-text">List any specific requirements or prerequisites for the project</div>
+                    </div>
+
+                    <!-- Form Actions -->
+                    <div class="d-flex justify-content-between align-items-center mt-4">
+                        <a href="{% url 'collaboration:project_list' %}" class="btn btn-outline-secondary">
+                            <i class="ri-arrow-left-line me-2"></i> Cancel
+                        </a>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ri-save-line me-2"></i>
+                            {% if form.instance.pk %}Update Project{% else %}Create Project{% endif %}
+                        </button>
+                    </div>
+                </form>
+            </div>
+
+            {% if form.instance.pk %}
+            <!-- Danger Zone -->
+            <div class="widget-card mt-4">
+                <h5 class="text-danger mb-4">Danger Zone</h5>
+                <div class="d-flex justify-content-between align-items-center">
+                    <div>
+                        <h6 class="mb-1">Delete this project</h6>
+                        <p class="text-muted mb-0">Once deleted, it cannot be recovered</p>
+                    </div>
+                    <a href="{% url 'collaboration:project_delete' form.instance.pk %}" 
+                       class="btn btn-danger">
+                        <i class="ri-delete-bin-line me-2"></i> Delete Project
+                    </a>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <!-- Help Sidebar -->
+        <div class="col-lg-4">
+            <div class="widget-card mb-4">
+                <h5 class="mb-3">Guidelines</h5>
+                <div class="mb-4">
+                    <h6><i class="ri-information-line me-2"></i> Project Title</h6>
+                    <p class="text-muted small">Choose a clear and concise title that accurately reflects your research project.</p>
+                </div>
+                <div class="mb-4">
+                    <h6><i class="ri-file-text-line me-2"></i> Description</h6>
+                    <p class="text-muted small">Include the project's objectives, methodology, and expected outcomes.</p>
+                </div>
+                <div class="mb-4">
+                    <h6><i class="ri-calendar-line me-2"></i> Timeline</h6>
+                    <p class="text-muted small">Set realistic start and end dates for your project phases.</p>
+                </div>
+                <div class="mb-4">
+                    <h6><i class="ri-eye-line me-2"></i> Visibility</h6>
+                    <p class="text-muted small">Public projects are discoverable by other researchers. Private projects are visible only to invited members.</p>
+                </div>
+            </div>
+
+            <div class="widget-card">
+                <h5 class="mb-3">Tips</h5>
+                <ul class="list-unstyled mb-0">
+                    <li class="mb-2">
+                        <i class="ri-checkbox-circle-line text-success me-2"></i>
+                        <span class="text-muted small">Use clear and specific language</span>
+                    </li>
+                    <li class="mb-2">
+                        <i class="ri-checkbox-circle-line text-success me-2"></i>
+                        <span class="text-muted small">Include relevant keywords in tags</span>
+                    </li>
+                    <li class="mb-2">
+                        <i class="ri-checkbox-circle-line text-success me-2"></i>
+                        <span class="text-muted small">Keep the description focused and structured</span>
+                    </li>
+                    <li>
+                        <i class="ri-checkbox-circle-line text-success me-2"></i>
+                        <span class="text-muted small">Review all details before submission</span>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Form validation
+    (function () {
+        'use strict'
+        const forms = document.querySelectorAll('.needs-validation')
+        
+        Array.from(forms).forEach(form => {
+            form.addEventListener('submit', event => {
+                if (!form.checkValidity()) {
+                    event.preventDefault()
+                    event.stopPropagation()
+                }
+                form.classList.add('was-validated')
+            }, false)
+        })
+    })()
+
+    // Date validation
+    const startDate = document.querySelector('input[name="start_date"]');
+    const endDate = document.querySelector('input[name="end_date"]');
+
+    function validateDates() {
+        if (startDate.value && endDate.value) {
+            if (new Date(endDate.value) < new Date(startDate.value)) {
+                endDate.setCustomValidity('End date must be after start date');
+            } else {
+                endDate.setCustomValidity('');
+            }
+        }
+    }
+
+    startDate.addEventListener('change', validateDates);
+    endDate.addEventListener('change', validateDates);
+
+    // Initialize tooltips
+    tippy('[data-tippy-content]', {
+        placement: 'bottom'
+    });
+</script>
+{% endblock %}

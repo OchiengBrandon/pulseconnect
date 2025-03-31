@@ -1,0 +1,461 @@
+<!-- collaboration/project_detail.html -->
+{% extends 'base.html' %}
+{% load static %}
+
+{% block title %}{{ project.title }} - PulseConnect{% endblock %}
+
+{% block page_title %}Project Details{% endblock %}
+
+{% block content %}
+<div class="container-fluid">
+    <!-- Project Header -->
+    <div class="widget-card mb-4">
+        <div class="d-flex justify-content-between align-items-start mb-4">
+            <div>
+                <div class="d-flex align-items-center gap-3 mb-2">
+                    <h2 class="mb-0">{{ project.title }}</h2>
+                    <span class="badge" style="background-color: {% if project.status == 'active' %}var(--success){% elif project.status == 'pending' %}var(--warning){% else %}var(--danger){% endif %}">
+                        {{ project.get_status_display }}
+                    </span>
+                    {% if project.is_public %}
+                        <span class="badge bg-info">Public</span>
+                    {% else %}
+                        <span class="badge bg-secondary">Private</span>
+                    {% endif %}
+                </div>
+                <p class="text-muted mb-0">{{ project.description }}</p>
+            </div>
+            
+            <div class="d-flex gap-2">
+                {% if can_edit %}
+                <a href="{% url 'collaboration:project_update' project.pk %}" class="btn btn-outline-primary">
+                    <i class="ri-edit-line me-2"></i> Edit Project
+                </a>
+                {% endif %}
+                
+                {% if can_invite %}
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#inviteModal">
+                    <i class="ri-user-add-line me-2"></i> Invite Members
+                </button>
+                {% endif %}
+                
+                {% if project.owner == request.user %}
+                <div class="dropdown">
+                    <button class="btn btn-icon" data-bs-toggle="dropdown" title="More options">
+                        <i class="ri-more-2-fill"></i>
+                    </button>
+                    <ul class="dropdown-menu">
+                        <li>
+                            <a class="dropdown-item" href="{% url 'collaboration:transfer_ownership' project.pk %}">
+                                <i class="ri-exchange-line me-2"></i> Transfer Ownership
+                            </a>
+                        </li>
+                        <li><hr class="dropdown-divider"></li>
+                        <li>
+                            <a class="dropdown-item text-danger" href="{% url 'collaboration:project_delete' project.pk %}">
+                                <i class="ri-delete-bin-line me-2"></i> Delete Project
+                            </a>
+                        </li>
+                    </ul>
+                </div>
+                {% endif %}
+            </div>
+        </div>
+
+        <!-- Project Progress -->
+        <div class="row align-items-center mb-4">
+            <div class="col-md-9">
+                <div class="progress" style="height: 10px;">
+                    <div class="progress-bar" role="progressbar" 
+                         style="width: {{ project.progress }}%; background-color: var(--primary);"
+                         aria-valuenow="{{ project.progress }}" aria-valuemin="0" aria-valuemax="100">
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3 text-end">
+                <span class="fs-5 fw-bold">{{ project.progress }}% Complete</span>
+            </div>
+        </div>
+
+        <!-- Project Stats -->
+        <div class="row g-4">
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon purple">
+                        <i class="ri-team-line"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-1">{{ project.members.count }}</h3>
+                        <span class="text-muted">Team Members</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon green">
+                        <i class="ri-task-line"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-1">{{ tasks.count }}</h3>
+                        <span class="text-muted">Total Tasks</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon blue">
+                        <i class="ri-file-text-line"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-1">{{ documents.count }}</h3>
+                        <span class="text-muted">Documents</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="stat-card">
+                    <div class="stat-icon" style="background-color: rgba(245, 158, 11, 0.1); color: var(--warning);">
+                        <i class="ri-time-line"></i>
+                    </div>
+                    <div>
+                        <h3 class="mb-1">{{ project.days_remaining }}</h3>
+                        <span class="text-muted">Days Remaining</span>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Main Content Tabs -->
+    <ul class="nav nav-tabs mb-4" role="tablist">
+        <li class="nav-item">
+            <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#tasks">
+                <i class="ri-task-line me-2"></i> Tasks
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#documents">
+                <i class="ri-file-text-line me-2"></i> Documents
+            </button>
+        </li>
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#members">
+                <i class="ri-team-line me-2"></i> Team Members
+            </button>
+        </li>
+        {% if can_invite %}
+        <li class="nav-item">
+            <button class="nav-link" data-bs-toggle="tab" data-bs-target="#invitations">
+                <i class="ri-mail-line me-2"></i> Invitations
+                {% if pending_invitations %}
+                <span class="badge bg-danger">{{ pending_invitations.count }}</span>
+                {% endif %}
+            </button>
+        </li>
+        {% endif %}
+    </ul>
+
+    <!-- Tab Content -->
+    <div class="tab-content">
+        <!-- Tasks Tab -->
+        <div class="tab-pane fade show active" id="tasks">
+            <div class="row g-4">
+                <div class="col-md-4">
+                    <div class="widget-card">
+                        <h5 class="mb-3">To Do</h5>
+                        <div class="task-list" data-status="todo">
+                            {% for task in tasks %}
+                            {% if task.status == 'todo' %}
+                            <div class="task-card mb-3" data-task-id="{{ task.id }}">
+                                <div class="d-flex justify-content-between align-items-start mb-2">
+                                    <h6 class="mb-0">{{ task.title }}</h6>
+                                    <span class="badge" style="background-color: {% if task.priority == 'high' %}var(--danger){% elif task.priority == 'medium' %}var(--warning){% else %}var(--success){% endif %}">
+                                        {{ task.get_priority_display }}
+                                    </span>
+                                </div>
+                                <p class="text-muted small mb-2">{{ task.description|truncatewords:20 }}</p>
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div class="d-flex align-items-center">
+                                        <img src="{% if task.assigned_to.profile_picture %}{{ task.assigned_to.profile_picture.url }}{% else %}https://via.placeholder.com/24{% endif %}" 
+                                             alt="{{ task.assigned_to.get_full_name }}"
+                                             class="rounded-circle me-2"
+                                             style="width: 24px; height: 24px; object-fit: cover;">
+                                        <span class="small">{{ task.assigned_to.get_short_name }}</span>
+                                    </div>
+                                    <span class="small text-muted">Due: {{ task.due_date|date:"M d" }}</span>
+                                </div>
+                            </div>
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="widget-card">
+                        <h5 class="mb-3">In Progress</h5>
+                        <div class="task-list" data-status="in_progress">
+                            {% for task in tasks %}
+                            {% if task.status == 'in_progress' %}
+                            <!-- Similar task card structure as above -->
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-md-4">
+                    <div class="widget-card">
+                        <h5 class="mb-3">Completed</h5>
+                        <div class="task-list" data-status="completed">
+                            {% for task in tasks %}
+                            {% if task.status == 'completed' %}
+                            <!-- Similar task card structure as above -->
+                            {% endif %}
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Documents Tab -->
+        <div class="tab-pane fade" id="documents">
+            <div class="row g-4">
+                {% for document in documents %}
+                <div class="col-md-4">
+                    <div class="widget-card">
+                        <div class="d-flex align-items-center mb-3">
+                            <i class="ri-file-text-line me-2" style="font-size: 2rem; color: var(--primary);"></i>
+                            <div>
+                                <h5 class="mb-1">{{ document.title }}</h5>
+                                <span class="text-muted">Version {{ document.version }}</span>
+                            </div>
+                        </div>
+                        <p class="text-muted mb-3">{{ document.description|truncatewords:20 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div class="d-flex align-items-center">
+                                <img src="{% if document.created_by.profile_picture %}{{ document.created_by.profile_picture.url }}{% else %}https://via.placeholder.com/24{% endif %}" 
+                                     alt="{{ document.created_by.get_full_name }}"
+                                     class="rounded-circle me-2"
+                                     style="width: 24px; height: 24px; object-fit: cover;">
+                                <span class="small">{{ document.created_by.get_short_name }}</span>
+                            </div>
+                            <div class="btn-group">
+                                <a href="{% url 'collaboration:view_document' document.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="ri-eye-line"></i>
+                                </a>
+                                {% if can_edit %}
+                                <a href="{% url 'collaboration:edit_document' document.pk %}" class="btn btn-sm btn-outline-primary">
+                                    <i class="ri-edit-line"></i>
+                                </a>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="widget-card text-center py-5">
+                        <i class="ri-file-text-line" style="font-size: 3rem; color: var(--text-2);"></i>
+                        <h4 class="mt-3">No Documents Yet</h4>
+                        <p class="text-muted">Start by uploading project documents</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Members Tab -->
+        <div class="tab-pane fade" id="members">
+            <div class="row g-4">
+                {% for member in members %}
+                <div class="col-md-4">
+                    <div class="widget-card">
+                        <div class="d-flex align-items-center mb-3">
+                            <img src="{% if member.user.profile_picture %}{{ member.user.profile_picture.url }}{% else %}https://via.placeholder.com/64{% endif %}" 
+                                 alt="{{ member.user.get_full_name }}"
+                                 class="rounded-circle me-3"
+                                 style="width: 64px; height: 64px; object-fit: cover;">
+                            <div>
+                                <h5 class="mb-1">{{ member.user.get_full_name }}</h5>
+                                <span class="badge" style="background-color: var(--primary);">{{ member.get_role_display }}</span>
+                            </div>
+                        </div>
+                        <div class="d-flex justify-content-between mb-3">
+                            <div>
+                                <small class="d-block text-muted">Permissions</small>
+                                <div>
+                                    {% if member.can_edit %}
+                                    <span class="badge bg-success me-1">Can Edit</span>
+                                    {% endif %}
+                                    {% if member.can_invite %}
+                                    <span class="badge bg-info">Can Invite</span>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            <div class="text-end">
+                                <small class="d-block text-muted">Joined</small>
+                                <span>{{ member.joined_at|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        {% if project.owner == request.user and member.user != project.owner %}
+                        <div class="d-flex justify-content-end">
+                            <button class="btn btn-sm btn-outline-danger" 
+                                    onclick="confirmRemoveMember({{ member.user.id }}, '{{ member.user.get_full_name }}')">
+                                <i class="ri-user-unfollow-line me-1"></i> Remove
+                            </button>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Invitations Tab -->
+        {% if can_invite %}
+        <div class="tab-pane fade" id="invitations">
+            <div class="row g-4">
+                {% for invitation in pending_invitations %}
+                <div class="col-md-4">
+                    <div class="widget-card">
+                        <div class="d-flex justify-content-between align-items-start mb-3">
+                            <div>
+                                <h5 class="mb-1">{{ invitation.email }}</h5>
+                                <span class="badge bg-warning">Pending</span>
+                            </div>
+                            <button class="btn btn-icon btn-sm btn-outline-danger" 
+                                    onclick="cancelInvitation({{ invitation.id }})">
+                                <i class="ri-close-line"></i>
+                            </button>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <div>
+                                <small class="d-block text-muted">Role</small>
+                                <span>{{ invitation.get_role_display }}</span>
+                            </div>
+                            <div class="text-end">
+                                <small class="d-block text-muted">Sent</small>
+                                <span>{{ invitation.created_at|date:"M d, Y" }}</span>
+                            </div>
+                        </div>
+                        <div class="progress" style="height: 4px;">
+                            <div class="progress-bar bg-warning" role="progressbar" 
+                                 style="width: {{ invitation.expiry_progress }}%"
+                                 aria-valuenow="{{ invitation.expiry_progress }}" 
+                                 aria-valuemin="0" aria-valuemax="100">
+                            </div>
+                        </div>
+                        <small class="text-muted">Expires in {{ invitation.days_until_expiry }} days</small>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="col-12">
+                    <div class="widget-card text-center py-5">
+                        <i class="ri-mail-line" style="font-size: 3rem; color: var(--text-2);"></i>
+                        <h4 class="mt-3">No Pending Invitations</h4>
+                        <p class="text-muted">Invite new members to join the project</p>
+                    </div>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Invite Modal -->
+<div class="modal fade" id="inviteModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Invite Members</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form action="{% url 'collaboration:project_invitations' project.pk %}" method="post">
+                {% csrf_token %}
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label class="form-label">Email Address</label>
+                        <input type="email" name="email" class="form-control" required>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Role</label>
+                        <select name="role" class="form-select" required>
+                            <option value="researcher">Researcher</option>
+                            <option value="coordinator">Coordinator</option>
+                            <option value="viewer">Viewer</option>
+                        </select>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label">Message (Optional)</label>
+                        <textarea name="message" class="form-control" rows="3"></textarea>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="ri-send-plane-line me-2"></i> Send Invitation
+                    </button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Initialize tooltips
+    tippy('[data-tippy-content]', {
+        placement: 'bottom'
+    });
+
+    // Confirm member removal
+    function confirmRemoveMember(userId, userName) {
+        if (confirm(`Are you sure you want to remove ${userName} from the project?`)) {
+            // Redirect to the remove_member URL with both project and user IDs
+            window.location.href = `{% url 'collaboration:remove_member' project.pk '0' %}`.replace('0', userId);
+        }
+    }
+
+    // Cancel invitation
+    function cancelInvitation(invitationId) {
+        if (confirm('Are you sure you want to cancel this invitation?')) {
+            // Redirect to the cancel_invitation URL with the invitation ID
+            window.location.href = `{% url 'collaboration:cancel_invitation' '0' %}`.replace('0', invitationId);
+        }
+    }
+
+    // Task drag and drop functionality
+    if (typeof Sortable !== 'undefined') {
+        document.querySelectorAll('.task-list').forEach(list => {
+            new Sortable(list, {
+                group: 'tasks',
+                animation: 150,
+                onEnd: function(evt) {
+                    const taskId = evt.item.dataset.taskId;
+                    const newStatus = evt.to.dataset.status;
+                    
+                    // Update task status via AJAX
+                    fetch(`/collaborate/tasks/${taskId}/status/`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/x-www-form-urlencoded',
+                            'X-CSRFToken': '{{ csrf_token }}'
+                        },
+                        body: `status=${newStatus}`
+                    }).then(response => {
+                        if (!response.ok) {
+                            // Revert the drag if update failed
+                            evt.from.appendChild(evt.item);
+                        }
+                    });
+                }
+            });
+        });
+    }
+</script>
+{% endblock %}
