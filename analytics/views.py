@@ -146,6 +146,41 @@ class DataSetCreateView(CreateView):
     def get_success_url(self):
         return reverse('analytics:dataset_detail', kwargs={'uuid': self.object.uuid})
 
+@method_decorator(login_required, name='dispatch')
+class DataSetUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = DataSet
+    form_class = DataSetForm
+    template_name = 'analytics/dataset_form.html'
+    slug_field = 'uuid'
+    slug_url_kwarg = 'uuid'
+    
+    def test_func(self):
+        dataset = self.get_object()
+        return self.request.user == dataset.creator
+
+    def form_valid(self, form):
+        messages.success(self.request, _('Dataset updated successfully!'))
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('analytics:dataset_detail', kwargs={'uuid': self.object.uuid})
+    
+    
+@method_decorator(login_required, name='dispatch')
+class DataSetDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = DataSet
+    template_name = 'analytics/dataset_confirm_delete.html'
+    slug_field = 'uuid'
+    slug_url_kwarg = 'uuid'
+    
+    def test_func(self):
+        dataset = self.get_object()
+        return self.request.user == dataset.creator
+
+    def get_success_url(self):
+        messages.success(self.request, _('Dataset deleted successfully!'))
+        return reverse_lazy('analytics:dataset_list')
+
 
 class DataSetDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = DataSet

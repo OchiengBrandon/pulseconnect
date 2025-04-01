@@ -1,36 +1,252 @@
-{% extends 'analytics/base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}Datasets{% endblock %}
+{% block title %}Datasets - Analytics{% endblock %}
+
+{% block page_title %}Datasets{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold">Datasets</h1>
-    <a href="{% url 'analytics:dataset_create' %}" class="btn-primary">Create New Dataset</a>
-</div>
-<ul class="space-y-4">
-    {% for dataset in datasets %}
-    <li class="dashboard-card p-4">
-        <a href="{% url 'analytics:dataset_detail' dataset.uuid %}" class="text-lg font-semibold hover:underline">{{ dataset.title }}</a>
-    </li>
-    {% empty %}
-    <li class="dashboard-card p-4">No datasets found.</li>
-    {% endfor %}
-</ul>
-{% if is_paginated %}
-<div class="mt-6">
-    <nav>
-        <ul class="flex justify-center space-x-2">
+<div class="fade-in">
+    <!-- Stats Overview -->
+    <div class="stats-grid mb-4">
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="ri-folder-line"></i>
+            </div>
+            <div>
+                <div class="text-2 mb-1">My Datasets</div>
+                <div class="fw-semibold">{{ datasets.filter.creator|length }}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="ri-share-line"></i>
+            </div>
+            <div>
+                <div class="text-2 mb-1">Shared With Me</div>
+                <div class="fw-semibold">{{ datasets.filter.collaborators|length }}</div>
+            </div>
+        </div>
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="ri-global-line"></i>
+            </div>
+            <div>
+                <div class="text-2 mb-1">Public Datasets</div>
+                <div class="fw-semibold">{{ datasets.filter.is_public|length }}</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Actions -->
+    <div class="widget-card mb-4">
+        <div class="row g-4">
+            <div class="col-md-8">
+                <div class="d-flex gap-2">
+                    <a href="?filter=" class="btn {% if not filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        <i class="ri-apps-line me-2"></i>All
+                    </a>
+                    <a href="?filter=mine" class="btn {% if filter == 'mine' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        <i class="ri-folder-user-line me-2"></i>My Datasets
+                    </a>
+                    <a href="?filter=shared" class="btn {% if filter == 'shared' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        <i class="ri-share-line me-2"></i>Shared
+                    </a>
+                    <a href="?filter=public" class="btn {% if filter == 'public' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                        <i class="ri-global-line me-2"></i>Public
+                    </a>
+                </div>
+            </div>
+            <div class="col-md-4">
+                <div class="d-flex gap-2 justify-content-md-end">
+                    <div class="position-relative flex-grow-1">
+                        <input type="text" id="searchDataset" class="form-control pe-4" placeholder="Search datasets...">
+                        <i class="ri-search-line position-absolute top-50 end-0 translate-middle-y me-2 text-2"></i>
+                    </div>
+                    <a href="{% url 'analytics:dataset_create' %}" class="btn btn-primary">
+                        <i class="ri-add-line me-2"></i>New Dataset
+                    </a>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Datasets Grid -->
+    <div class="row g-4 mb-4">
+        {% for dataset in datasets %}
+        <div class="col-md-6 col-lg-4 dataset-card">
+            <div class="widget-card h-100">
+                <div class="d-flex justify-content-between mb-3">
+                    <div class="d-flex align-items-center">
+                        <div class="rounded-circle p-2 me-2" 
+                             style="background: var(--surface-2);">
+                            <i class="ri-database-2-line text-primary"></i>
+                        </div>
+                        <div>
+                            <h3 class="h6 mb-0">{{ dataset.title }}</h3>
+                            <small class="text-2">{{ dataset.created_at|date:"M d, Y" }}</small>
+                        </div>
+                    </div>
+                    <div class="dropdown">
+                        <button class="btn btn-icon" data-bs-toggle="dropdown">
+                            <i class="ri-more-2-fill"></i>
+                        </button>
+                        <ul class="dropdown-menu">
+                            <li>
+                                <a class="dropdown-item" href="{% url 'analytics:dataset_detail' dataset.uuid %}">
+                                    <i class="ri-eye-line me-2"></i>View Details
+                                </a>
+                            </li>
+                            {% if request.user == dataset.creator %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'analytics:dataset_update' dataset.uuid %}">
+                                    <i class="ri-edit-line me-2"></i>Edit
+                                </a>
+                            </li>
+                            <li>
+                                <a class="dropdown-item" href="{% url 'analytics:dataset_delete' dataset.uuid %}">
+                                    <i class="ri-delete-bin-line me-2"></i>Delete
+                                </a>
+                            </li>
+                            {% endif %}
+                            <li>
+                                <a class="dropdown-item" href="{% url 'analytics:visualization_create' %}?dataset={{ dataset.pk }}">
+                                    <i class="ri-bar-chart-line me-2"></i>Create Visualization
+                                </a>
+                            </li>
+                        </ul>
+                    </div>
+                </div>
+
+                <p class="text-2 mb-3">
+                    {{ dataset.description|truncatechars:100 }}
+                </p>
+
+                <div class="d-flex justify-content-between align-items-center mb-3">
+                    <div class="d-flex align-items-center">
+                        <i class="ri-file-list-line me-2 text-2"></i>
+                        <span class="text-2">{{ dataset.rows_count }} rows</span>
+                    </div>
+                    <div class="d-flex align-items-center">
+                        <i class="ri-time-line me-2 text-2"></i>
+                        <span class="text-2">{{ dataset.updated_at|timesince }} ago</span>
+                    </div>
+                </div>
+
+                <div class="d-flex justify-content-between align-items-center">
+                    <div class="d-flex align-items-center">
+                        <img src="{{ dataset.creator.profile_picture.url|default:'https://ui-avatars.com/api/?name='|add:dataset.creator.username }}" 
+                             alt="{{ dataset.creator.username }}"
+                             class="rounded-circle me-2"
+                             style="width: 24px; height: 24px;">
+                        <span class="text-2">{{ dataset.creator.get_full_name }}</span>
+                    </div>
+                    <div>
+                        {% if dataset.is_public %}
+                        <span class="badge bg-success">
+                            <i class="ri-global-line me-1"></i>Public
+                        </span>
+                        {% else %}
+                        <span class="badge bg-primary">
+                            <i class="ri-lock-line me-1"></i>Private
+                        </span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="col-12">
+            <div class="widget-card text-center py-5">
+                {% load static %}
+                <img src="{% static 'img/empty-state.svg' %}" alt="No datasets" 
+                     style="width: 200px; height: 200px; margin-bottom: 1.5rem;">
+                <h3 class="h5 mb-3">No Datasets Found</h3>
+                <p class="text-2 mb-4">
+                    {% if filter %}
+                        No datasets match the selected filter.
+                    {% else %}
+                        Start by creating your first dataset.
+                    {% endif %}
+                </p>
+                <a href="{% url 'analytics:dataset_create' %}" class="btn btn-primary">
+                    <i class="ri-add-line me-2"></i>Create Dataset
+                </a>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav aria-label="Dataset pagination">
+        <ul class="pagination justify-content-center">
             {% if page_obj.has_previous %}
-            <li><a href="?page=1" class="btn-primary">First</a></li>
-            <li><a href="?page={{ page_obj.previous_page_number }}" class="btn-primary">Previous</a></li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filter %}&filter={{ filter }}{% endif %}">
+                    <i class="ri-arrow-left-s-line"></i>
+                </a>
+            </li>
             {% endif %}
-            <li class="px-3 py-1">{{ page_obj.number }}</li>
+
+            {% for num in page_obj.paginator.page_range %}
+                {% if page_obj.number == num %}
+                <li class="page-item active">
+                    <span class="page-link">{{ num }}</span>
+                </li>
+                {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ num }}{% if filter %}&filter={{ filter }}{% endif %}">
+                        {{ num }}
+                    </a>
+                </li>
+                {% endif %}
+            {% endfor %}
+
             {% if page_obj.has_next %}
-            <li><a href="?page={{ page_obj.next_page_number }}" class="btn-primary">Next</a></li>
-            <li><a href="?page={{ page_obj.paginator.num_pages }}" class="btn-primary">Last</a></li>
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filter %}&filter={{ filter }}{% endif %}">
+                    <i class="ri-arrow-right-s-line"></i>
+                </a>
+            </li>
             {% endif %}
         </ul>
     </nav>
+    {% endif %}
 </div>
-{% endif %}
+
+<!-- Quick Action Button -->
+<div class="quick-actions">
+    <a href="{% url 'analytics:dataset_create' %}" class="action-button" title="Create new dataset">
+        <i class="ri-add-line"></i>
+    </a>
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Search functionality
+    const searchInput = document.getElementById('searchDataset');
+    const datasetCards = document.querySelectorAll('.dataset-card');
+
+    searchInput.addEventListener('input', function(e) {
+        const searchTerm = e.target.value.toLowerCase();
+        
+        datasetCards.forEach(card => {
+            const title = card.querySelector('.h6').textContent.toLowerCase();
+            const description = card.querySelector('p').textContent.toLowerCase();
+            
+            if (title.includes(searchTerm) || description.includes(searchTerm)) {
+                card.style.display = '';
+            } else {
+                card.style.display = 'none';
+            }
+        });
+    });
+
+    // Initialize tooltips
+    var tooltipTriggerList = [].slice.call(document.querySelectorAll('[data-bs-toggle="tooltip"]'))
+    var tooltipList = tooltipTriggerList.map(function (tooltipTriggerEl) {
+        return new bootstrap.Tooltip(tooltipTriggerEl)
+    });
+</script>
 {% endblock %}
