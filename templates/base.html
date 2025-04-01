@@ -561,6 +561,9 @@
                     <a href="{% url 'analytics:dashboard' %}" class="nav-link {% if 'analytics' in request.path %}active{% endif %}">
                         <i class="ri-line-chart-line"></i> Analytics
                     </a>
+                    <a href="{% url 'gamification:rewards_home' %}" class="nav-link {% if 'rewards' in request.path %}active{% endif %}">
+                        <i class="ri-medal-line"></i> Rewards & Badges
+                    </a>
                 </nav>
             </div>
 
