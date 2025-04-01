@@ -1,297 +1,616 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Community Dashboard</title>
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Chart.js for analytics -->
-    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-    <style>
-        .dashboard-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
+{% extends 'base.html' %}
+{% load static %}
 
-        .dark .dashboard-card {
-            background: rgba(30, 30, 30, 0.8);
-        }
+{% block title %}Community Dashboard | PulseConnect{% endblock %}
 
-        .dashboard-card:hover {
-            transform: translateY(-3px);
-        }
+{% block page_title %}Community Dashboard{% endblock %}
 
-        /* Animated gradient background */
-        .animated-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: linear-gradient(-45deg, #f3f4f6, #e5e7eb, #d1d5db, #e5e7eb);
-            background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
-        }
-
-        .dark .animated-bg {
-            background: linear-gradient(-45deg, #1a1a1a, #2d3748, #1a1a1a, #2d3748);
-        }
-
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-
-        /* Custom scrollbar */
-        ::-webkit-scrollbar {
-            width: 8px;
-        }
-
-        ::-webkit-scrollbar-track {
-            background: transparent;
-        }
-
-        ::-webkit-scrollbar-thumb {
-            background: #888;
-            border-radius: 4px;
-        }
-
-        .dark ::-webkit-scrollbar-thumb {
-            background: #555;
-        }
-    </style>
-</head>
-<body class="min-h-screen bg-gray-50 dark:bg-gray-900 transition-colors duration-300">
-    <!-- Animated Background -->
-    <div class="animated-bg"></div>
-
-    <!-- Dark Mode Toggle -->
-    <button id="darkModeToggle" class="fixed top-4 right-4 p-2 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path class="sun hidden" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-            <path class="moon" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-        </svg>
-    </button>
-
-    <div class="container mx-auto px-4 py-8">
-        <!-- Welcome Section -->
-        <div class="text-center mb-12">
-            <h1 class="text-4xl font-bold mb-4 dark:text-white">Welcome to Community Dashboard</h1>
-            <p class="text-gray-600 dark:text-gray-400">Your central hub for community engagement and activities</p>
-        </div>
-
-        <!-- Quick Stats -->
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-            <div class="dashboard-card p-6 rounded-xl shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Active Discussions</p>
-                        <h3 class="text-2xl font-bold dark:text-white">{{ recent_discussions.count }}</h3>
-                    </div>
-                    <div class="p-3 bg-blue-100 rounded-full dark:bg-blue-900">
-                        <svg class="w-6 h-6 text-blue-600 dark:text-blue-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/>
-                        </svg>
-                    </div>
-                </div>
+{% block content %}
+<div class="dashboard-wrapper">
+    <!-- Stats Overview -->
+    <div class="stats-grid mb-4">
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="ri-discuss-line"></i>
             </div>
-
-            <div class="dashboard-card p-6 rounded-xl shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Upcoming Events</p>
-                        <h3 class="text-2xl font-bold dark:text-white">{{ upcoming_events.count }}</h3>
-                    </div>
-                    <div class="p-3 bg-green-100 rounded-full dark:bg-green-900">
-                        <svg class="w-6 h-6 text-green-600 dark:text-green-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z"/>
-                        </svg>
-                    </div>
-                </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ recent_discussions.count }}</h3>
+                <p class="stat-label">Active Discussions</p>
             </div>
-
-            <div class="dashboard-card p-6 rounded-xl shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Volunteer Opportunities</p>
-                        <h3 class="text-2xl font-bold dark:text-white">{{ recent_opportunities.count }}</h3>
-                    </div>
-                    <div class="p-3 bg-purple-100 rounded-full dark:bg-purple-900">
-                        <svg class="w-6 h-6 text-purple-600 dark:text-purple-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z"/>
-                        </svg>
-                    </div>
-                </div>
-            </div>
-
-            <div class="dashboard-card p-6 rounded-xl shadow-lg">
-                <div class="flex items-center justify-between">
-                    <div>
-                        <p class="text-sm text-gray-600 dark:text-gray-400">Verified Impacts</p>
-                        <h3 class="text-2xl font-bold dark:text-white">{{ verified_impacts.count }}</h3>
-                    </div>
-                    <div class="p-3 bg-yellow-100 rounded-full dark:bg-yellow-900">
-                        <svg class="w-6 h-6 text-yellow-600 dark:text-yellow-300" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z"/>
-                        </svg>
-                    </div>
-                </div>
+            <div class="stat-trend positive">
+                <i class="ri-arrow-up-line"></i>
+                <span>12%</span>
             </div>
         </div>
 
-        <!-- Main Content Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
-            <!-- Recent Discussions -->
-            <div class="dashboard-card rounded-xl p-6 shadow-lg">
-                <h2 class="text-xl font-bold mb-6 dark:text-white">Recent Discussions</h2>
-                <div class="space-y-4">
-                    {% for discussion in recent_discussions %}
-                    <div class="flex items-start space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
-                        <div class="flex-1">
-                            <a href="{% url 'community:discussion_detail' slug=discussion.slug %}" 
-                               class="text-lg font-semibold hover:text-blue-600 dark:text-white dark:hover:text-blue-400">
-                                {{ discussion.title }}
-                            </a>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {{ discussion.content|truncatewords:15 }}
-                            </p>
-                            <div class="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-                                <span>{{ discussion.created_at|timesince }} ago</span>
-                                <span class="mx-2">•</span>
-                                <span>{{ discussion.comment_count }} comments</span>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <a href="{% url 'community:discussion_list' %}" 
-                   class="block text-center mt-6 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
-                    View All Discussions →
-                </a>
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="ri-calendar-event-line"></i>
             </div>
-
-            <!-- Upcoming Events -->
-            <div class="dashboard-card rounded-xl p-6 shadow-lg">
-                <h2 class="text-xl font-bold mb-6 dark:text-white">Upcoming Events</h2>
-                <div class="space-y-4">
-                    {% for event in upcoming_events %}
-                    <div class="flex items-start space-x-4 p-4 bg-white dark:bg-gray-800 rounded-lg">
-                        <div class="flex-shrink-0 w-16 text-center">
-                            <span class="block text-lg font-bold text-blue-600 dark:text-blue-400">
-                                {{ event.start_datetime|date:"d" }}
-                            </span>
-                            <span class="block text-sm text-gray-600 dark:text-gray-400">
-                                {{ event.start_datetime|date:"M" }}
-                            </span>
-                        </div>
-                        <div class="flex-1">
-                            <a href="{% url 'community:event_detail' slug=event.slug %}"
-                               class="text-lg font-semibold hover:text-blue-600 dark:text-white dark:hover:text-blue-400">
-                                {{ event.title }}
-                            </a>
-                            <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                                {{ event.description|truncatewords:15 }}
-                            </p>
-                            <div class="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-                                <span>{{ event.location }}</span>
-                                <span class="mx-2">•</span>
-                                <span>{{ event.attendees.count }} attendees</span>
-                            </div>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <a href="{% url 'community:event_list' %}" 
-                   class="block text-center mt-6 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
-                    View All Events →
-                </a>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ upcoming_events.count }}</h3>
+                <p class="stat-label">Upcoming Events</p>
+            </div>
+            <div class="stat-trend positive">
+                <i class="ri-arrow-up-line"></i>
+                <span>8%</span>
             </div>
         </div>
 
-        <!-- Bottom Grid -->
-        <div class="grid grid-cols-1 lg:grid-cols-2 gap-8 mt-8">
-            <!-- Volunteer Opportunities -->
-            <div class="dashboard-card rounded-xl p-6 shadow-lg">
-                <h2 class="text-xl font-bold mb-6 dark:text-white">Volunteer Opportunities</h2>
-                <div class="space-y-4">
-                    {% for opportunity in recent_opportunities %}
-                    <div class="p-4 bg-white dark:bg-gray-800 rounded-lg">
-                        <a href="{% url 'community:opportunity_detail' slug=opportunity.slug %}"
-                           class="text-lg font-semibold hover:text-blue-600 dark:text-white dark:hover:text-blue-400">
-                            {{ opportunity.title }}
-                        </a>
-                        <p class="text-sm text-gray-600 dark:text-gray-400 mt-1">
-                            {{ opportunity.description|truncatewords:15 }}
-                        </p>
-                        <div class="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            <span>{{ opportunity.organization }}</span>
-                            <span class="mx-2">•</span>
-                            <span>{{ opportunity.interested_users.count }} interested</span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <a href="{% url 'community:opportunity_list' %}" 
-                   class="block text-center mt-6 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
-                    View All Opportunities →
-                </a>
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="ri-hand-heart-line"></i>
             </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ recent_opportunities.count }}</h3>
+                <p class="stat-label">Volunteer Opportunities</p>
+            </div>
+            <div class="stat-trend positive">
+                <i class="ri-arrow-up-line"></i>
+                <span>15%</span>
+            </div>
+        </div>
 
-            <!-- Active Polls -->
-            <div class="dashboard-card rounded-xl p-6 shadow-lg">
-                <h2 class="text-xl font-bold mb-6 dark:text-white">Active Polls</h2>
-                <div class="space-y-4">
-                    {% for poll in active_polls %}
-                    <div class="p-4 bg-white dark:bg-gray-800 rounded-lg">
-                        <a href="{% url 'polls:detail' poll.slug %}"
-                           class="text-lg font-semibold hover:text-blue-600 dark:text-white dark:hover:text-blue-400">
-                            {{ poll.title }}
-                        </a>
-                        <div class="mt-2">
-                            <div class="w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700">
-                                <div class="bg-blue-600 h-2.5 rounded-full" style="width: {{ poll.participation_percentage }}%"></div>
-                            </div>
-                        </div>
-                        <div class="flex items-center mt-2 text-sm text-gray-500 dark:text-gray-400">
-                            <span>{{ poll.total_votes }} votes</span>
-                            <span class="mx-2">•</span>
-                            <span>Ends in {{ poll.end_date|timeuntil }}</span>
-                        </div>
-                    </div>
-                    {% endfor %}
-                </div>
-                <a href="{% url 'polls:poll_list' %}" 
-                   class="block text-center mt-6 text-blue-600 hover:text-blue-700 dark:text-blue-400 dark:hover:text-blue-300">
-                    View All Polls →
-                </a>
+        <div class="stat-card">
+            <div class="stat-icon orange">
+                <i class="ri-pulse-line"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ verified_impacts.count }}</h3>
+                <p class="stat-label">Verified Impacts</p>
+            </div>
+            <div class="stat-trend positive">
+                <i class="ri-arrow-up-line"></i>
+                <span>10%</span>
             </div>
         </div>
     </div>
 
-    <!-- Dark Mode Script -->
-    <script>
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        const html = document.documentElement;
-        const sunIcon = darkModeToggle.querySelector('.sun');
-        const moonIcon = darkModeToggle.querySelector('.moon');
+    <!-- Main Grid -->
+    <div class="dashboard-grid">
+        <!-- Recent Discussions -->
+        <div class="dashboard-card discussions-card">
+            <div class="card-header">
+                <h2 class="card-title">Recent Discussions</h2>
+                <a href="{% url 'community:discussion_list' %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% for discussion in recent_discussions %}
+                <div class="discussion-item">
+                    <div class="discussion-content">
+                        <h3 class="item-title">
+                            <a href="{% url 'community:discussion_detail' discussion.slug %}">
+                                {{ discussion.title }}
+                            </a>
+                        </h3>
+                        <div class="item-meta">
+                            <img src="{{ discussion.creator.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
+                                 alt="{{ discussion.creator.get_full_name }}" 
+                                 class="avatar-sm">
+                            <span class="author">{{ discussion.creator.get_full_name }}</span>
+                            <span class="dot">•</span>
+                            <span class="date">{{ discussion.created_at|timesince }} ago</span>
+                        </div>
+                    </div>
+                    <div class="discussion-stats">
+                        <span class="stat" title="Comments">
+                            <i class="ri-message-3-line"></i>
+                            {{ discussion.comments.count }}
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state small">
+                    <i class="ri-discuss-line"></i>
+                    <p>No recent discussions</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
 
-        // Check for saved dark mode preference
-        if (localStorage.getItem('darkMode') === 'true' || 
-            (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            html.classList.add('dark');
-            sunIcon.classList.remove('hidden');
-            moonIcon.classList.add('hidden');
+        <!-- Upcoming Events -->
+        <div class="dashboard-card events-card">
+            <div class="card-header">
+                <h2 class="card-title">Upcoming Events</h2>
+                <a href="{% url 'community:event_list' %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% for event in upcoming_events %}
+                <div class="event-item">
+                    <div class="event-date">
+                        <span class="day">{{ event.start_datetime|date:"d" }}</span>
+                        <span class="month">{{ event.start_datetime|date:"M" }}</span>
+                    </div>
+                    <div class="event-content">
+                        <h3 class="item-title">
+                            <a href="{% url 'community:event_detail' event.slug %}">
+                                {{ event.title }}
+                            </a>
+                        </h3>
+                        <div class="item-meta">
+                            {% if event.is_virtual %}
+                            <span class="badge bg-primary">Virtual</span>
+                            {% else %}
+                            <i class="ri-map-pin-line"></i>
+                            <span>{{ event.location }}</span>
+                            {% endif %}
+                            <span class="dot">•</span>
+                            <span>{{ event.start_datetime|date:"g:i A" }}</span>
+                        </div>
+                    </div>
+                    <div class="event-attendees">
+                        <div class="attendee-avatars">
+                            {% for attendee in event.attendees.all|slice:":3" %}
+                            <img src="{{ attendee.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
+                                 alt="{{ attendee.get_full_name }}" 
+                                 class="avatar-sm">
+                            {% endfor %}
+                            {% if event.attendees.count > 3 %}
+                            <span class="more-attendees">+{{ event.attendees.count|add:"-3" }}</span>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state small">
+                    <i class="ri-calendar-event-line"></i>
+                    <p>No upcoming events</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Volunteer Opportunities -->
+        <div class="dashboard-card opportunities-card">
+            <div class="card-header">
+                <h2 class="card-title">Volunteer Opportunities</h2>
+                <a href="{% url 'community:opportunity_list' %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% for opportunity in recent_opportunities %}
+                <div class="opportunity-item">
+                    <div class="opportunity-content">
+                        <h3 class="item-title">
+                            <a href="{% url 'community:opportunity_detail' opportunity.slug %}">
+                                {{ opportunity.title }}
+                            </a>
+                        </h3>
+                        <div class="item-meta">
+                            <i class="ri-building-line"></i>
+                            <span>{{ opportunity.organization }}</span>
+                            <span class="dot">•</span>
+                            <span>{{ opportunity.location }}</span>
+                        </div>
+                    </div>
+                    <div class="opportunity-stats">
+                        <span class="interested-count">
+                            {{ opportunity.interested_users.count }} interested
+                        </span>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state small">
+                    <i class="ri-hand-heart-line"></i>
+                    <p>No active opportunities</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Recent Impacts -->
+        <div class="dashboard-card impacts-card">
+            <div class="card-header">
+                <h2 class="card-title">Verified Impacts</h2>
+                <a href="{% url 'community:impact_list' %}" class="btn btn-sm btn-outline-primary">
+                    View All
+                </a>
+            </div>
+            <div class="card-body">
+                {% for impact in verified_impacts %}
+                <div class="impact-item">
+                    <div class="impact-icon">
+                        <i class="ri-award-line"></i>
+                    </div>
+                    <div class="impact-content">
+                        <h3 class="item-title">
+                            <a href="{% url 'community:impact_detail' impact.pk %}">
+                                {{ impact.title }}
+                            </a>
+                        </h3>
+                        <div class="item-meta">
+                            <span class="impact-type">{{ impact.impact_type }}</span>
+                            <span class="dot">•</span>
+                            <span class="date">{{ impact.created_at|timesince }} ago</span>
+                        </div>
+                    </div>
+                </div>
+                {% empty %}
+                <div class="empty-state small">
+                    <i class="ri-pulse-line"></i>
+                    <p>No verified impacts yet</p>
+                </div>
+                {% endfor %}
+            </div>
+        </div>
+    </div>
+
+    <!-- Active Polls -->
+    {% if active_polls %}
+    <div class="dashboard-card polls-card mt-4">
+        <div class="card-header">
+            <h2 class="card-title">Active Polls</h2>
+            <a href="{% url 'polls:poll_list' %}" class="btn btn-sm btn-outline-primary">
+                View All Polls
+            </a>
+        </div>
+        <div class="polls-grid">
+            {% for poll in active_polls %}
+            <div class="poll-card">
+                <div class="poll-header">
+                    <h3 class="poll-title">
+                        <a href="{% url 'polls:detail' poll.slug %}">
+                            {{ poll.title }}
+                        </a>
+                    </h3>
+                    <span class="poll-type badge bg-primary">{{ poll.get_poll_type_display }}</span>
+                </div>
+                <div class="poll-meta">
+                    <div class="poll-stats">
+                        <span class="stat">
+                            <i class="ri-user-line"></i>
+                            {{ poll.total_votes }} votes
+                        </span>
+                        <span class="stat">
+                            <i class="ri-time-line"></i>
+                            {{ poll.end_date|timeuntil }} left
+                        </span>
+                    </div>
+                    <a href="{% url 'polls:detail' poll.slug %}" class="btn btn-sm btn-primary">
+                        Vote Now
+                    </a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+    .dashboard-wrapper {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    /* Stats Grid */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .stat-card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        box-shadow: var(--shadow);
+    }
+
+    .stat-icon {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.5rem;
+    }
+
+    .stat-icon.purple { background: rgba(99, 102, 241, 0.1); color: var(--primary); }
+    .stat-icon.green { background: rgba(16, 185, 129, 0.1); color: #10b981; }
+    .stat-icon.blue { background: rgba(59, 130, 246, 0.1); color: #3b82f6; }
+    .stat-icon.orange { background: rgba(245, 158, 11, 0.1); color: #f59e0b; }
+
+    .stat-info {
+        flex: 1;
+    }
+
+    .stat-value {
+        font-size: 1.5rem;
+        font-weight: 600;
+        margin: 0;
+        color: var(--text);
+    }
+
+    .stat-label {
+        color: var(--text-2);
+        margin: 0;
+        font-size: 0.875rem;
+    }
+
+    .stat-trend {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        font-size: 0.875rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+    }
+
+    .stat-trend.positive {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .stat-trend.negative {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    /* Dashboard Grid */
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(2, 1fr);
+        gap: 1.5rem;
+    }
+
+    @media (max-width: 991px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
         }
+    }
 
-        darkModeToggle.addEventListener('click', () => {
-            html.classList.toggle('dark');
-            sunIcon.classList.toggle('hidden');
-            moonIcon.classList.toggle('hidden');
-            localStorage.setItem('darkMode', html.classList.contains('dark'));
-        });
-    </script>
-</body>
-</html>
+    .dashboard-card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        box-shadow: var(--shadow);
+        overflow: hidden;
+    }
+
+    .card-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 1.5rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .card-title {
+        font-size: 1.25rem;
+        margin: 0;
+        color: var(--text);
+    }
+
+    .card-body {
+        padding: 1.5rem;
+    }
+
+    /* Discussion Items */
+    .discussion-item {
+        display: flex;
+        align-items: flex-start;
+        padding: 1rem;
+        border-radius: var(--radius);
+        transition: all 0.2s ease;
+    }
+
+    .discussion-item:hover {
+        background: var(--surface-2);
+    }
+
+    .discussion-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .item-title {
+        font-size: 1rem;
+        margin: 0 0 0.5rem;
+    }
+
+    .item-title a {
+        color: var(--text);
+        text-decoration: none;
+    }
+
+    .item-title a:hover {
+        color: var(--primary);
+    }
+
+    .item-meta {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-2);
+        font-size: 0.875rem;
+    }
+
+    .avatar-sm {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .dot {
+        color: var(--text-2);
+    }
+
+    /* Event Items */
+    .event-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: var(--radius);
+        transition: all 0.2s ease;
+    }
+
+    .event-item:hover {
+        background: var(--surface-2);
+    }
+
+    .event-date {
+        text-align: center;
+        min-width: 48px;
+    }
+
+    .event-date .day {
+        font-size: 1.25rem;
+        font-weight: 600;
+        color: var(--primary);
+        display: block;
+    }
+
+    .event-date .month {
+        font-size: 0.875rem;
+        color: var(--text-2);
+        text-transform: uppercase;
+    }
+
+    .attendee-avatars {
+        display: flex;
+        align-items: center;
+    }
+
+    .attendee-avatars img {
+        border: 2px solid var(--surface);
+        margin-left: -8px;
+    }
+
+    .attendee-avatars img:first-child {
+        margin-left: 0;
+    }
+
+    .more-attendees {
+        width: 24px;
+        height: 24px;
+        background: var(--surface-3);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 0.75rem;
+        color: var(--text-2);
+        margin-left: -8px;
+    }
+
+    /* Opportunity Items */
+    .opportunity-item {
+        display: flex;
+        align-items: center;
+        padding: 1rem;
+        border-radius: var(--radius);
+        transition: all 0.2s ease;
+    }
+
+    .opportunity-item:hover {
+        background: var(--surface-2);
+    }
+
+    .interested-count {
+        font-size: 0.875rem;
+        color: var(--text-2);
+    }
+
+    /* Impact Items */
+    .impact-item {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        padding: 1rem;
+        border-radius: var(--radius);
+        transition: all 0.2s ease;
+    }
+
+    .impact-item:hover {
+        background: var(--surface-2);
+    }
+
+    .impact-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius);
+        background: var(--primary);
+        color: white;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+    }
+
+    /* Polls Grid */
+    .polls-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+
+    .poll-card {
+        background: var(--surface-2);
+        border-radius: var(--radius);
+        padding: 1rem;
+        transition: all 0.2s ease;
+    }
+
+    .poll-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .poll-header {
+        display: flex;
+        align-items: flex-start;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+    }
+
+    .poll-title {
+        font-size: 1rem;
+        margin: 0;
+    }
+
+    .poll-meta {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .poll-stats {
+        display: flex;
+        gap: 1rem;
+    }
+
+    /* Empty States */
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-2);
+    }
+
+    .empty-state.small {
+        padding: 1rem;
+    }
+
+    .empty-state i {
+        font-size: 2rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .empty-state p {
+        margin: 0;
+    }
+</style>
+
+{% endblock %}

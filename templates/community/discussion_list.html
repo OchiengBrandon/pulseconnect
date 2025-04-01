@@ -1,256 +1,368 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Community Discussions</title>
-    <!-- Tailwind CSS -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Custom Styles -->
-    <style>
-        .discussion-card {
-            background: rgba(255, 255, 255, 0.8);
-            backdrop-filter: blur(10px);
-            transition: all 0.3s ease;
-        }
-        
-        .discussion-card:hover {
-            transform: translateY(-3px);
-            box-shadow: 0 10px 20px rgba(0,0,0,0.1);
-        }
+{% extends 'base.html' %}
+{% load static %}
 
-        .tag {
-            transition: all 0.3s ease;
-        }
+{% block title %}Discussions | PulseConnect{% endblock %}
 
-        .tag:hover {
-            transform: scale(1.05);
-        }
+{% block page_title %}Community Discussions{% endblock %}
 
-        /* Dark mode styles */
-        .dark {
-            background-color: #1a1a1a;
-            color: #ffffff;
-        }
-
-        .dark .discussion-card {
-            background: rgba(30, 30, 30, 0.8);
-        }
-
-        /* Background animation */
-        .animated-bg {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100%;
-            height: 100%;
-            z-index: -1;
-            background: linear-gradient(45deg, #f3f4f6, #e5e7eb);
-            background-size: 400% 400%;
-            animation: gradient 15s ease infinite;
-        }
-
-        .dark .animated-bg {
-            background: linear-gradient(45deg, #1a1a1a, #2d3748);
-        }
-
-        @keyframes gradient {
-            0% { background-position: 0% 50%; }
-            50% { background-position: 100% 50%; }
-            100% { background-position: 0% 50%; }
-        }
-    </style>
-</head>
-<body class="min-h-screen bg-gray-50 transition-colors duration-300">
-    <!-- Animated Background -->
-    <div class="animated-bg"></div>
-
-    <!-- Dark Mode Toggle -->
-    <button id="darkModeToggle" class="fixed top-4 right-4 p-2 rounded-full bg-gray-200 dark:bg-gray-700 transition-colors duration-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path class="sun hidden" d="M12 3v1m0 16v1m9-9h-1M4 12H3m15.364 6.364l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-            <path class="moon" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z" stroke-linecap="round" stroke-linejoin="round" stroke-width="2"/>
-        </svg>
-    </button>
-
-    <div class="container mx-auto px-4 py-8">
-        <!-- Search and Filters -->
-        <div class="mb-8">
-            <form method="GET" class="space-y-4 md:space-y-0 md:flex md:items-center md:space-x-4">
-                <div class="flex-1">
-                    <input type="text" name="q" value="{{ search_query }}" 
-                           class="w-full px-4 py-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700"
-                           placeholder="Search discussions...">
+{% block content %}
+<div class="discussion-wrapper">
+    <!-- Filters Section -->
+    <div class="filters-section mb-4">
+        <form method="get" class="row g-3">
+            <div class="col-md-4">
+                <div class="search-container">
+                    <i class="ri-search-line"></i>
+                    <input type="search" name="q" class="form-control" placeholder="Search discussions..." 
+                           value="{{ search_query }}">
                 </div>
-                
-                <!-- Poll Filter -->
-                <select name="poll" class="w-full md:w-auto px-4 py-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700">
+            </div>
+            
+            <div class="col-md-3">
+                <label for="poll-select" class="form-label">Filter by Poll</label>
+                <select id="poll-select" name="poll" class="form-select">
                     <option value="">All Polls</option>
                     {% for poll in polls %}
-                        <option value="{{ poll.id }}" {% if poll.id|stringformat:"i" == current_poll %}selected{% endif %}>
-                            {{ poll.title }}
-                        </option>
+                    <option value="{{ poll.id }}" {% if poll.id|stringformat:"s" == current_poll %}selected{% endif %}>
+                        {{ poll.title }}
+                    </option>
                     {% endfor %}
                 </select>
-
-                <!-- Sort Filter -->
-                <select name="sort" class="w-full md:w-auto px-4 py-2 rounded-lg border dark:bg-gray-800 dark:border-gray-700">
+            </div>
+            
+            <div class="col-md-3">
+                <label for="sort-select" class="form-label">Sort by</label>
+                <select id="sort-select" name="sort" class="form-select">
                     <option value="recent" {% if sort_by == 'recent' %}selected{% endif %}>Most Recent</option>
                     <option value="popular" {% if sort_by == 'popular' %}selected{% endif %}>Most Popular</option>
                 </select>
-
-                <button type="submit" class="w-full md:w-auto px-6 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 transition-colors duration-300">
-                    Filter
+            </div>
+            
+            <div class="col-md-2">
+                <button type="submit" class="btn btn-primary w-100">
+                    <i class="ri-filter-3-line me-2"></i>Apply
                 </button>
-            </form>
-        </div>
-
-        <!-- Pinned Discussions -->
-        {% if pinned_discussions %}
-        <div class="mb-8">
-            <h2 class="text-2xl font-bold mb-4 dark:text-gray-200">📌 Pinned Discussions</h2>
-            <div class="space-y-4">
-                {% for discussion in pinned_discussions %}
-                <div class="discussion-card rounded-xl p-6 border dark:border-gray-700">
-                    <div class="flex items-start justify-between">
-                        <div>
-                            <h3 class="text-xl font-semibold mb-2">
-                                <a href="{% url 'community:discussion_detail' slug=discussion.slug %}" 
-                                   class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300">
-                                    {{ discussion.title }}
-                                </a>
-                            </h3>
-                            <p class="text-gray-600 dark:text-gray-400 mb-4">{{ discussion.content|truncatewords:30 }}</p>
-                        </div>
-                    </div>
-                    
-                    <div class="flex items-center justify-between mt-4">
-                        <div class="flex items-center space-x-4">
-                            <span class="text-sm text-gray-500 dark:text-gray-400">
-                                By {{ discussion.creator.username }}
-                            </span>
-                            <span class="text-sm text-gray-500 dark:text-gray-400">
-                                {{ discussion.created_at|timesince }} ago
-                            </span>
-                        </div>
-                        <div class="flex items-center space-x-2">
-                            <span class="text-sm text-gray-500 dark:text-gray-400">
-                                💬 {{ discussion.comment_count }} comments
-                            </span>
-                        </div>
-                    </div>
-                </div>
-                {% endfor %}
             </div>
-        </div>
-        {% endif %}
-
-        <!-- Regular Discussions -->
-        <div class="space-y-4">
-            {% for discussion in discussions %}
-            <div class="discussion-card rounded-xl p-6 border dark:border-gray-700">
-                <div class="flex items-start justify-between">
-                    <div>
-                        <h3 class="text-xl font-semibold mb-2">
-                            <a href="{% url 'community:discussion_detail' slug=discussion.slug %}" 
-                               class="hover:text-blue-600 dark:hover:text-blue-400 transition-colors duration-300">
-                                {{ discussion.title }}
-                            </a>
-                        </h3>
-                        <p class="text-gray-600 dark:text-gray-400 mb-4">{{ discussion.content|truncatewords:30 }}</p>
-                        
-                        <!-- Tags -->
-                        {% if discussion.tags.exists %}
-                        <div class="flex flex-wrap gap-2 mb-4">
-                            {% for tag in discussion.tags.all %}
-                            <a href="?tag={{ tag.name }}" 
-                               class="tag px-3 py-1 text-sm bg-blue-100 text-blue-600 rounded-full dark:bg-blue-900 dark:text-blue-200">
-                                #{{ tag.name }}
-                            </a>
-                            {% endfor %}
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-                
-                <div class="flex items-center justify-between mt-4">
-                    <div class="flex items-center space-x-4">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">
-                            By {{ discussion.creator.username }}
-                        </span>
-                        <span class="text-sm text-gray-500 dark:text-gray-400">
-                            {{ discussion.created_at|timesince }} ago
-                        </span>
-                    </div>
-                    <div class="flex items-center space-x-2">
-                        <span class="text-sm text-gray-500 dark:text-gray-400">
-                            💬 {{ discussion.comment_count }} comments
-                        </span>
-                    </div>
-                </div>
-            </div>
-            {% empty %}
-            <div class="text-center py-8">
-                <p class="text-gray-500 dark:text-gray-400">No discussions found.</p>
-            </div>
-            {% endfor %}
-        </div>
-
-        <!-- Pagination -->
-        {% if is_paginated %}
-        <div class="mt-8 flex justify-center">
-            <div class="flex space-x-2">
-                {% if page_obj.has_previous %}
-                <a href="?page={{ page_obj.previous_page_number }}" 
-                   class="px-4 py-2 bg-gray-200 rounded-lg dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
-                    Previous
-                </a>
-                {% endif %}
-                
-                <span class="px-4 py-2 bg-blue-600 text-white rounded-lg">
-                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
-                </span>
-                
-                {% if page_obj.has_next %}
-                <a href="?page={{ page_obj.next_page_number }}" 
-                   class="px-4 py-2 bg-gray-200 rounded-lg dark:bg-gray-700 hover:bg-gray-300 dark:hover:bg-gray-600 transition-colors duration-300">
-                    Next
-                </a>
-                {% endif %}
-            </div>
-        </div>
-        {% endif %}
+        </form>
     </div>
 
     <!-- Create Discussion Button -->
-    <a href="{% url 'community:discussion_create' %}" 
-       class="fixed bottom-8 right-8 bg-blue-600 text-white p-4 rounded-full shadow-lg hover:bg-blue-700 transition-colors duration-300">
-        <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M12 4v16m8-8H4"/>
-        </svg>
-    </a>
+    <div class="mb-4">
+        <a href="{% url 'community:discussion_create' %}" class="btn btn-primary">
+            <i class="ri-add-line me-2"></i>Start New Discussion
+        </a>
+    </div>
 
-    <!-- Dark Mode Script -->
-    <script>
-        const darkModeToggle = document.getElementById('darkModeToggle');
-        const html = document.documentElement;
-        const sunIcon = darkModeToggle.querySelector('.sun');
-        const moonIcon = darkModeToggle.querySelector('.moon');
+    <!-- Pinned Discussions -->
+    {% if pinned_discussions %}
+    <div class="pinned-discussions mb-4">
+        <h5 class="section-title">
+            <i class="ri-pushpin-2-line me-2"></i>Pinned Discussions
+        </h5>
+        {% for discussion in pinned_discussions %}
+        <div class="discussion-card pinned">
+            <div class="discussion-header">
+                <img src="{{ discussion.creator.profile_picture.url|default:'https://via.placeholder.com/40' }}" 
+                     alt="{{ discussion.creator.get_full_name }}" 
+                     class="avatar">
+                <div class="discussion-meta">
+                    <h3 class="discussion-title">
+                        <a href="{% url 'community:discussion_detail' discussion.slug %}">
+                            {{ discussion.title }}
+                        </a>
+                    </h3>
+                    <div class="discussion-info">
+                        <span class="author">{{ discussion.creator.get_full_name }}</span>
+                        <span class="dot">•</span>
+                        <span class="date">{{ discussion.created_at|timesince }} ago</span>
+                    </div>
+                </div>
+                <div class="discussion-stats">
+                    <span class="stat">
+                        <i class="ri-message-3-line"></i>
+                        {{ discussion.comments.count }}
+                    </span>
+                    <span class="stat">
+                        <i class="ri-eye-line"></i>
+                        {{ discussion.views }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% endfor %}
+    </div>
+    {% endif %}
 
-        // Check for saved dark mode preference
-        if (localStorage.getItem('darkMode') === 'true' || 
-            (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches)) {
-            html.classList.add('dark');
-            sunIcon.classList.remove('hidden');
-            moonIcon.classList.add('hidden');
-        }
+    <!-- Regular Discussions -->
+    <div class="discussions-grid">
+        {% for discussion in discussions %}
+        <div class="discussion-card">
+            <div class="discussion-header">
+                <img src="{{ discussion.creator.profile_picture.url|default:'https://via.placeholder.com/40' }}" 
+                     alt="{{ discussion.creator.get_full_name }}" 
+                     class="avatar">
+                <div class="discussion-meta">
+                    <h3 class="discussion-title">
+                        <a href="{% url 'community:discussion_detail' discussion.slug %}">
+                            {{ discussion.title }}
+                        </a>
+                    </h3>
+                    <div class="discussion-info">
+                        <span class="author">{{ discussion.creator.get_full_name }}</span>
+                        <span class="dot">•</span>
+                        <span class="date">{{ discussion.created_at|timesince }} ago</span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="discussion-preview">
+                {{ discussion.content|truncatewords:30 }}
+            </div>
+            
+            <div class="discussion-footer">
+                <div class="tags">
+                    {% for tag in discussion.tags.all %}
+                    <a href="?tag={{ tag.name }}" class="tag">{{ tag.name }}</a>
+                    {% endfor %}
+                </div>
+                
+                <div class="discussion-stats">
+                    <span class="stat">
+                        <i class="ri-message-3-line"></i>
+                        {{ discussion.comments.count }}
+                    </span>
+                    <span class="stat">
+                        <i class="ri-eye-line"></i>
+                        {{ discussion.views }}
+                    </span>
+                </div>
+            </div>
+        </div>
+        {% empty %}
+        <div class="empty-state">
+            <i class="ri-discuss-line"></i>
+            <h3>No discussions found</h3>
+            <p>Be the first to start a discussion!</p>
+            <a href="{% url 'community:discussion_create' %}" class="btn btn-primary">
+                Start New Discussion
+            </a>
+        </div>
+        {% endfor %}
+    </div>
 
-        darkModeToggle.addEventListener('click', () => {
-            html.classList.toggle('dark');
-            sunIcon.classList.toggle('hidden');
-            moonIcon.classList.toggle('hidden');
-            localStorage.setItem('darkMode', html.classList.contains('dark'));
-        });
-    </script>
-</body>
-</html>
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <nav class="pagination-wrapper">
+        <ul class="pagination">
+            {% if page_obj.has_previous %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.previous_page_number }}">
+                    <i class="ri-arrow-left-s-line"></i>
+                </a>
+            </li>
+            {% endif %}
+
+            {% for num in page_obj.paginator.page_range %}
+            <li class="page-item {% if page_obj.number == num %}active{% endif %}">
+                <a class="page-link" href="?page={{ num }}">{{ num }}</a>
+            </li>
+            {% endfor %}
+
+            {% if page_obj.has_next %}
+            <li class="page-item">
+                <a class="page-link" href="?page={{ page_obj.next_page_number }}">
+                    <i class="ri-arrow-right-s-line"></i>
+                </a>
+            </li>
+            {% endif %}
+        </ul>
+    </nav>
+    {% endif %}
+</div>
+
+<style>
+    .discussion-wrapper {
+        max-width: 1200px;
+        margin: 0 auto;
+    }
+
+    .filters-section {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        box-shadow: var(--shadow);
+    }
+
+    .search-container {
+        position: relative;
+    }
+
+    .search-container i {
+        position: absolute;
+        left: 1rem;
+        top: 50%;
+        transform: translateY(-50%);
+        color: var(--text-2);
+    }
+
+    .search-container input {
+        padding-left: 2.5rem;
+    }
+
+    .section-title {
+        display: flex;
+        align-items: center;
+        color: var(--text);
+        font-size: 1.25rem;
+        margin-bottom: 1rem;
+    }
+
+    .discussion-card {
+        background: var(--surface);
+        border-radius: var(--radius);
+        padding: 1.5rem;
+        margin-bottom: 1rem;
+        box-shadow: var(--shadow);
+        transition: all 0.3s ease;
+    }
+
+    .discussion-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+
+    .discussion-card.pinned {
+        border-left: 4px solid var(--primary);
+    }
+
+    .discussion-header {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        margin-bottom: 1rem;
+    }
+
+    .avatar {
+        width: 40px;
+        height: 40px;
+        border-radius: 50%;
+        object-fit: cover;
+    }
+
+    .discussion-meta {
+        flex: 1;
+    }
+
+    .discussion-title {
+        font-size: 1.125rem;
+        margin: 0 0 0.5rem;
+    }
+
+    .discussion-title a {
+        color: var(--text);
+        text-decoration: none;
+    }
+
+    .discussion-title a:hover {
+        color: var(--primary);
+    }
+
+    .discussion-info {
+        font-size: 0.875rem;
+        color: var(--text-2);
+    }
+
+    .discussion-info .dot {
+        margin: 0 0.5rem;
+    }
+
+    .discussion-preview {
+        color: var(--text-2);
+        margin-bottom: 1rem;
+    }
+
+    .discussion-footer {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+    }
+
+    .tags {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .tag {
+        background: var(--surface-2);
+        color: var(--text-2);
+        padding: 0.25rem 0.75rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.875rem;
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .tag:hover {
+        background: var(--surface-3);
+        color: var(--primary);
+    }
+
+    .discussion-stats {
+        display: flex;
+        gap: 1rem;
+    }
+
+    .stat {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+        color: var(--text-2);
+        font-size: 0.875rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 3rem;
+        background: var(--surface);
+        border-radius: var(--radius);
+        color: var(--text-2);
+    }
+
+    .empty-state i {
+        font-size: 3rem;
+        margin-bottom: 1rem;
+    }
+
+    .pagination-wrapper {
+        margin-top: 2rem;
+        display: flex;
+        justify-content: center;
+    }
+
+    .pagination {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .page-link {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        border-radius: var(--radius);
+        color: var(--text);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .page-link:hover {
+        background: var(--surface-2);
+    }
+
+    .page-item.active .page-link {
+        background: var(--primary);
+        color: white;
+    }
+</style>
+{% endblock %}
