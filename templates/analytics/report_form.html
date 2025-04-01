@@ -1,15 +1,255 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Create Report{% endblock %}
+{% block title %}Create Report - Analytics{% endblock %}
 
 {% block content %}
-<div class="dashboard-card p-6">
-    <h1 class="text-2xl font-bold">Create New Report</h1>
-    <form method="post" class="mt-4">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit" class="btn-primary mt-4">Create Report</button>
-    </form>
-    <a href="{% url 'analytics:report_list' %}" class="btn-primary mt-4">Back to Reports</a>
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">Create New Analysis Report</h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'analytics:report_list' %}" class="btn btn-outline-primary">
+                <i class="ri-arrow-left-line"></i> Back to Reports
+            </a>
+        </div>
+    </div>
+
+    <!-- Main Form Card -->
+    <div class="widget-card">
+        <form method="POST" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <!-- Form Errors -->
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
+            {% endif %}
+
+            <!-- Title Field -->
+            <div class="mb-4">
+                <label for="{{ form.title.id_for_label }}" class="form-label">
+                    Report Title <span class="text-danger">*</span>
+                </label>
+                <input type="text" 
+                       class="form-control {% if form.title.errors %}is-invalid{% endif %}"
+                       id="{{ form.title.id_for_label }}"
+                       name="{{ form.title.name }}"
+                       value="{{ form.title.value|default:'' }}"
+                       required>
+                {% if form.title.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.title.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Description Field -->
+            <div class="mb-4">
+                <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                          id="{{ form.description.id_for_label }}"
+                          name="{{ form.description.name }}"
+                          rows="4"
+                          placeholder="Enter a detailed description of this report">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.description.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Datasets Field -->
+            <div class="mb-4">
+                <label for="{{ form.datasets.id_for_label }}" class="form-label">
+                    Select Datasets <span class="text-danger">*</span>
+                </label>
+                <select multiple 
+                        class="form-select {% if form.datasets.errors %}is-invalid{% endif %}"
+                        id="{{ form.datasets.id_for_label }}"
+                        name="{{ form.datasets.name }}"
+                        required>
+                    {% for value, label in form.datasets.field.choices %}
+                    <option value="{{ value }}"
+                            {% if value in form.datasets.value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.datasets.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.datasets.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="form-text">
+                    Hold Ctrl/Cmd to select multiple datasets
+                </div>
+            </div>
+
+            <!-- Report Type Field -->
+            <div class="mb-4">
+                <label for="{{ form.report_type.id_for_label }}" class="form-label">
+                    Report Type <span class="text-danger">*</span>
+                </label>
+                <select class="form-select {% if form.report_type.errors %}is-invalid{% endif %}"
+                        id="{{ form.report_type.id_for_label }}"
+                        name="{{ form.report_type.name }}"
+                        required>
+                    <option value="">Select report type</option>
+                    {% for value, label in form.report_type.field.choices %}
+                    <option value="{{ value }}"
+                            {% if value == form.report_type.value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.report_type.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.report_type.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Tags Field -->
+            <div class="mb-4">
+                <label for="{{ form.tags.id_for_label }}" class="form-label">Tags</label>
+                <input type="text" 
+                       class="form-control {% if form.tags.errors %}is-invalid{% endif %}"
+                       id="{{ form.tags.id_for_label }}"
+                       name="{{ form.tags.name }}"
+                       value="{{ form.tags.value|default:'' }}"
+                       placeholder="Enter tags separated by commas">
+                {% if form.tags.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.tags.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                <div class="form-text">
+                    Example: quarterly-report, sales-analysis, customer-feedback
+                </div>
+            </div>
+
+            <!-- Public Access Toggle -->
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <input type="checkbox" 
+                           class="form-check-input"
+                           id="{{ form.is_public.id_for_label }}"
+                           name="{{ form.is_public.name }}"
+                           {% if form.is_public.value %}checked{% endif %}>
+                    <label class="form-check-label" for="{{ form.is_public.id_for_label }}">
+                        Make this report public
+                    </label>
+                </div>
+                <div class="form-text">
+                    Public reports can be viewed by anyone with access to the platform
+                </div>
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex gap-2 justify-content-end">
+                <button type="button" 
+                        class="btn btn-outline-secondary" 
+                        onclick="history.back()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="ri-file-chart-line"></i> Create Report
+                </button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tips Card -->
+    <div class="widget-card mt-4">
+        <h5 class="mb-3">
+            <i class="ri-lightbulb-line text-warning"></i> Tips for Creating Reports
+        </h5>
+        <div class="tips-container">
+            <div class="tip-item mb-3">
+                <h6>Choose the Right Datasets</h6>
+                <p class="text-muted mb-0">
+                    Select datasets that are related and will provide meaningful insights when analyzed together.
+                </p>
+            </div>
+            <div class="tip-item mb-3">
+                <h6>Descriptive Titles</h6>
+                <p class="text-muted mb-0">
+                    Use clear, descriptive titles that indicate the purpose and content of your report.
+                </p>
+            </div>
+            <div class="tip-item">
+                <h6>Effective Tags</h6>
+                <p class="text-muted mb-0">
+                    Add relevant tags to make your report easily discoverable by other team members.
+                </p>
+            </div>
+        </div>
+    </div>
 </div>
+
+<!-- Form Validation Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Form validation
+    const forms = document.querySelectorAll('.needs-validation');
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+
+    // Initialize select2 for better multiple select experience
+    if (typeof $.fn.select2 !== 'undefined') {
+        $('#{{ form.datasets.id_for_label }}').select2({
+            theme: 'bootstrap-5',
+            placeholder: 'Select datasets to analyze',
+            width: '100%'
+        });
+    }
+
+    // Tags input enhancement
+    const tagsInput = document.getElementById('{{ form.tags.id_for_label }}');
+    if (tagsInput) {
+        tagsInput.addEventListener('keydown', function(e) {
+            if (e.key === 'Enter') {
+                e.preventDefault();
+                const currentValue = this.value.trim();
+                if (currentValue) {
+                    this.value = currentValue + ', ';
+                }
+            }
+        });
+
+        // Clean up tags on form submit
+        tagsInput.closest('form').addEventListener('submit', function() {
+            tagsInput.value = tagsInput.value.split(',')
+                .map(tag => tag.trim())
+                .filter(tag => tag)
+                .join(', ');
+        });
+    }
+});
+</script>
+
+{% if form.media %}
+    {{ form.media }}
+{% endif %}
 {% endblock %}

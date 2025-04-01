@@ -1,49 +1,147 @@
 {% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Create Dataset{% endblock %}
+{% block title %}Create Dataset - Analytics{% endblock %}
 
 {% block content %}
-<div class="dashboard-card p-6">
-    <h1 class="text-2xl font-bold">Create New Dataset</h1>
-    <form method="post" enctype="multipart/form-data" class="mt-4">
-        {% csrf_token %}
-        
-        <div class="mb-4">
-            <label for="id_title" class="block text-sm font-medium text-gray-700">Title</label>
-            {{ form.title }}
-            {% if form.title.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ form.title.errors }}</p>
-            {% endif %}
+<div class="container-fluid">
+    <!-- Page Header -->
+    <div class="page-header">
+        <h1 class="page-title">Create New Dataset</h1>
+        <div class="d-flex gap-2">
+            <a href="{% url 'analytics:dataset_list' %}" class="btn btn-outline-primary">
+                <i class="ri-arrow-left-line"></i> Back to Datasets
+            </a>
         </div>
+    </div>
 
-        <div class="mb-4">
-            <label for="id_description" class="block text-sm font-medium text-gray-700">Description</label>
-            {{ form.description }}
-            {% if form.description.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ form.description.errors }}</p>
+    <!-- Main Form Card -->
+    <div class="widget-card">
+        <form method="POST" class="needs-validation" novalidate>
+            {% csrf_token %}
+            
+            <!-- Form Errors -->
+            {% if form.non_field_errors %}
+            <div class="alert alert-danger" role="alert">
+                {% for error in form.non_field_errors %}
+                    {{ error }}
+                {% endfor %}
+            </div>
             {% endif %}
-        </div>
 
-        <div class="mb-4">
-            <label for="id_is_public" class="flex items-center">
-                {{ form.is_public }} 
-                <span class="ml-2">Make this dataset public</span>
-            </label>
-            {% if form.is_public.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ form.is_public.errors }}</p>
-            {% endif %}
-        </div>
+            <!-- Title Field -->
+            <div class="mb-4">
+                <label for="{{ form.title.id_for_label }}" class="form-label">
+                    Dataset Title <span class="text-danger">*</span>
+                </label>
+                <input type="text" 
+                       class="form-control {% if form.title.errors %}is-invalid{% endif %}"
+                       id="{{ form.title.id_for_label }}"
+                       name="{{ form.title.name }}"
+                       value="{{ form.title.value|default:'' }}"
+                       required>
+                {% if form.title.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.title.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+                {% if form.title.help_text %}
+                <div class="form-text">{{ form.title.help_text }}</div>
+                {% endif %}
+            </div>
 
-        <div class="mb-4">
-            <label for="id_source_polls" class="block text-sm font-medium text-gray-700">Source Polls</label>
-            {{ form.source_polls }}
-            {% if form.source_polls.errors %}
-                <p class="mt-1 text-sm text-red-600">{{ form.source_polls.errors }}</p>
-            {% endif %}
-        </div>
-        
-        <button type="submit" class="btn-primary mt-4">Create Dataset</button>
-    </form>
-    <a href="{% url 'analytics:dataset_list' %}" class="btn-primary mt-4">Back to Datasets</a>
+            <!-- Description Field -->
+            <div class="mb-4">
+                <label for="{{ form.description.id_for_label }}" class="form-label">Description</label>
+                <textarea class="form-control {% if form.description.errors %}is-invalid{% endif %}"
+                          id="{{ form.description.id_for_label }}"
+                          name="{{ form.description.name }}"
+                          rows="4">{{ form.description.value|default:'' }}</textarea>
+                {% if form.description.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.description.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Source Polls Field -->
+            <div class="mb-4">
+                <label for="{{ form.source_polls.id_for_label }}" class="form-label">
+                    Source Polls <span class="text-danger">*</span>
+                </label>
+                <select multiple 
+                        class="form-select {% if form.source_polls.errors %}is-invalid{% endif %}"
+                        id="{{ form.source_polls.id_for_label }}"
+                        name="{{ form.source_polls.name }}"
+                        required>
+                    {% for value, label in form.source_polls.field.choices %}
+                    <option value="{{ value }}" 
+                            {% if value in form.source_polls.value %}selected{% endif %}>
+                        {{ label }}
+                    </option>
+                    {% endfor %}
+                </select>
+                {% if form.source_polls.errors %}
+                <div class="invalid-feedback">
+                    {% for error in form.source_polls.errors %}
+                        {{ error }}
+                    {% endfor %}
+                </div>
+                {% endif %}
+            </div>
+
+            <!-- Public Access Toggle -->
+            <div class="mb-4">
+                <div class="form-check form-switch">
+                    <input type="checkbox" 
+                           class="form-check-input"
+                           id="{{ form.is_public.id_for_label }}"
+                           name="{{ form.is_public.name }}"
+                           {% if form.is_public.value %}checked{% endif %}>
+                    <label class="form-check-label" for="{{ form.is_public.id_for_label }}">
+                        Make this dataset public
+                    </label>
+                </div>
+                {% if form.is_public.help_text %}
+                <div class="form-text">{{ form.is_public.help_text }}</div>
+                {% endif %}
+            </div>
+
+            <!-- Form Actions -->
+            <div class="d-flex gap-2 justify-content-end">
+                <button type="button" 
+                        class="btn btn-outline-secondary" 
+                        onclick="history.back()">
+                    Cancel
+                </button>
+                <button type="submit" class="btn btn-primary">
+                    <i class="ri-save-line"></i> Create Dataset
+                </button>
+            </div>
+        </form>
+    </div>
 </div>
+
+<!-- Form Validation Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Fetch all forms that need validation
+    const forms = document.querySelectorAll('.needs-validation');
+
+    // Loop over them and prevent submission
+    Array.from(forms).forEach(form => {
+        form.addEventListener('submit', event => {
+            if (!form.checkValidity()) {
+                event.preventDefault();
+                event.stopPropagation();
+            }
+            form.classList.add('was-validated');
+        }, false);
+    });
+});
+</script>
 {% endblock %}

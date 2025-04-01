@@ -1,194 +1,367 @@
-{% extends 'analytics/base.html' %}
+{% extends 'base.html' %}
+{% load static %}
 
-{% block title %}Dashboard{% endblock %}
+{% block title %}Analytics Dashboard{% endblock %}
 
 {% block content %}
-<div class="space-y-8">
-    <!-- Overview Stats -->
-    <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <div class="dashboard-card p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-blue-100 dark:bg-blue-900">
-                    <i class="fas fa-database text-blue-500"></i>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                        Total Datasets
-                    </h3>
-                    <p class="text-2xl font-semibold">
-                        {{ datasets.count }}
-                    </p>
-                </div>
+<div class="dashboard-wrapper">
+    <!-- Stats Overview -->
+    <div class="stats-grid">
+        <!-- Total Datasets -->
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="ri-database-2-line"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ datasets.count }}</h3>
+                <p class="stat-label">Datasets</p>
+            </div>
+            <div class="stat-trend positive">
+                <i class="ri-arrow-up-line"></i>
+                <span>12%</span>
             </div>
         </div>
 
-        <div class="dashboard-card p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-green-100 dark:bg-green-900">
-                    <i class="fas fa-chart-line text-green-500"></i>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                        Total Reports
-                    </h3>
-                    <p class="text-2xl font-semibold">
-                        {{ reports.count }}
-                    </p>
-                </div>
+        <!-- Active Reports -->
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="ri-file-chart-line"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ reports.count }}</h3>
+                <p class="stat-label">Reports</p>
+            </div>
+            <div class="stat-trend positive">
+                <i class="ri-arrow-up-line"></i>
+                <span>8%</span>
             </div>
         </div>
 
-        <div class="dashboard-card p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-purple-100 dark:bg-purple-900">
-                    <i class="fas fa-chart-pie text-purple-500"></i>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                        Total Visualizations
-                    </h3>
-                    <p class="text-2xl font-semibold">
-                        {{ visualizations.count }}
-                    </p>
-                </div>
+        <!-- Visualizations -->
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="ri-bar-chart-box-line"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ visualizations.count }}</h3>
+                <p class="stat-label">Visualizations</p>
+            </div>
+            <div class="stat-trend positive">
+                <i class="ri-arrow-up-line"></i>
+                <span>15%</span>
             </div>
         </div>
 
-        <div class="dashboard-card p-6">
-            <div class="flex items-center">
-                <div class="p-3 rounded-full bg-yellow-100 dark:bg-yellow-900">
-                    <i class="fas fa-tasks text-yellow-500"></i>
-                </div>
-                <div class="ml-4">
-                    <h3 class="text-sm font-medium text-gray-500 dark:text-gray-400">
-                        Active Jobs
-                    </h3>
-                    <p class="text-2xl font-semibold">
-                        {{ jobs.count }}
-                    </p>
-                </div>
+        <!-- Active Jobs -->
+        <div class="stat-card">
+            <div class="stat-icon orange">
+                <i class="ri-cpu-line"></i>
+            </div>
+            <div class="stat-info">
+                <h3 class="stat-value">{{ jobs.count }}</h3>
+                <p class="stat-label">Active Jobs</p>
+            </div>
+            <div class="stat-trend neutral">
+                <i class="ri-subtract-line"></i>
+                <span>Stable</span>
             </div>
         </div>
     </div>
 
-    <!-- Recent Items -->
-    <div class="grid grid-cols-1 lg:grid-cols-2 gap-8">
+    <!-- Main Content Grid -->
+    <div class="dashboard-grid">
         <!-- Recent Datasets -->
-        <div class="dashboard-card p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold">Recent Datasets</h2>
-                <a href="{% url 'analytics:dataset_list' %}" 
-                   class="text-sm text-primary hover:text-primary-light">
-                    View All
+        <div class="widget-card">
+            <div class="widget-header">
+                <h2 class="widget-title">
+                    <i class="ri-database-2-line"></i>
+                    Recent Datasets
+                </h2>
+                <a href="{% url 'analytics:dataset_list' %}" class="btn btn-sm btn-outline">
+                    View All <i class="ri-arrow-right-line"></i>
                 </a>
             </div>
-            <div class="space-y-4">
-                {% for dataset in datasets %}
-                <div class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <i class="fas fa-database text-gray-400"></i>
-                    <div class="ml-4">
-                        <h3 class="text-sm font-medium">
-                            <a href="{% url 'analytics:dataset_detail' uuid=dataset.uuid %}"
-                               class="hover:text-primary">
-                                {{ dataset.title }}
+            <div class="widget-content">
+                <div class="dataset-list">
+                    {% for dataset in datasets|slice:":5" %}
+                    <div class="dataset-item">
+                        <div class="dataset-info">
+                            <h3 class="dataset-title">{{ dataset.title }}</h3>
+                            <p class="dataset-meta">
+                                <span class="meta-item">
+                                    <i class="ri-time-line"></i>
+                                    {{ dataset.created_at|timesince }} ago
+                                </span>
+                                <span class="meta-item">
+                                    <i class="ri-user-line"></i>
+                                    {{ dataset.creator.get_short_name }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="dataset-actions">
+                            <a href="{% url 'analytics:dataset_detail' uuid=dataset.uuid %}" 
+                               class="btn btn-icon" title="View Dataset">
+                                <i class="ri-eye-line"></i>
                             </a>
-                        </h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                            Created {{ dataset.created_at|timesince }} ago
-                        </p>
+                        </div>
                     </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="ri-inbox-line"></i>
+                        <p>No datasets available</p>
+                        <a href="{% url 'analytics:dataset_create' %}" class="btn btn-primary">
+                            Create Dataset
+                        </a>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% empty %}
-                <p class="text-gray-500 dark:text-gray-400 text-center py-4">
-                    No datasets yet
-                </p>
-                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Analytics Chart -->
+        <div class="widget-card">
+            <div class="widget-header">
+                <h2 class="widget-title">
+                    <i class="ri-line-chart-line"></i>
+                    Data Trends
+                </h2>
+                <div class="widget-actions">
+                    <button class="btn btn-sm btn-outline active" data-period="week">Week</button>
+                    <button class="btn btn-sm btn-outline" data-period="month">Month</button>
+                    <button class="btn btn-sm btn-outline" data-period="year">Year</button>
+                </div>
+            </div>
+            <div class="widget-content">
+                <canvas id="trendsChart" height="300"></canvas>
             </div>
         </div>
 
         <!-- Recent Reports -->
-        <div class="dashboard-card p-6">
-            <div class="flex justify-between items-center mb-6">
-                <h2 class="text-lg font-semibold">Recent Reports</h2>
-                <a href="{% url 'analytics:report_list' %}" 
-                   class="text-sm text-primary hover:text-primary-light">
-                    View All
+        <div class="widget-card">
+            <div class="widget-header">
+                <h2 class="widget-title">
+                    <i class="ri-file-chart-line"></i>
+                    Recent Reports
+                </h2>
+                <a href="{% url 'analytics:report_list' %}" class="btn btn-sm btn-outline">
+                    View All <i class="ri-arrow-right-line"></i>
                 </a>
             </div>
-            <div class="space-y-4">
-                {% for report in reports %}
-                <div class="flex items-center p-4 bg-gray-50 dark:bg-gray-700 rounded-lg">
-                    <i class="fas fa-chart-line text-gray-400"></i>
-                    <div class="ml-4">
-                        <h3 class="text-sm font-medium">
-                            <a href="{% url 'analytics:report_detail' uuid=report.uuid %}"
-                               class="hover:text-primary">
-                                {{ report.title }}
+            <div class="widget-content">
+                <div class="report-list">
+                    {% for report in reports|slice:":5" %}
+                    <div class="report-item">
+                        <div class="report-info">
+                            <h3 class="report-title">{{ report.title }}</h3>
+                            <p class="report-meta">
+                                <span class="meta-item">
+                                    <i class="ri-time-line"></i>
+                                    {{ report.created_at|timesince }} ago
+                                </span>
+                                <span class="meta-item">
+                                    <i class="ri-user-line"></i>
+                                    {{ report.creator.get_short_name }}
+                                </span>
+                            </p>
+                        </div>
+                        <div class="report-actions">
+                            <a href="{% url 'analytics:report_detail' uuid=report.uuid %}" 
+                               class="btn btn-icon" title="View Report">
+                                <i class="ri-eye-line"></i>
                             </a>
-                        </h3>
-                        <p class="text-sm text-gray-500 dark:text-gray-400">
-                            Created {{ report.created_at|timesince }} ago
-                        </p>
+                        </div>
                     </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="ri-file-list-line"></i>
+                        <p>No reports available</p>
+                        <a href="{% url 'analytics:report_create' %}" class="btn btn-primary">
+                            Create Report
+                        </a>
+                    </div>
+                    {% endfor %}
                 </div>
-                {% empty %}
-                <p class="text-gray-500 dark:text-gray-400 text-center py-4">
-                    No reports yet
-                </p>
-                {% endfor %}
             </div>
         </div>
-    </div>
 
-    <!-- Recent Visualizations -->
-    <div class="dashboard-card p-6">
-        <div class="flex justify-between items-center mb-6">
-            <h2 class="text-lg font-semibold">Recent Visualizations</h2>
-            <a href="{% url 'analytics:visualization_list' %}" 
-               class="text-sm text-primary hover:text-primary-light">
-                View All
-            </a>
-        </div>
-        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {% for viz in visualizations %}
-            <div class="bg-gray-50 dark:bg-gray-700 rounded-lg p-4">
-                <div class="aspect-w-16 aspect-h-9 mb-4">
-                    <div class="visualization-preview" data-viz-id="{{ viz.id }}">
-                        <!-- Visualization will be rendered here -->
-                    </div>
-                </div>
-                <h3 class="text-sm font-medium mb-2">
-                    <a href="{% url 'analytics:visualization_detail' pk=viz.id %}"
-                       class="hover:text-primary">
-                        {{ viz.title }}
-                    </a>
-                </h3>
-                <p class="text-sm text-gray-500 dark:text-gray-400">
-                    {{ viz.visualization_type|title }}
-                </p>
+        <!-- Recent Visualizations -->
+        <div class="widget-card">
+            <div class="widget-header">
+                <h2 class="widget-title">
+                    <i class="ri-bar-chart-box-line"></i>
+                    Recent Visualizations
+                </h2>
+                <a href="{% url 'analytics:visualization_list' %}" class="btn btn-sm btn-outline">
+                    View All <i class="ri-arrow-right-line"></i>
+                </a>
             </div>
-            {% empty %}
-            <p class="text-gray-500 dark:text-gray-400 text-center py-4 col-span-3">
-                No visualizations yet
-            </p>
-            {% endfor %}
+            <div class="widget-content">
+                <div class="visualization-grid">
+                    {% for viz in visualizations|slice:":6" %}
+                    <div class="visualization-card">
+                        <div class="visualization-preview">
+                            <!-- Placeholder for visualization preview -->
+                            <div class="viz-placeholder" data-viz-id="{{ viz.id }}">
+                                <i class="ri-{{ viz.get_visualization_type_display|lower }}-chart-line"></i>
+                            </div>
+                        </div>
+                        <div class="visualization-info">
+                            <h3 class="visualization-title">{{ viz.title }}</h3>
+                            <p class="visualization-meta">
+                                {{ viz.get_visualization_type_display }}
+                            </p>
+                        </div>
+                        <a href="{% url 'analytics:visualization_detail' pk=viz.pk %}" 
+                           class="visualization-overlay">
+                            <span class="overlay-text">View Details</span>
+                        </a>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="ri-bar-chart-box-line"></i>
+                        <p>No visualizations available</p>
+                        <a href="{% url 'analytics:visualization_create' %}" class="btn btn-primary">
+                            Create Visualization
+                        </a>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+        </div>
+
+        <!-- Active Jobs -->
+        <div class="widget-card">
+            <div class="widget-header">
+                <h2 class="widget-title">
+                    <i class="ri-cpu-line"></i>
+                    Active Jobs
+                </h2>
+                <a href="{% url 'analytics:job_list' %}" class="btn btn-sm btn-outline">
+                    View All <i class="ri-arrow-right-line"></i>
+                </a>
+            </div>
+            <div class="widget-content">
+                <div class="job-list">
+                    {% for job in jobs|slice:":5" %}
+                    <div class="job-item">
+                        <div class="job-info">
+                            <div class="job-status {{ job.status }}">
+                                <i class="ri-checkbox-blank-circle-fill"></i>
+                                {{ job.get_status_display }}
+                            </div>
+                            <h3 class="job-title">{{ job.get_job_type_display }}</h3>
+                            <p class="job-meta">
+                                Started {{ job.started_at|timesince }} ago
+                            </p>
+                        </div>
+                        <div class="job-progress">
+                            <div class="progress-bar">
+                                <div class="progress" style="width: {{ job.progress }}%"></div>
+                            </div>
+                            <span class="progress-text">{{ job.progress }}%</span>
+                        </div>
+                    </div>
+                    {% empty %}
+                    <div class="empty-state">
+                        <i class="ri-cpu-line"></i>
+                        <p>No active jobs</p>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
         </div>
     </div>
 </div>
 
+<!-- Quick Actions Menu -->
+<div class="quick-actions">
+    <button class="action-button" id="quickActionsToggle">
+        <i class="ri-add-line"></i>
+    </button>
+    <div class="quick-actions-menu" id="quickActionsMenu">
+        <a href="{% url 'analytics:dataset_create' %}" class="quick-action-item">
+            <i class="ri-database-2-line"></i>
+            <span>New Dataset</span>
+        </a>
+        <a href="{% url 'analytics:report_create' %}" class="quick-action-item">
+            <i class="ri-file-chart-line"></i>
+            <span>New Report</span>
+        </a>
+        <a href="{% url 'analytics:visualization_create' %}" class="quick-action-item">
+            <i class="ri-bar-chart-box-line"></i>
+            <span>New Visualization</span>
+        </a>
+        <a href="{% url 'analytics:data_import' %}" class="quick-action-item">
+            <i class="ri-upload-cloud-line"></i>
+            <span>Import Data</span>
+        </a>
+    </div>
+</div>
 {% endblock %}
 
 {% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
-    // Function to render visualization previews
-    function renderVisualizations() {
-        document.querySelectorAll('.visualization-preview').forEach(container => {
-            const vizId = container.dataset.vizId;
-            // Here you would fetch the visualization data and render it
-            // using Chart.js or other appropriate library
-        });
-    }
+// Initialize charts and other interactive elements
+document.addEventListener('DOMContentLoaded', function() {
+    // Trends Chart
+    const ctx = document.getElementById('trendsChart').getContext('2d');
+    const trendsChart = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
+            datasets: [{
+                label: 'Datasets',
+                data: [12, 19, 3, 5, 2, 3, 7],
+                borderColor: 'rgb(99, 102, 241)',
+                tension: 0.4,
+                fill: false
+            }, {
+                label: 'Reports',
+                data: [7, 11, 5, 8, 3, 7, 9],
+                borderColor: 'rgb(16, 185, 129)',
+                tension: 0.4,
+                fill: false
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        }
+    });
 
-    document.addEventListener('DOMContentLoaded', renderVisualizations);
+    // Quick Actions Menu Toggle
+    const quickActionsToggle = document.getElementById('quickActionsToggle');
+    const quickActionsMenu = document.getElementById('quickActionsMenu');
+
+    quickActionsToggle.addEventListener('click', function() {
+        quickActionsMenu.classList.toggle('show');
+    });
+
+    // Close quick actions menu when clicking outside
+    document.addEventListener('click', function(event) {
+        if (!event.target.closest('.quick-actions')) {
+            quickActionsMenu.classList.remove('show');
+        }
+    });
+
+    // Initialize visualization previews
+    document.querySelectorAll('.viz-placeholder').forEach(placeholder => {
+        const vizId = placeholder.dataset.vizId;
+        // Here you would typically load the actual visualization preview
+        // For now, we'll just add a class to style it
+        placeholder.classList.add('viz-loaded');
+    });
+});
 </script>
 {% endblock %}
