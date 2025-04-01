@@ -2,6 +2,7 @@ from django import forms
 from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 from taggit.forms import TagField
+import json
 
 from accounts.models import InstitutionProfile
 
@@ -12,7 +13,8 @@ from .models import (
     Choice, 
     PollComment, 
     QuestionType,
-    PollTemplate
+    PollTemplate,
+    PollResponse
 )
 
 class PollCategoryForm(forms.ModelForm):
@@ -271,11 +273,9 @@ class PollResponseForm(forms.Form):
                 )
 
     def save(self):
-        """Save user responses to all questions in this poll"""
+        """Save user responses to all questions in this poll."""
         if not self.is_valid():
             raise ValueError("Form must be valid before saving")
-        
-        from .models import PollResponse
         
         saved_responses = []
         for field_name, response_value in self.cleaned_data.items():
@@ -284,7 +284,7 @@ class PollResponseForm(forms.Form):
                 question = Question.objects.get(id=question_id)
                 
                 if question.question_type.slug == 'multiple_choice':
-                    response_data = str(list(response_value))
+                    response_data = json.dumps(list(response_value))  # Save as JSON
                 else:
                     response_data = str(response_value)
                 
