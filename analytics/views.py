@@ -499,6 +499,68 @@ class AnalysisReportDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailVi
 
 
 @login_required
+def export_report(request, uuid):
+    """Export an analysis report in various formats."""
+    report = get_object_or_404(AnalysisReport, uuid=uuid)
+
+    # Check if user has access to this report
+    if not (report.creator == request.user or 
+            request.user in report.collaborators.all() or 
+            report.is_public):
+        return HttpResponseForbidden()
+
+    export_format = request.GET.get('format', 'json')
+
+    if export_format == 'json':
+        response = HttpResponse(json.dumps(report.content, indent=2), content_type='application/json')
+        response['Content-Disposition'] = f'attachment; filename="{report.title}.json"'
+    elif export_format == 'csv':
+        # Convert report content to CSV and return as response
+        pass  # Implement CSV export logic
+    elif export_format == 'excel':
+        # Convert report content to Excel and return as response
+        pass  # Implement Excel export logic
+    else:
+        messages.error(request, _('Unsupported export format.'))
+        return redirect('analytics:report_detail', uuid=uuid)
+
+    return response
+
+@login_required
+@require_POST
+def toggle_visibility(request, uuid):
+    """Toggle the visibility of an analysis report."""
+    report = get_object_or_404(AnalysisReport, uuid=uuid)
+
+    # Check if the user has permission to toggle visibility
+    if request.user != report.creator:
+        return JsonResponse({'error': 'Forbidden'}, status=403)
+
+    # Update the visibility
+    report.is_public = not report.is_public
+    report.save()
+
+    return JsonResponse({'is_public': report.is_public})
+
+from django.shortcuts import render, get_object_or_404
+from django.contrib.auth.decorators import login_required
+from .models import AnalysisReport
+
+@login_required
+def report_preview(request, uuid):
+    """Preview an analysis report."""
+    report = get_object_or_404(AnalysisReport, uuid=uuid)
+
+    # Check if the user has access to view the report
+    if not (report.creator == request.user or 
+            request.user in report.collaborators.all() or 
+            report.is_public):
+        return HttpResponseForbidden()
+
+    # Render the preview template with the report content
+    return render(request, 'analytics/report_preview.html', {'report': report})
+
+@login_required
 def edit_report(request, uuid):
     """Edit report content"""
     report = get_object_or_404(AnalysisReport, uuid=uuid)
