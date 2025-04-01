@@ -22,6 +22,8 @@ urlpatterns = [
     path('reports/create/', views.AnalysisReportCreateView.as_view(), name='report_create'),
     path('reports/<uuid:uuid>/', views.AnalysisReportDetailView.as_view(), name='report_detail'),
     path('reports/<uuid:uuid>/edit/', views.edit_report, name='report_edit'),
+    path('reports/<uuid:uuid>/duplicate/', views.duplicate_report, name='report_duplicate'),
+    path('reports/<uuid:uuid>/delete/', views.delete_report, name='report_delete'),
     path('reports/<uuid:uuid>/collaborators/add/', views.add_report_collaborator, name='add_report_collaborator'),
     path('reports/<uuid:uuid>/collaborators/<int:user_id>/remove/', views.remove_report_collaborator, name='remove_report_collaborator'),
     

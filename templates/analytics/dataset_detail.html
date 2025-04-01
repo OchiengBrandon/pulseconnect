@@ -1,23 +1,272 @@
-{% extends 'analytics/base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}{{ dataset.title }}{% endblock %}
+{% block title %}{{ dataset.name }} - Dataset Details{% endblock %}
+
+{% block page_title %}Dataset: {{ dataset.name }}{% endblock %}
 
 {% block content %}
-<div class="dashboard-card p-6">
-    <h1 class="text-2xl font-bold">{{ dataset.title }}</h1>
-    <p class="mt-4">{{ dataset.description }}</p>
-    <h2 class="mt-6 text-lg font-semibold">Data Preview</h2>
-    <pre class="bg-gray-100 p-4 rounded">{{ data_preview|safe }}</pre>
-    <h3 class="mt-6 text-lg font-semibold">Collaborators</h3>
-    <ul>
-        {% for collaborator in dataset.collaborators.all %}
-        <li>{{ collaborator.username }}</li>
-        {% empty %}
-        <li>No collaborators.</li>
-        {% endfor %}
-    </ul>
-    <div class="mt-4">
-        <a href="{% url 'analytics:dataset_list' %}" class="btn-primary">Back to Datasets</a>
+<div class="dataset-detail">
+    <!-- Dataset Header -->
+    <div class="widget-card mb-4">
+        <div class="d-flex justify-content-between align-items-start flex-wrap gap-3">
+            <div>
+                <div class="d-flex align-items-center gap-2 mb-2">
+                    <span class="badge {% if dataset.is_public %}bg-success{% else %}bg-primary{% endif %} rounded-pill">
+                        {{ dataset.is_public|yesno:"Public,Private" }}
+                    </span>
+                    <span class="text-2">Created {{ dataset.created_at|timesince }} ago</span>
+                </div>
+                <h2 class="h4 mb-2">{{ dataset.name }}</h2>
+                <p class="text-2 mb-3">{{ dataset.description }}</p>
+                <div class="d-flex gap-2 flex-wrap">
+                    <button class="btn btn-primary">
+                        <i class="ri-download-line"></i> Export
+                    </button>
+                    {% if user == dataset.creator %}
+                    <button class="btn btn-outline-primary">
+                        <i class="ri-edit-line"></i> Edit
+                    </button>
+                    <button class="btn btn-outline-danger">
+                        <i class="ri-delete-bin-line"></i> Delete
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+            
+            <div class="dataset-meta">
+                <div class="d-flex gap-4">
+                    <div class="text-center">
+                        <div class="h4 mb-1">{{ dataset.data|length }}</div>
+                        <div class="text-2">Records</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="h4 mb-1">{{ visualizations|length }}</div>
+                        <div class="text-2">Visualizations</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="h4 mb-1">{{ reports|length }}</div>
+                        <div class="text-2">Reports</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Data Preview Section -->
+    {% if data_preview %}
+    <div class="widget-card mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="h5 mb-0">Data Preview</h3>
+            <button class="btn btn-sm btn-outline-primary">
+                <i class="ri-eye-line"></i> View Full Data
+            </button>
+        </div>
+        
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Poll</th>
+                        <th>Question</th>
+                        <th>Response</th>
+                        <th>Timestamp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {% for response in data_preview.responses %}
+                    <tr>
+                        <td>{{ data_preview.poll_title }}</td>
+                        <td>{{ data_preview.question_text }}</td>
+                        <td>{{ response.answer }}</td>
+                        <td>{{ response.timestamp }}</td>
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Visualizations Grid -->
+    {% if visualizations %}
+    <div class="widget-card mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="h5 mb-0">Visualizations</h3>
+            <button class="btn btn-sm btn-primary">
+                <i class="ri-add-line"></i> New Visualization
+            </button>
+        </div>
+        
+        <div class="row g-3">
+            {% for viz in visualizations %}
+            <div class="col-md-6 col-lg-4">
+                <div class="viz-card">
+                    <div class="viz-preview">
+                        <!-- Visualization preview would go here -->
+                        <div class="viz-placeholder">
+                            <i class="ri-bar-chart-2-line"></i>
+                        </div>
+                    </div>
+                    <div class="viz-info p-3">
+                        <h4 class="h6 mb-1">{{ viz.title }}</h4>
+                        <p class="text-2 small mb-2">{{ viz.description|truncatechars:60 }}</p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <span class="badge bg-primary-light text-primary">{{ viz.type }}</span>
+                            <button class="btn btn-sm btn-icon">
+                                <i class="ri-more-2-fill"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Reports Section -->
+    {% if reports %}
+    <div class="widget-card mb-4">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="h5 mb-0">Analysis Reports</h3>
+            <button class="btn btn-sm btn-primary">
+                <i class="ri-add-line"></i> New Report
+            </button>
+        </div>
+        
+        <div class="list-group">
+            {% for report in reports %}
+            <div class="list-group-item list-group-item-action d-flex justify-content-between align-items-center p-3">
+                <div>
+                    <h4 class="h6 mb-1">{{ report.title }}</h4>
+                    <p class="text-2 small mb-0">{{ report.description|truncatechars:100 }}</p>
+                </div>
+                <div class="d-flex gap-2">
+                    <button class="btn btn-sm btn-icon btn-outline-primary">
+                        <i class="ri-eye-line"></i>
+                    </button>
+                    <button class="btn btn-sm btn-icon btn-outline-primary">
+                        <i class="ri-download-line"></i>
+                    </button>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Collaborators Section -->
+    <div class="widget-card">
+        <div class="d-flex justify-content-between align-items-center mb-3">
+            <h3 class="h5 mb-0">Collaborators</h3>
+            {% if user == dataset.creator %}
+            <button class="btn btn-sm btn-primary" data-bs-toggle="modal" data-bs-target="#addCollaboratorModal">
+                <i class="ri-user-add-line"></i> Add Collaborator
+            </button>
+            {% endif %}
+        </div>
+        
+        <div class="collaborators-list">
+            <!-- Creator -->
+            <div class="collaborator-item d-flex align-items-center gap-3 mb-3">
+                <img src="{{ dataset.creator.profile_picture.url|default:'https://via.placeholder.com/40' }}" 
+                     alt="{{ dataset.creator.get_full_name }}" 
+                     class="rounded-circle" 
+                     width="40" 
+                     height="40">
+                <div>
+                    <div class="fw-medium">{{ dataset.creator.get_full_name }}</div>
+                    <div class="text-2 small">Creator</div>
+                </div>
+            </div>
+            
+            <!-- Collaborators -->
+            {% for collaborator in dataset.collaborators.all %}
+            <div class="collaborator-item d-flex align-items-center gap-3 mb-3">
+                <img src="{{ collaborator.profile_picture.url|default:'https://via.placeholder.com/40' }}" 
+                     alt="{{ collaborator.get_full_name }}" 
+                     class="rounded-circle" 
+                     width="40" 
+                     height="40">
+                <div>
+                    <div class="fw-medium">{{ collaborator.get_full_name }}</div>
+                    <div class="text-2 small">Collaborator</div>
+                </div>
+                {% if user == dataset.creator %}
+                <button class="btn btn-sm btn-icon btn-outline-danger ms-auto">
+                    <i class="ri-close-line"></i>
+                </button>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
     </div>
 </div>
+
+<!-- Add Collaborator Modal -->
+{% if user == dataset.creator %}
+<div class="modal fade" id="addCollaboratorModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add Collaborator</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="post" action="{% url 'analytics:add_dataset_collaborator' dataset.uuid %}">
+                    {% csrf_token %}
+                    {{ collaborator_form.as_p }}
+                    <div class="d-flex justify-content-end gap-2">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <button type="submit" class="btn btn-primary">Add Collaborator</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Additional styles -->
+<style>
+    .viz-card {
+        background: var(--surface);
+        border: 1px solid var(--border);
+        border-radius: var(--radius);
+        overflow: hidden;
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .viz-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-md);
+    }
+    
+    .viz-preview {
+        background: var(--surface-2);
+        height: 160px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .viz-placeholder i {
+        font-size: 3rem;
+        color: var(--text-2);
+    }
+    
+    .collaborator-item {
+        padding: 0.75rem;
+        border-radius: var(--radius);
+        transition: background-color 0.2s ease;
+    }
+    
+    .collaborator-item:hover {
+        background-color: var(--surface-2);
+    }
+    
+    .badge.bg-primary-light {
+        background-color: rgba(99, 102, 241, 0.1);
+    }
+</style>
 {% endblock %}

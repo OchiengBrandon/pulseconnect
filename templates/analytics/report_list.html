@@ -1,19 +1,326 @@
-{% extends 'analytics/base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}Analysis Reports{% endblock %}
+{% block title %}Analysis Reports - PulseConnect{% endblock %}
+
+{% block page_title %}Analysis Reports{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold">Analysis Reports</h1>
-    <a href="{% url 'analytics:report_create' %}" class="btn-primary">Create New Report</a>
+<div class="reports-dashboard">
+    <!-- Stats Overview -->
+    <div class="stats-grid mb-4">
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="ri-file-chart-line"></i>
+            </div>
+            <div>
+                <div class="h4 mb-1">{{ reports.count }}</div>
+                <div class="text-2">Total Reports</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="ri-user-line"></i>
+            </div>
+            <div>
+                <div class="h4 mb-1">{{ my_reports_count }}</div>
+                <div class="text-2">My Reports</div>
+            </div>
+        </div>
+        
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="ri-share-line"></i>
+            </div>
+            <div>
+                <div class="h4 mb-1">{{ public_reports_count }}</div>
+                <div class="text-2">Public Reports</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Filters and Actions -->
+    <div class="widget-card mb-4">
+        <div class="d-flex flex-wrap justify-content-between gap-3 align-items-center">
+            <!-- Filter Tabs -->
+            <div class="btn-group" role="group">
+                <a href="{% url 'analytics:report_list' %}" 
+                   class="btn {% if not filter %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    All Reports
+                </a>
+                <a href="{% url 'analytics:report_list' %}?filter=mine" 
+                   class="btn {% if filter == 'mine' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    My Reports
+                </a>
+                <a href="{% url 'analytics:report_list' %}?filter=shared" 
+                   class="btn {% if filter == 'shared' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Shared with Me
+                </a>
+                <a href="{% url 'analytics:report_list' %}?filter=public" 
+                   class="btn {% if filter == 'public' %}btn-primary{% else %}btn-outline-primary{% endif %}">
+                    Public Reports
+                </a>
+            </div>
+
+            <!-- Create New Report Button -->
+            <a href="{% url 'analytics:report_create' %}" class="btn btn-primary">
+                <i class="ri-add-line"></i> Create New Report
+            </a>
+        </div>
+    </div>
+
+    <!-- Reports Grid -->
+    {% if reports %}
+    <div class="row g-4">
+        {% for report in reports %}
+        <div class="col-md-6 col-lg-4">
+            <div class="report-card widget-card h-100">
+                <!-- Report Header -->
+                <div class="report-header mb-3">
+                    <div class="d-flex justify-content-between align-items-start">
+                        <div class="report-meta">
+                            <div class="d-flex align-items-center gap-2 mb-2">
+                                <span class="badge {% if report.is_public %}bg-success{% else %}bg-primary{% endif %} rounded-pill">
+                                    {{ report.is_public|yesno:"Public,Private" }}
+                                </span>
+                                <span class="text-2 small">{{ report.created_at|timesince }} ago</span>
+                            </div>
+                            <h3 class="h5 mb-1">{{ report.title }}</h3>
+                            <p class="text-2 small mb-0">{{ report.description|truncatechars:100 }}</p>
+                        </div>
+                        
+                        <!-- Action Menu -->
+                        <div class="dropdown">
+                            <button class="btn btn-icon btn-sm" data-bs-toggle="dropdown">
+                                <i class="ri-more-2-fill"></i>
+                            </button>
+                            <ul class="dropdown-menu dropdown-menu-end">
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'analytics:report_detail' report.uuid %}">
+                                        <i class="ri-eye-line me-2"></i> View Report
+                                    </a>
+                                </li>
+                                {% if user == report.creator %}
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'analytics:report_edit' report.uuid %}">
+                                        <i class="ri-edit-line me-2"></i> Edit Report
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="dropdown-item" href="{% url 'analytics:report_duplicate' report.uuid %}">
+                                        <i class="ri-file-copy-line me-2"></i> Duplicate
+                                    </a>
+                                </li>
+                                <li><hr class="dropdown-divider"></li>
+                                <li>
+                                    <a class="dropdown-item text-danger" href="#" 
+                                       data-bs-toggle="modal" 
+                                       data-bs-target="#deleteReportModal{{ report.uuid }}">
+                                        <i class="ri-delete-bin-line me-2"></i> Delete
+                                    </a>
+                                </li>
+                                {% endif %}
+                            </ul>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Report Preview -->
+                <div class="report-preview mb-3">
+                    <div class="preview-placeholder">
+                        <i class="ri-bar-chart-2-line"></i>
+                    </div>
+                </div>
+
+                <!-- Report Footer -->
+                <div class="report-footer">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <!-- Creator Info -->
+                        <div class="d-flex align-items-center gap-2">
+                            <img src="{{ report.creator.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
+                                 alt="{{ report.creator.get_full_name }}" 
+                                 class="rounded-circle" 
+                                 width="32" 
+                                 height="32">
+                            <div class="small">
+                                <div class="fw-medium">{{ report.creator.get_full_name }}</div>
+                                <div class="text-2">Creator</div>
+                            </div>
+                        </div>
+
+                        <!-- Quick Actions -->
+                        <div class="d-flex gap-2">
+                            <button class="btn btn-sm btn-icon btn-outline-primary" title="Download Report">
+                                <i class="ri-download-line"></i>
+                            </button>
+                            <button class="btn btn-sm btn-icon btn-outline-primary" title="Share Report">
+                                <i class="ri-share-line"></i>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Delete Confirmation Modal -->
+        {% if user == report.creator %}
+        <div class="modal fade" id="deleteReportModal{{ report.uuid }}" tabindex="-1">
+            <div class="modal-dialog modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title">Delete Report</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                    </div>
+                    <div class="modal-body">
+                        <p>Are you sure you want to delete the report "{{ report.title }}"? This action cannot be undone.</p>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                        <form method="post" action="{% url 'analytics:report_delete' report.uuid %}">
+                            {% csrf_token %}
+                            <button type="submit" class="btn btn-danger">Delete Report</button>
+                        </form>
+                    </div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if is_paginated %}
+    <div class="d-flex justify-content-center mt-4">
+        <nav aria-label="Page navigation">
+            <ul class="pagination">
+                {% if page_obj.has_previous %}
+                <li class="page-item">
+                    <a class="page-link" href="?page=1{% if filter %}&filter={{ filter }}{% endif %}">
+                        <i class="ri-arrow-left-double-line"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if filter %}&filter={{ filter }}{% endif %}">
+                        <i class="ri-arrow-left-line"></i>
+                    </a>
+                </li>
+                {% endif %}
+
+                {% for num in page_obj.paginator.page_range %}
+                    {% if page_obj.number == num %}
+                    <li class="page-item active">
+                        <span class="page-link">{{ num }}</span>
+                    </li>
+                    {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                    <li class="page-item">
+                        <a class="page-link" href="?page={{ num }}{% if filter %}&filter={{ filter }}{% endif %}">{{ num }}</a>
+                    </li>
+                    {% endif %}
+                {% endfor %}
+
+                {% if page_obj.has_next %}
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if filter %}&filter={{ filter }}{% endif %}">
+                        <i class="ri-arrow-right-line"></i>
+                    </a>
+                </li>
+                <li class="page-item">
+                    <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if filter %}&filter={{ filter }}{% endif %}">
+                        <i class="ri-arrow-right-double-line"></i>
+                    </a>
+                </li>
+                {% endif %}
+            </ul>
+        </nav>
+    </div>
+    {% endif %}
+
+    {% else %}
+    <!-- Empty State -->
+    <div class="text-center py-5">
+        <div class="mb-3">
+            <i class="ri-file-chart-line" style="font-size: 4rem; color: var(--text-2);"></i>
+        </div>
+        <h3 class="h4 mb-2">No Reports Found</h3>
+        <p class="text-2 mb-4">Get started by creating your first analysis report</p>
+        <a href="{% url 'analytics:report_create' %}" class="btn btn-primary">
+            <i class="ri-add-line"></i> Create New Report
+        </a>
+    </div>
+    {% endif %}
 </div>
-<ul class="space-y-4">
-    {% for report in reports %}
-    <li class="dashboard-card p-4">
-        <a href="{% url 'analytics:report_detail' report.uuid %}" class="text-lg font-semibold hover:underline">{{ report.title }}</a>
-    </li>
-    {% empty %}
-    <li class="dashboard-card p-4">No reports found.</li>
-    {% endfor %}
-</ul>
+
+<style>
+    .report-card {
+        transition: transform 0.2s ease, box-shadow 0.2s ease;
+    }
+    
+    .report-card:hover {
+        transform: translateY(-2px);
+        box-shadow: var(--shadow-lg);
+    }
+    
+    .preview-placeholder {
+        background: var(--surface-2);
+        height: 160px;
+        border-radius: var(--radius);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .preview-placeholder i {
+        font-size: 3rem;
+        color: var(--text-2);
+    }
+    
+    .page-link {
+        color: var(--text);
+        background-color: var(--surface);
+        border-color: var(--border);
+    }
+    
+    .page-link:hover {
+        color: var(--primary);
+        background-color: var(--surface-2);
+        border-color: var(--border);
+    }
+    
+    .page-item.active .page-link {
+        background-color: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+    
+    .btn-group .btn {
+        border-color: var(--primary);
+    }
+    
+    .dropdown-menu {
+        background-color: var(--surface);
+        border-color: var(--border);
+    }
+    
+    .dropdown-item {
+        color: var(--text);
+    }
+    
+    .dropdown-item:hover {
+        background-color: var(--surface-2);
+        color: var(--primary);
+    }
+    
+    .modal-content {
+        background-color: var(--surface);
+        border-color: var(--border);
+    }
+    
+    .modal-header {
+        border-bottom-color: var(--border);
+    }
+    
+    .modal-footer {
+        border-top-color: var(--border);
+    }
+</style>
 {% endblock %}

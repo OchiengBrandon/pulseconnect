@@ -369,21 +369,22 @@ def _dataset_to_dataframe(dataset):
     return pd.DataFrame(rows)
 
 
+@method_decorator(login_required, name='dispatch')
 class AnalysisReportListView(LoginRequiredMixin, ListView):
     model = AnalysisReport
     template_name = 'analytics/report_list.html'
     context_object_name = 'reports'
     paginate_by = 10
-    
+
     def get_queryset(self):
         user = self.request.user
         
-        # Show reports the user has access to
+        # Base queryset showing reports the user has access to
         queryset = AnalysisReport.objects.filter(
             Q(creator=user) | Q(collaborators=user) | Q(is_public=True)
         ).distinct()
         
-        # Apply filters
+        # Apply filters based on the query parameter
         filter_type = self.request.GET.get('filter', '')
         if filter_type == 'mine':
             queryset = queryset.filter(creator=user)
@@ -393,12 +394,50 @@ class AnalysisReportListView(LoginRequiredMixin, ListView):
             queryset = queryset.filter(is_public=True)
         
         return queryset.order_by('-created_at')
-    
+
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         context['filter'] = self.request.GET.get('filter', '')
+        context['my_reports_count'] = AnalysisReport.objects.filter(creator=self.request.user).count()
+        context['shared_reports_count'] = AnalysisReport.objects.filter(collaborators=self.request.user).count()
+        context['public_reports_count'] = AnalysisReport.objects.filter(is_public=True).count()
         return context
 
+@login_required
+def duplicate_report(request, uuid):
+    """Duplicate an existing analysis report."""
+    original_report = get_object_or_404(AnalysisReport, uuid=uuid)
+
+    # Check if the user has permission to duplicate the report
+    if request.user != original_report.creator:
+        return HttpResponseForbidden()
+
+    # Create a copy of the original report
+    new_report = AnalysisReport.objects.create(
+        title=f"Copy of {original_report.title}",
+        description=original_report.description,
+        creator=request.user,
+        content=original_report.content,  # Adjust as necessary
+        is_public=original_report.is_public,
+        # Copy other relevant fields as necessary
+    )
+
+    messages.success(request, _('Report duplicated successfully!'))
+    return redirect('analytics:report_detail', uuid=new_report.uuid)
+
+
+@login_required
+def delete_report(request, uuid):
+    """Delete an existing analysis report."""
+    report = get_object_or_404(AnalysisReport, uuid=uuid)
+
+    # Check if the user has permission to delete the report
+    if request.user != report.creator:
+        return HttpResponseForbidden()
+
+    report.delete()
+    messages.success(request, _('Report deleted successfully!'))
+    return redirect('analytics:report_list')
 
 @method_decorator(login_required, name='dispatch')
 class AnalysisReportCreateView(CreateView):
