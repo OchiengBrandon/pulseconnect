@@ -138,7 +138,6 @@ from .models import Poll, QuestionType, Choice, InstitutionProfile
 from .forms import PollForm, QuestionFormSet
 from django.utils.translation import gettext as _
 
-
 class PollCreateView(CreateView):
     model = Poll
     form_class = PollForm
