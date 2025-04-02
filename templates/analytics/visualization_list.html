@@ -1,19 +1,385 @@
-{% extends 'analytics/base.html' %}
+{% extends 'base.html' %}
 
-{% block title %}Visualizations{% endblock %}
+{% block title %}Data Visualizations - PulseConnect{% endblock %}
+
+{% block page_title %}Data Visualizations{% endblock %}
 
 {% block content %}
-<div class="flex justify-between items-center mb-6">
-    <h1 class="text-2xl font-bold">Visualizations</h1>
-    <a href="{% url 'analytics:visualization_create' %}" class="btn-primary">Create New Visualization</a>
+<div class="visualization-container">
+    <!-- Filters Section -->
+    <div class="filters-section mb-4">
+        <div class="d-flex flex-wrap gap-3 align-items-center justify-content-between">
+            <div class="d-flex flex-wrap gap-3 flex-grow-1">
+                <!-- Visualization Type Filter -->
+                <div class="filter-group">
+                    <select class="form-select" id="vizTypeFilter" onchange="applyFilters()">
+                        <option value="">All Visualization Types</option>
+                        {% for key, value in visualization_types.items %}
+                            <option value="{{ key }}" {% if current_type == key %}selected{% endif %}>
+                                {{ value }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+
+                <!-- Dataset Filter -->
+                <div class="filter-group">
+                    <select class="form-select" id="datasetFilter" onchange="applyFilters()">
+                        <option value="">All Datasets</option>
+                        {% for dataset in datasets %}
+                            <option value="{{ dataset.uuid }}" {% if current_dataset == dataset.uuid %}selected{% endif %}>
+                                {{ dataset.name }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+
+            <!-- Create New Visualization Button -->
+            <a href="{% url 'analytics:visualization_create' %}" class="btn btn-primary">
+                <i class="ri-add-line me-2"></i>
+                New Visualization
+            </a>
+        </div>
+    </div>
+
+    <!-- Visualizations Grid -->
+    {% if visualizations %}
+        <div class="visualizations-grid">
+            {% for viz in visualizations %}
+                <div class="visualization-card">
+                    <div class="visualization-preview">
+                        {% if viz.thumbnail %}
+                            <img src="{{ viz.thumbnail.url }}" alt="{{ viz.title }}" class="viz-thumbnail">
+                        {% else %}
+                            <div class="viz-placeholder">
+                                <i class="ri-bar-chart-2-line"></i>
+                            </div>
+                        {% endif %}
+                        
+                        <div class="viz-type-badge">
+                            <i class="ri-{{ viz.get_icon_class }} me-1"></i>
+                            {{ viz.get_visualization_type_display }}
+                        </div>
+                    </div>
+
+                    <div class="visualization-content">
+                        <h3 class="viz-title">{{ viz.title }}</h3>
+                        <p class="viz-description">{{ viz.description|truncatechars:100 }}</p>
+
+                        <div class="viz-meta">
+                            <div class="viz-creator">
+                                <img src="{{ viz.creator.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
+                                     alt="{{ viz.creator.get_full_name }}" 
+                                     class="creator-avatar">
+                                <span>{{ viz.creator.get_full_name }}</span>
+                            </div>
+                            <div class="viz-date">
+                                <i class="ri-time-line"></i>
+                                {{ viz.created_at|timesince }} ago
+                            </div>
+                        </div>
+
+                        <div class="viz-actions">
+                            <a href="{% url 'analytics:visualization_detail' viz.pk %}" class="btn btn-outline-primary btn-sm">
+                                <i class="ri-eye-line me-1"></i> View
+                            </a>
+                            {% if viz.creator == request.user %}
+                                <a href="{% url 'analytics:visualization_edit' viz.pk %}" class="btn btn-outline-secondary btn-sm">
+                                    <i class="ri-edit-line me-1"></i> Edit
+                                </a>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            {% endfor %}
+        </div>
+
+        <!-- Pagination -->
+        {% if is_paginated %}
+            <div class="pagination-wrapper">
+                <ul class="pagination">
+                    {% if page_obj.has_previous %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page=1{% if current_type %}&type={{ current_type }}{% endif %}{% if current_dataset %}&dataset={{ current_dataset }}{% endif %}">
+                                <i class="ri-arrow-left-s-line"></i><i class="ri-arrow-left-s-line"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.previous_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_dataset %}&dataset={{ current_dataset }}{% endif %}">
+                                <i class="ri-arrow-left-s-line"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+
+                    {% for num in page_obj.paginator.page_range %}
+                        {% if page_obj.number == num %}
+                            <li class="page-item active"><span class="page-link">{{ num }}</span></li>
+                        {% elif num > page_obj.number|add:'-3' and num < page_obj.number|add:'3' %}
+                            <li class="page-item">
+                                <a class="page-link" href="?page={{ num }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_dataset %}&dataset={{ current_dataset }}{% endif %}">
+                                    {{ num }}
+                                </a>
+                            </li>
+                        {% endif %}
+                    {% endfor %}
+
+                    {% if page_obj.has_next %}
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.next_page_number }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_dataset %}&dataset={{ current_dataset }}{% endif %}">
+                                <i class="ri-arrow-right-s-line"></i>
+                            </a>
+                        </li>
+                        <li class="page-item">
+                            <a class="page-link" href="?page={{ page_obj.paginator.num_pages }}{% if current_type %}&type={{ current_type }}{% endif %}{% if current_dataset %}&dataset={{ current_dataset }}{% endif %}">
+                                <i class="ri-arrow-right-s-line"></i><i class="ri-arrow-right-s-line"></i>
+                            </a>
+                        </li>
+                    {% endif %}
+                </ul>
+            </div>
+        {% endif %}
+
+    {% else %}
+        <div class="empty-state">
+            <div class="empty-state-icon">
+                <i class="ri-bar-chart-2-line"></i>
+            </div>
+            <h3>No Visualizations Found</h3>
+            <p>Start by creating your first visualization or adjust your filters to see more results.</p>
+            <a href="{% url 'analytics:visualization_create' %}" class="btn btn-primary">
+                <i class="ri-add-line me-2"></i>
+                Create Visualization
+            </a>
+        </div>
+    {% endif %}
 </div>
-<ul class="space-y-4">
-    {% for visualization in visualizations %}
-    <li class="dashboard-card p-4">
-        <a href="{% url 'analytics:visualization_detail' visualization.pk %}" class="text-lg font-semibold hover:underline">{{ visualization.title }}</a>
-    </li>
-    {% empty %}
-    <li class="dashboard-card p-4">No visualizations found.</li>
-    {% endfor %}
-</ul>
+
+<style>
+    .visualization-container {
+        max-width: 1400px;
+        margin: 0 auto;
+    }
+
+    .filters-section {
+        background-color: var(--surface);
+        border-radius: var(--radius);
+        padding: 1.25rem;
+        border: 1px solid var(--border);
+    }
+
+    .filter-group {
+        min-width: 200px;
+    }
+
+    .form-select {
+        background-color: var(--surface-2);
+        border: 1px solid var(--border);
+        color: var(--text);
+        border-radius: var(--radius);
+        padding: 0.625rem 1rem;
+    }
+
+    .visualizations-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-bottom: 2rem;
+    }
+
+    .visualization-card {
+        background-color: var(--surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+        overflow: hidden;
+        transition: transform 0.3s ease, box-shadow 0.3s ease;
+    }
+
+    .visualization-card:hover {
+        transform: translateY(-4px);
+        box-shadow: var(--shadow-lg);
+    }
+
+    .visualization-preview {
+        position: relative;
+        aspect-ratio: 16/9;
+        background-color: var(--surface-2);
+        overflow: hidden;
+    }
+
+    .viz-thumbnail {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .viz-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 3rem;
+        color: var(--text-2);
+    }
+
+    .viz-type-badge {
+        position: absolute;
+        top: 1rem;
+        right: 1rem;
+        background-color: var(--surface);
+        color: var(--text);
+        padding: 0.5rem 0.75rem;
+        border-radius: var(--radius);
+        font-size: 0.875rem;
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+        box-shadow: var(--shadow);
+    }
+
+    .visualization-content {
+        padding: 1.25rem;
+    }
+
+    .viz-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text);
+    }
+
+    .viz-description {
+        color: var(--text-2);
+        font-size: 0.875rem;
+        margin-bottom: 1rem;
+        line-height: 1.5;
+    }
+
+    .viz-meta {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+        font-size: 0.875rem;
+    }
+
+    .viz-creator {
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .creator-avatar {
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+    }
+
+    .viz-date {
+        color: var(--text-2);
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .viz-actions {
+        display: flex;
+        gap: 0.5rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 4rem 1rem;
+        background-color: var(--surface);
+        border-radius: var(--radius-lg);
+        border: 1px solid var(--border);
+    }
+
+    .empty-state-icon {
+        font-size: 4rem;
+        color: var(--text-2);
+        margin-bottom: 1.5rem;
+    }
+
+    .empty-state h3 {
+        font-size: 1.5rem;
+        margin-bottom: 0.5rem;
+        color: var(--text);
+    }
+
+    .empty-state p {
+        color: var(--text-2);
+        margin-bottom: 1.5rem;
+    }
+
+    .pagination-wrapper {
+        display: flex;
+        justify-content: center;
+        margin-top: 2rem;
+    }
+
+    .pagination {
+        display: flex;
+        gap: 0.25rem;
+        padding: 0;
+        margin: 0;
+        list-style: none;
+    }
+
+    .page-item.active .page-link {
+        background-color: var(--primary);
+        border-color: var(--primary);
+        color: white;
+    }
+
+    .page-link {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 36px;
+        height: 36px;
+        padding: 0 0.75rem;
+        border-radius: var(--radius);
+        border: 1px solid var(--border);
+        background-color: var(--surface);
+        color: var(--text);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .page-link:hover {
+        background-color: var(--surface-2);
+        border-color: var(--border);
+        color: var(--primary);
+    }
+
+    @media (max-width: 768px) {
+        .visualizations-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-group {
+            min-width: 100%;
+        }
+    }
+</style>
+
+<script>
+    function applyFilters() {
+        const vizType = document.getElementById('vizTypeFilter').value;
+        const dataset = document.getElementById('datasetFilter').value;
+        
+        let url = new URL(window.location.href);
+        url.searchParams.delete('page');
+        
+        if (vizType) url.searchParams.set('type', vizType);
+        else url.searchParams.delete('type');
+        
+        if (dataset) url.searchParams.set('dataset', dataset);
+        else url.searchParams.delete('dataset');
+        
+        window.location.href = url.toString();
+    }
+</script>
 {% endblock %}

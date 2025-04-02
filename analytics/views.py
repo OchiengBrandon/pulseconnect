@@ -1108,6 +1108,24 @@ class DatasetUUIDView(View):
         except DataSet.DoesNotExist:
             return JsonResponse({'error': 'Dataset not found'}, status=404)
 
+@method_decorator(login_required, name='dispatch')
+class VisualizationUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
+    model = Visualization
+    form_class = VisualizationForm
+    template_name = 'analytics/visualization_form.html'
+    # Removed slug_field and slug_url_kwarg since we're using pk
+    
+    def test_func(self):
+        visualization = self.get_object()
+        return self.request.user == visualization.creator
+
+    def form_valid(self, form):
+        messages.success(self.request, _('Visualization updated successfully!'))
+        return super().form_valid(form)
+
+    def get_success_url(self):
+        return reverse_lazy('analytics:visualization_detail', kwargs={'pk': self.object.pk})
+    
 
 class VisualizationDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
     model = Visualization
