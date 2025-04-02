@@ -296,36 +296,51 @@
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Visualization configuration from Django view
-        const vizConfig = {{ viz_config|safe }};
-        const vizType = vizConfig.type;
-        const vizData = typeof vizConfig.data === 'string' ? JSON.parse(vizConfig.data) : vizConfig.data;
-        const vizOptions = vizConfig.config || {};
+        // Print visualization config to console to debug
+        console.log("Visualization Config:", {{ viz_config|safe }});
         
+        // Get the visualization container
         const container = document.getElementById('visualization-container');
         
-        // Remove loading spinner
+        // Clear loading spinner
         container.innerHTML = '';
         
-        // Render the appropriate visualization based on type
-        switch(vizType) {
-            case 'bar':
-                renderBarChart(container, vizData, vizOptions);
-                break;
-            case 'pie':
-                renderPieChart(container, vizData, vizOptions);
-                break;
-            case 'line':
-                renderLineChart(container, vizData, vizOptions);
-                break;
-            case 'scatter':
-                renderScatterPlot(container, vizData, vizOptions);
-                break;
-            case 'wordcloud':
-                renderWordCloud(container, vizData, vizOptions);
-                break;
-            default:
-                container.innerHTML = `<div class="alert alert-warning">Unsupported visualization type: ${vizType}</div>`;
+        try {
+            // Get visualization data
+            const vizConfig = {{ viz_config|safe }};
+            
+            if (!vizConfig) {
+                throw new Error("Visualization configuration is missing");
+            }
+            
+            // Handle visualization based on type
+            switch(vizConfig.type) {
+                case 'bar':
+                    renderBarChart(container, vizConfig);
+                    break;
+                case 'pie':
+                    renderPieChart(container, vizConfig);
+                    break;
+                case 'line':
+                    renderLineChart(container, vizConfig);
+                    break;
+                case 'scatter':
+                    renderScatterPlot(container, vizConfig);
+                    break;
+                case 'wordcloud':
+                    renderWordCloud(container, vizConfig);
+                    break;
+                default:
+                    throw new Error(`Unsupported visualization type: ${vizConfig.type}`);
+            }
+        } catch (error) {
+            console.error("Error rendering visualization:", error);
+            container.innerHTML = `
+                <div class="alert alert-danger">
+                    <i class="ri-error-warning-line me-2"></i>
+                    Error rendering visualization: ${error.message}
+                </div>
+            `;
         }
         
         // Setup export functionality
@@ -344,261 +359,279 @@
         });
     });
     
-    function renderBarChart(container, data, options) {
+    function renderBarChart(container, vizConfig) {
         // Create canvas for Chart.js
         const canvas = document.createElement('canvas');
+        canvas.id = 'viz-chart';
         container.appendChild(canvas);
         
-        const ctx = canvas.getContext('2d');
-        
-        // Default chart options
-        const chartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    display: false
-                },
-                title: {
-                    display: options.chart_title ? true : false,
-                    text: options.chart_title || ''
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    padding: 10,
-                    cornerRadius: 8
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
+        // Parse data if it's a string
+        let data = vizConfig.data;
+        if (typeof data === 'string') {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                console.error("Error parsing data:", e);
+                throw new Error("Invalid data format for bar chart");
             }
-        };
+        }
         
-        // Create the chart
-        new Chart(ctx, {
+        // Create Chart.js dataset
+        const chart = new Chart(canvas, {
             type: 'bar',
             data: {
                 labels: data.labels || [],
                 datasets: [{
-                    label: options.value_field || 'Value',
+                    label: vizConfig.config?.value_field || 'Value',
                     data: data.values || [],
-                    backgroundColor: getColorArray(data.labels ? data.labels.length : 0),
+                    backgroundColor: getColorArray(data.labels?.length || 0),
                     borderColor: 'rgba(0, 0, 0, 0.1)',
                     borderWidth: 1
                 }]
             },
-            options: chartOptions
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    title: {
+                        display: !!vizConfig.config?.chart_title,
+                        text: vizConfig.config?.chart_title || ''
+                    }
+                },
+                scales: {
+                    y: {
+                        beginAtZero: true
+                    }
+                }
+            }
         });
     }
     
-    function renderPieChart(container, data, options) {
+    function renderPieChart(container, vizConfig) {
         // Create canvas for Chart.js
         const canvas = document.createElement('canvas');
+        canvas.id = 'viz-chart';
         container.appendChild(canvas);
         
-        const ctx = canvas.getContext('2d');
-        
-        // Default chart options
-        const chartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: options.chart_title ? true : false,
-                    text: options.chart_title || ''
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    padding: 10,
-                    cornerRadius: 8
-                }
+        // Parse data if it's a string
+        let data = vizConfig.data;
+        if (typeof data === 'string') {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                console.error("Error parsing data:", e);
+                throw new Error("Invalid data format for pie chart");
             }
-        };
+        }
         
-        // Create the chart
-        new Chart(ctx, {
+        // Create Chart.js dataset
+        const chart = new Chart(canvas, {
             type: 'pie',
             data: {
                 labels: data.labels || [],
                 datasets: [{
                     data: data.values || [],
-                    backgroundColor: getColorArray(data.labels ? data.labels.length : 0),
+                    backgroundColor: getColorArray(data.labels?.length || 0),
                     borderColor: 'rgba(255, 255, 255, 0.8)',
                     borderWidth: 1
                 }]
             },
-            options: chartOptions
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: !!vizConfig.config?.chart_title,
+                        text: vizConfig.config?.chart_title || ''
+                    }
+                }
+            }
         });
     }
     
-    function renderLineChart(container, data, options) {
+    function renderLineChart(container, vizConfig) {
         // Create canvas for Chart.js
         const canvas = document.createElement('canvas');
+        canvas.id = 'viz-chart';
         container.appendChild(canvas);
         
-        const ctx = canvas.getContext('2d');
-        
-        // Default chart options
-        const chartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: options.chart_title ? true : false,
-                    text: options.chart_title || ''
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    padding: 10,
-                    cornerRadius: 8
-                }
-            },
-            scales: {
-                x: {
-                    type: 'time',
-                    time: {
-                        unit: 'day'
-                    }
-                },
-                y: {
-                    beginAtZero: true
-                }
+        // Parse data if it's a string
+        let data = vizConfig.data;
+        if (typeof data === 'string') {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                console.error("Error parsing data:", e);
+                throw new Error("Invalid data format for line chart");
             }
-        };
+        }
         
-        // Create datasets based on series if available
-        let datasets;
+        // Determine if we have series or a single dataset
+        let datasets = [];
+        const useSeries = data.series && Array.isArray(data.series);
         
-        if (data.series) {
-            // Multiple series
+        if (useSeries) {
+            // Process multiple series
             datasets = data.series.map((series, index) => {
                 const color = getColorByIndex(index);
                 return {
-                    label: series.name || 'Series ' + (index + 1),
+                    label: series.name || `Series ${index + 1}`,
                     data: series.data || [],
                     borderColor: color,
-                    backgroundColor: options.fill ? getTransparentColor(color, 0.2) : 'transparent',
-                    fill: options.fill || false,
+                    backgroundColor: vizConfig.config?.fill ? getTransparentColor(color, 0.2) : 'transparent',
+                    fill: !!vizConfig.config?.fill,
                     tension: 0.1
                 };
             });
         } else {
-            // Single series
+            // Single dataset
             const color = getColorByIndex(0);
             datasets = [{
-                label: options.value_field || 'Value',
+                label: vizConfig.config?.value_field || 'Value',
                 data: data.values || [],
                 borderColor: color,
-                backgroundColor: options.fill ? getTransparentColor(color, 0.2) : 'transparent',
-                fill: options.fill || false,
+                backgroundColor: vizConfig.config?.fill ? getTransparentColor(color, 0.2) : 'transparent',
+                fill: !!vizConfig.config?.fill,
                 tension: 0.1
             }];
         }
         
         // Create the chart
-        new Chart(ctx, {
+        const chart = new Chart(canvas, {
             type: 'line',
             data: {
                 labels: data.labels || [],
                 datasets: datasets
             },
-            options: chartOptions
-        });
-    }
-    
-    function renderScatterPlot(container, data, options) {
-        // Create canvas for Chart.js
-        const canvas = document.createElement('canvas');
-        container.appendChild(canvas);
-        
-        const ctx = canvas.getContext('2d');
-        
-        // Default chart options
-        const chartOptions = {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                title: {
-                    display: options.chart_title ? true : false,
-                    text: options.chart_title || ''
-                },
-                tooltip: {
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    padding: 10,
-                    cornerRadius: 8
-                }
-            },
-            scales: {
-                x: {
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
                     title: {
-                        display: true,
-                        text: options.x_field || 'X-Axis'
+                        display: !!vizConfig.config?.chart_title,
+                        text: vizConfig.config?.chart_title || ''
                     }
                 },
-                y: {
-                    title: {
-                        display: true,
-                        text: options.y_field || 'Y-Axis'
+                scales: {
+                    y: {
+                        beginAtZero: true
                     }
                 }
             }
-        };
+        });
+    }
+    
+    function renderScatterPlot(container, vizConfig) {
+        // Create canvas for Chart.js
+        const canvas = document.createElement('canvas');
+        canvas.id = 'viz-chart';
+        container.appendChild(canvas);
         
-        // Create datasets based on series if available
-        let datasets;
+        // Parse data if it's a string
+        let data = vizConfig.data;
+        if (typeof data === 'string') {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                console.error("Error parsing data:", e);
+                throw new Error("Invalid data format for scatter plot");
+            }
+        }
         
-        if (data.series) {
-            // Multiple series
+        // Determine if we have series or a single dataset
+        let datasets = [];
+        const useSeries = data.series && Array.isArray(data.series);
+        
+        if (useSeries) {
+            // Process multiple series
             datasets = data.series.map((series, index) => {
                 const color = getColorByIndex(index);
                 return {
-                    label: series.name || 'Series ' + (index + 1),
+                    label: series.name || `Series ${index + 1}`,
                     data: series.data || [],
                     backgroundColor: color,
-                    borderColor: 'rgba(0, 0, 0, 0.1)',
                     pointRadius: 5,
                     pointHoverRadius: 8
                 };
             });
         } else {
-            // Single series
+            // Single dataset
             datasets = [{
-                label: options.y_field + ' vs ' + options.x_field,
+                label: `${vizConfig.config?.y_field || 'Y'} vs ${vizConfig.config?.x_field || 'X'}`,
                 data: data.points || [],
                 backgroundColor: getColorByIndex(0),
-                borderColor: 'rgba(0, 0, 0, 0.1)',
                 pointRadius: 5,
                 pointHoverRadius: 8
             }];
         }
         
         // Create the chart
-        new Chart(ctx, {
+        const chart = new Chart(canvas, {
             type: 'scatter',
             data: {
                 datasets: datasets
             },
-            options: chartOptions
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    title: {
+                        display: !!vizConfig.config?.chart_title,
+                        text: vizConfig.config?.chart_title || ''
+                    }
+                },
+                scales: {
+                    x: {
+                        title: {
+                            display: true,
+                            text: vizConfig.config?.x_field || 'X-Axis'
+                        }
+                    },
+                    y: {
+                        title: {
+                            display: true,
+                            text: vizConfig.config?.y_field || 'Y-Axis'
+                        }
+                    }
+                }
+            }
         });
     }
     
-    function renderWordCloud(container, data, options) {
-        // Set up container for D3 cloud
+    function renderWordCloud(container, vizConfig) {
+        // Set container styles
+        container.style.position = 'relative';
+        
+        // Create SVG for D3 cloud
         const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
         svg.setAttribute("width", "100%");
         svg.setAttribute("height", "100%");
+        svg.id = 'viz-cloud';
+        svg.style.display = 'block';
         container.appendChild(svg);
         
         // Set dimensions based on container
         const width = container.clientWidth;
         const height = container.clientHeight;
         
-        // Get the word data
+        // Parse data if it's a string
+        let data = vizConfig.data;
+        if (typeof data === 'string') {
+            try {
+                data = JSON.parse(data);
+            } catch (e) {
+                console.error("Error parsing data:", e);
+                throw new Error("Invalid data format for word cloud");
+            }
+        }
+        
+        // Get word data - handle both array format and object with words property
         const words = Array.isArray(data) ? data : (data.words || []);
         
-        if (words.length === 0) {
+        if (!words || words.length === 0) {
             svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#64748b">No data available for word cloud</text>';
             return;
         }
@@ -618,8 +651,6 @@
             .fontSize(d => d.size)
             .on("end", draw);
             
-        layout.start();
-        
         function draw(words) {
             d3.select(svg)
                 .append("g")
@@ -635,6 +666,9 @@
                 .attr("transform", d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
                 .text(d => d.text);
         }
+        
+        // Start the layout
+        layout.start();
     }
     
     function getColorArray(count) {
@@ -651,7 +685,7 @@
             '#f97316'  // orange
         ];
         
-        // If we need more colors than we have, reuse with opacity variations
+        // If we need more colors than we have, reuse them
         const colors = [];
         for (let i = 0; i < count; i++) {
             colors.push(baseColors[i % baseColors.length]);
