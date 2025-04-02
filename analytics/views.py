@@ -1109,6 +1109,19 @@ class DatasetUUIDView(View):
             return JsonResponse({'error': 'Dataset not found'}, status=404)
 
 @method_decorator(login_required, name='dispatch')
+class VisualizationDeleteView(LoginRequiredMixin, UserPassesTestMixin, DeleteView):
+    model = Visualization
+    template_name = 'analytics/visualization_confirm_delete.html'
+    
+    def test_func(self):
+        visualization = self.get_object()
+        return self.request.user == visualization.creator
+
+    def get_success_url(self):
+        messages.success(self.request, _('Visualization deleted successfully!'))
+        return reverse_lazy('analytics:visualization_list')
+
+@method_decorator(login_required, name='dispatch')
 class VisualizationUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateView):
     model = Visualization
     form_class = VisualizationForm
@@ -1127,20 +1140,10 @@ class VisualizationUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateVie
         return reverse_lazy('analytics:visualization_detail', kwargs={'pk': self.object.pk})
     
 
-class VisualizationDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
+class VisualizationDetailView(LoginRequiredMixin, DetailView):
     model = Visualization
     template_name = 'analytics/visualization_detail.html'
     context_object_name = 'visualization'
-    
-    def test_func(self):
-        visualization = self.get_object()
-        user = self.request.user
-        dataset = visualization.dataset
-        
-        # Check if user has access to the dataset
-        return (dataset.creator == user or 
-                user in dataset.collaborators.all() or 
-                dataset.is_public)
     
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
@@ -1149,7 +1152,34 @@ class VisualizationDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailVie
         # Add dataset to context
         context['dataset'] = visualization.dataset
         
+        # Add visualization config for rendering
+        context['viz_config'] = {
+            'type': visualization.visualization_type,
+            'data': visualization.data,
+            'config': visualization.config
+        }
+        
+        # Add creator information
+        context['is_creator'] = (self.request.user == visualization.creator)
+        
         return context
+    
+    def dispatch(self, request, *args, **kwargs):
+        # Get the visualization
+        self.object = self.get_object()
+        visualization = self.object
+        user = request.user
+        dataset = visualization.dataset
+        
+        # Check if user has access to the dataset
+        has_access = (dataset.creator == user or 
+                      user in dataset.collaborators.all() or 
+                      dataset.is_public)
+        
+        if not has_access:
+            return self.handle_no_permission()
+        
+        return super().dispatch(request, *args, **kwargs)
 
 
 @login_required

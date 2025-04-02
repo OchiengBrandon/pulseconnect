@@ -2,7 +2,7 @@ import random
 import pandas as pd
 import uuid
 
-def generate_large_dataset(num_records=1000):
+def generate_small_dataset(num_records=20):  # Changed to 20 records
     categories = [f'Category {i}' for i in range(1, 21)]  # 20 categories
     data = []
 
@@ -20,9 +20,9 @@ def generate_large_dataset(num_records=1000):
     return pd.DataFrame(data)
 
 # Generate the dataset
-large_dataset = generate_large_dataset()
+small_dataset = generate_small_dataset()  # Now generates 20 records
 
 # Save to a CSV file
-large_dataset.to_csv('large_dataset.csv', index=False)
+small_dataset.to_csv('small_dataset.csv', index=False)
 
-print("Large dataset generated and saved to 'large_dataset.csv'")
+print("Small dataset generated and saved to 'small_dataset.csv'")

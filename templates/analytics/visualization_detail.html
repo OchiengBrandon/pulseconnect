@@ -1,294 +1,753 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 
-{% block title %}{{ visualization.title }} - Analytics{% endblock %}
+{% block title %}{{ visualization.title }} - PulseConnect{% endblock %}
 
 {% block page_title %}{{ visualization.title }}{% endblock %}
 
 {% block content %}
-<div class="fade-in">
-    <!-- Overview Stats -->
-    <div class="stats-grid">
-        <div class="stat-card">
-            <div class="stat-icon purple">
-                <i class="ri-bar-chart-box-line"></i>
-            </div>
-            <div>
-                <div class="text-2 mb-1">Chart Type</div>
-                <div class="fw-semibold">{{ visualization.chart_type|title }}</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon green">
-                <i class="ri-database-2-line"></i>
-            </div>
-            <div>
-                <div class="text-2 mb-1">Dataset</div>
-                <div class="fw-semibold">{{ dataset.title }}</div>
-            </div>
-        </div>
-        <div class="stat-card">
-            <div class="stat-icon blue">
-                <i class="ri-time-line"></i>
-            </div>
-            <div>
-                <div class="text-2 mb-1">Last Updated</div>
-                <div class="fw-semibold">{{ visualization.updated_at|date:"M d, Y" }}</div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Main Visualization Card -->
-    <div class="widget-card mb-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <div>
-                <h2 class="h5 mb-1">Visualization Preview</h2>
-                <p class="text-2 m-0">{{ visualization.description }}</p>
-            </div>
-            <div class="d-flex gap-2">
-                <button class="btn btn-icon" onclick="toggleFullscreen()" title="Fullscreen">
-                    <i class="ri-fullscreen-line"></i>
-                </button>
-                <button class="btn btn-icon" onclick="refreshChart()" title="Refresh">
-                    <i class="ri-refresh-line"></i>
-                </button>
-                <button class="btn btn-icon" onclick="downloadChart()" title="Download">
-                    <i class="ri-download-line"></i>
-                </button>
-                <button class="btn btn-primary" onclick="shareVisualization()">
-                    <i class="ri-share-line"></i>
-                    Share
-                </button>
-            </div>
+<div class="widget-card mb-4">
+    <div class="d-flex justify-content-between align-items-center mb-3">
+        <div>
+            <h2 class="h4 mb-1">{{ visualization.title }}</h2>
+            <p class="text-2 mb-0">Created by {{ visualization.creator.get_full_name|default:visualization.creator.username }} on {{ visualization.created_at|date:"M d, Y" }}</p>
         </div>
         
-        <!-- Chart Container -->
-        <div class="position-relative" style="height: 400px;">
-            <canvas id="visualizationChart"></canvas>
-            <div id="chartSpinner" class="position-absolute top-50 start-50 translate-middle d-none">
-                <div class="spinner"></div>
+        {% if is_creator %}
+        <div class="d-flex gap-2">
+            <a href="{% url 'analytics:visualization_edit' visualization.pk %}" class="btn btn-primary btn-sm">
+                <i class="ri-edit-line"></i> Edit
+            </a>
+            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal">
+                <i class="ri-delete-bin-line"></i> Delete
+            </button>
+        </div>
+        {% endif %}
+    </div>
+    
+    {% if visualization.description %}
+    <p>{{ visualization.description }}</p>
+    {% endif %}
+    
+    <div class="border-top border-bottom py-3 my-3">
+        <div class="row g-3 align-items-center">
+            <div class="col-md-6">
+                <div class="d-flex align-items-center">
+                    <i class="ri-database-2-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Dataset</small>
+                        <span>{{ dataset.title }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-pie-chart-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Type</small>
+                        <span>{{ viz_config.type|capfirst }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-eye-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Visibility</small>
+                        <span>{{ dataset.is_public|yesno:"Public,Private" }}</span>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
+    
+    <!-- Visualization Container -->
+    <div class="visualization-container mb-3" style="height: 400px; width: 100%;" id="visualization-container">
+        <div class="d-flex justify-content-center align-items-center h-100">
+            <div class="spinner"></div>
+        </div>
+    </div>
+    
+    <!-- Additional visualization controls if needed -->
+    <div class="d-flex justify-content-between">
+        <div class="btn-group" role="group" aria-label="Visualization controls">
+            <button type="button" class="btn btn-outline-primary btn-sm" id="download-chart">
+                <i class="ri-download-line"></i> Export
+            </button>
+            <button type="button" class="btn btn-outline-primary btn-sm" id="fullscreen-chart">
+                <i class="ri-fullscreen-line"></i> Fullscreen
+            </button>
+        </div>
+        
+        <button type="button" class="btn btn-outline-primary btn-sm" id="share-chart">
+            <i class="ri-share-line"></i> Share
+        </button>
+    </div>
+</div>
 
-    <!-- Tabs Section -->
-    <div class="widget-card">
-        <ul class="nav nav-tabs" role="tablist">
-            <li class="nav-item" role="presentation">
-                <button class="nav-link active" data-bs-toggle="tab" data-bs-target="#details-tab" type="button">
-                    <i class="ri-information-line me-2"></i>Details
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#data-tab" type="button">
-                    <i class="ri-table-line me-2"></i>Data
-                </button>
-            </li>
-            <li class="nav-item" role="presentation">
-                <button class="nav-link" data-bs-toggle="tab" data-bs-target="#settings-tab" type="button">
-                    <i class="ri-settings-3-line me-2"></i>Settings
-                </button>
-            </li>
-        </ul>
-
-        <div class="tab-content mt-4">
-            <!-- Details Tab -->
-            <div class="tab-pane fade show active" id="details-tab">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <h3 class="h6 mb-3">Visualization Information</h3>
-                        <div class="d-flex flex-column gap-3">
-                            <div class="d-flex align-items-center p-3 rounded" style="background: var(--surface-2);">
-                                <i class="ri-chart-line text-primary me-3"></i>
-                                <div>
-                                    <div class="text-2">Chart Type</div>
-                                    <div class="fw-medium">{{ visualization.chart_type|title }}</div>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center p-3 rounded" style="background: var(--surface-2);">
-                                <i class="ri-database-2-line text-primary me-3"></i>
-                                <div>
-                                    <div class="text-2">Dataset</div>
-                                    <a href="{% url 'analytics:dataset_detail' dataset.uuid %}" class="text-primary fw-medium">
-                                        {{ dataset.title }}
-                                    </a>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center p-3 rounded" style="background: var(--surface-2);">
-                                <i class="ri-user-line text-primary me-3"></i>
-                                <div>
-                                    <div class="text-2">Created By</div>
-                                    <div class="fw-medium">{{ visualization.dataset.creator.get_full_name }}</div>
-                                </div>
-                            </div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <h3 class="h6 mb-3">Data Configuration</h3>
-                        <div class="d-flex flex-column gap-3">
-                            <div class="d-flex align-items-center p-3 rounded" style="background: var(--surface-2);">
-                                <i class="ri-arrow-left-right-line text-primary me-3"></i>
-                                <div>
-                                    <div class="text-2">X-Axis</div>
-                                    <div class="fw-medium">{{ visualization.x_axis }}</div>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center p-3 rounded" style="background: var(--surface-2);">
-                                <i class="ri-arrow-up-down-line text-primary me-3"></i>
-                                <div>
-                                    <div class="text-2">Y-Axis</div>
-                                    <div class="fw-medium">{{ visualization.y_axis }}</div>
-                                </div>
-                            </div>
-                            <div class="d-flex align-items-center p-3 rounded" style="background: var(--surface-2);">
-                                <i class="ri-timer-line text-primary me-3"></i>
-                                <div>
-                                    <div class="text-2">Last Updated</div>
-                                    <div class="fw-medium">{{ visualization.updated_at|date:"M d, Y H:i" }}</div>
-                                </div>
-                            </div>
-                        </div>
+<!-- Configuration Details Section -->
+<div class="widget-card mb-4">
+    <h3 class="h5 mb-3">Visualization Configuration</h3>
+    <div class="row">
+        {% if viz_config.type == "bar" or viz_config.type == "pie" %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-hashtag-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Category Field</small>
+                        <span>{{ viz_config.config.category_field }}</span>
                     </div>
                 </div>
             </div>
-
-            <!-- Data Tab -->
-            <div class="tab-pane fade" id="data-tab">
-                <div class="table-responsive">
-                    <table class="table">
-                        <thead>
-                            <tr>
-                                <th>{{ visualization.x_axis }}</th>
-                                <th>{{ visualization.y_axis }}</th>
-                                <th>Value</th>
-                            </tr>
-                        </thead>
-                        <tbody id="dataTable">
-                            <!-- Data will be populated dynamically -->
-                        </tbody>
-                    </table>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-scales-3-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Value Field</small>
+                        <span>{{ viz_config.config.value_field }}</span>
+                    </div>
                 </div>
             </div>
-
-            <!-- Settings Tab -->
-            <div class="tab-pane fade" id="settings-tab">
-                <div class="row g-4">
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Chart Style</label>
-                            <select class="form-select" id="chartStyle">
-                                <option value="default">Default</option>
-                                <option value="minimal">Minimal</option>
-                                <option value="modern">Modern</option>
-                            </select>
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Color Scheme</label>
-                            <select class="form-select" id="colorScheme">
-                                <option value="default">Default</option>
-                                <option value="monochrome">Monochrome</option>
-                                <option value="gradient">Gradient</option>
-                            </select>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="mb-3">
-                            <label class="form-label">Animation Speed</label>
-                            <input type="range" class="form-range" id="animationSpeed" min="0" max="2" step="0.1" value="1">
-                        </div>
-                        <div class="mb-3">
-                            <label class="form-label">Show Legend</label>
-                            <div class="form-check form-switch">
-                                <input class="form-check-input" type="checkbox" id="showLegend" checked>
-                                <label class="form-check-label" for="showLegend">Enable</label>
-                            </div>
-                        </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-sort-desc me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Sort Direction</small>
+                        <span>{{ viz_config.config.sort_desc|yesno:"Descending,Ascending" }}</span>
                     </div>
                 </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-numbers-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Data Limit</small>
+                        <span>{{ viz_config.config.limit }} items</span>
+                    </div>
+                </div>
+            </div>
+        {% elif viz_config.type == "line" %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-calendar-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Time Field</small>
+                        <span>{{ viz_config.config.time_field }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-scales-3-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Value Field</small>
+                        <span>{{ viz_config.config.value_field }}</span>
+                    </div>
+                </div>
+            </div>
+            {% if viz_config.config.series_field %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-split-cells-horizontal me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Series Field</small>
+                        <span>{{ viz_config.config.series_field }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-fill-color-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Fill Area</small>
+                        <span>{{ viz_config.config.fill|yesno:"Yes,No" }}</span>
+                    </div>
+                </div>
+            </div>
+        {% elif viz_config.type == "scatter" %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-align-bottom me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">X-Axis Field</small>
+                        <span>{{ viz_config.config.x_field }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-align-left me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Y-Axis Field</small>
+                        <span>{{ viz_config.config.y_field }}</span>
+                    </div>
+                </div>
+            </div>
+            {% if viz_config.config.series_field %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-split-cells-horizontal me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Series Field</small>
+                        <span>{{ viz_config.config.series_field }}</span>
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        {% elif viz_config.type == "wordcloud" %}
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-text me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Text Field</small>
+                        <span>{{ viz_config.config.text_field }}</span>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="d-flex align-items-center">
+                    <i class="ri-numbers-line me-2" style="color: var(--primary);"></i>
+                    <div>
+                        <small class="d-block text-2">Word Limit</small>
+                        <span>{{ viz_config.config.limit }} words</span>
+                    </div>
+                </div>
+            </div>
+        {% endif %}
+        
+        {% if viz_config.config.chart_title %}
+        <div class="col-md-6 mb-3">
+            <div class="d-flex align-items-center">
+                <i class="ri-heading me-2" style="color: var(--primary);"></i>
+                <div>
+                    <small class="d-block text-2">Chart Title</small>
+                    <span>{{ viz_config.config.chart_title }}</span>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<!-- Insights and Analysis Section -->
+<div class="row">
+    <div class="col-lg-7">
+        <div class="widget-card">
+            <h3 class="h5 mb-3">Insights</h3>
+            {% if visualization.insights %}
+                {{ visualization.insights|linebreaks }}
+            {% else %}
+                <p class="text-2">No insights recorded for this visualization.</p>
+                {% if is_creator %}
+                <a href="{% url 'analytics:visualization_edit' visualization.pk %}" class="btn btn-outline-primary btn-sm">
+                    <i class="ri-add-line"></i> Add Insights
+                </a>
+                {% endif %}
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="col-lg-5">
+        <div class="widget-card">
+            <h3 class="h5 mb-3">Dataset Details</h3>
+            <div class="mb-3">
+                <p class="mb-1"><strong>Name:</strong> {{ dataset.title }}</p>
+                <p class="mb-1"><strong>Rows:</strong> {{ dataset.row_count|default:"Unknown" }}</p>
+                <p class="mb-1"><strong>Last Updated:</strong> {{ dataset.updated_at|date:"M d, Y" }}</p>
+            </div>
+            
+            <a href="{% url 'analytics:dataset_detail' dataset.uuid %}" class="btn btn-outline-primary btn-sm">
+                <i class="ri-database-2-line"></i> View Dataset
+            </a>
+        </div>
+    </div>
+</div>
+
+<!-- Delete Confirmation Modal -->
+{% if is_creator %}
+<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                Are you sure you want to delete the visualization "{{ visualization.title }}"? This action cannot be undone.
+            </div>
+            <div class="modal-footer">
+                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
+                <form method="post" action="{% url 'analytics:visualization_delete' visualization.id %}">
+                    {% csrf_token %}
+                    <button type="submit" class="btn btn-danger">Delete Visualization</button>
+                </form>
             </div>
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
 
 {% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.0/d3.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js"></script>
+
 <script>
-    let chart;
+    document.addEventListener('DOMContentLoaded', function() {
+        // Visualization configuration from Django view
+        const vizConfig = {{ viz_config|safe }};
+        const vizType = vizConfig.type;
+        const vizData = typeof vizConfig.data === 'string' ? JSON.parse(vizConfig.data) : vizConfig.data;
+        const vizOptions = vizConfig.config || {};
+        
+        const container = document.getElementById('visualization-container');
+        
+        // Remove loading spinner
+        container.innerHTML = '';
+        
+        // Render the appropriate visualization based on type
+        switch(vizType) {
+            case 'bar':
+                renderBarChart(container, vizData, vizOptions);
+                break;
+            case 'pie':
+                renderPieChart(container, vizData, vizOptions);
+                break;
+            case 'line':
+                renderLineChart(container, vizData, vizOptions);
+                break;
+            case 'scatter':
+                renderScatterPlot(container, vizData, vizOptions);
+                break;
+            case 'wordcloud':
+                renderWordCloud(container, vizData, vizOptions);
+                break;
+            default:
+                container.innerHTML = `<div class="alert alert-warning">Unsupported visualization type: ${vizType}</div>`;
+        }
+        
+        // Setup export functionality
+        document.getElementById('download-chart').addEventListener('click', function() {
+            exportChart(container, '{{ visualization.title }}');
+        });
+        
+        // Setup fullscreen functionality
+        document.getElementById('fullscreen-chart').addEventListener('click', function() {
+            toggleFullscreen(container);
+        });
+        
+        // Setup share functionality
+        document.getElementById('share-chart').addEventListener('click', function() {
+            shareVisualization('{{ request.build_absolute_uri }}');
+        });
+    });
     
-    function initChart() {
-        const ctx = document.getElementById('visualizationChart').getContext('2d');
-        chart = new Chart(ctx, {
-            type: '{{ visualization.chart_type }}',
-            data: {
-                // Data will be populated dynamically
+    function renderBarChart(container, data, options) {
+        // Create canvas for Chart.js
+        const canvas = document.createElement('canvas');
+        container.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Default chart options
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    display: false
+                },
+                title: {
+                    display: options.chart_title ? true : false,
+                    text: options.chart_title || ''
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    padding: 10,
+                    cornerRadius: 8
+                }
             },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        position: 'top',
-                    },
+            scales: {
+                y: {
+                    beginAtZero: true
+                }
+            }
+        };
+        
+        // Create the chart
+        new Chart(ctx, {
+            type: 'bar',
+            data: {
+                labels: data.labels || [],
+                datasets: [{
+                    label: options.value_field || 'Value',
+                    data: data.values || [],
+                    backgroundColor: getColorArray(data.labels ? data.labels.length : 0),
+                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                    borderWidth: 1
+                }]
+            },
+            options: chartOptions
+        });
+    }
+    
+    function renderPieChart(container, data, options) {
+        // Create canvas for Chart.js
+        const canvas = document.createElement('canvas');
+        container.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Default chart options
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: options.chart_title ? true : false,
+                    text: options.chart_title || ''
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    padding: 10,
+                    cornerRadius: 8
+                }
+            }
+        };
+        
+        // Create the chart
+        new Chart(ctx, {
+            type: 'pie',
+            data: {
+                labels: data.labels || [],
+                datasets: [{
+                    data: data.values || [],
+                    backgroundColor: getColorArray(data.labels ? data.labels.length : 0),
+                    borderColor: 'rgba(255, 255, 255, 0.8)',
+                    borderWidth: 1
+                }]
+            },
+            options: chartOptions
+        });
+    }
+    
+    function renderLineChart(container, data, options) {
+        // Create canvas for Chart.js
+        const canvas = document.createElement('canvas');
+        container.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Default chart options
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: options.chart_title ? true : false,
+                    text: options.chart_title || ''
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    padding: 10,
+                    cornerRadius: 8
+                }
+            },
+            scales: {
+                x: {
+                    type: 'time',
+                    time: {
+                        unit: 'day'
+                    }
+                },
+                y: {
+                    beginAtZero: true
+                }
+            }
+        };
+        
+        // Create datasets based on series if available
+        let datasets;
+        
+        if (data.series) {
+            // Multiple series
+            datasets = data.series.map((series, index) => {
+                const color = getColorByIndex(index);
+                return {
+                    label: series.name || 'Series ' + (index + 1),
+                    data: series.data || [],
+                    borderColor: color,
+                    backgroundColor: options.fill ? getTransparentColor(color, 0.2) : 'transparent',
+                    fill: options.fill || false,
+                    tension: 0.1
+                };
+            });
+        } else {
+            // Single series
+            const color = getColorByIndex(0);
+            datasets = [{
+                label: options.value_field || 'Value',
+                data: data.values || [],
+                borderColor: color,
+                backgroundColor: options.fill ? getTransparentColor(color, 0.2) : 'transparent',
+                fill: options.fill || false,
+                tension: 0.1
+            }];
+        }
+        
+        // Create the chart
+        new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: data.labels || [],
+                datasets: datasets
+            },
+            options: chartOptions
+        });
+    }
+    
+    function renderScatterPlot(container, data, options) {
+        // Create canvas for Chart.js
+        const canvas = document.createElement('canvas');
+        container.appendChild(canvas);
+        
+        const ctx = canvas.getContext('2d');
+        
+        // Default chart options
+        const chartOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                title: {
+                    display: options.chart_title ? true : false,
+                    text: options.chart_title || ''
+                },
+                tooltip: {
+                    backgroundColor: 'rgba(0,0,0,0.7)',
+                    padding: 10,
+                    cornerRadius: 8
+                }
+            },
+            scales: {
+                x: {
                     title: {
                         display: true,
-                        text: '{{ visualization.title }}'
+                        text: options.x_field || 'X-Axis'
+                    }
+                },
+                y: {
+                    title: {
+                        display: true,
+                        text: options.y_field || 'Y-Axis'
                     }
                 }
             }
+        };
+        
+        // Create datasets based on series if available
+        let datasets;
+        
+        if (data.series) {
+            // Multiple series
+            datasets = data.series.map((series, index) => {
+                const color = getColorByIndex(index);
+                return {
+                    label: series.name || 'Series ' + (index + 1),
+                    data: series.data || [],
+                    backgroundColor: color,
+                    borderColor: 'rgba(0, 0, 0, 0.1)',
+                    pointRadius: 5,
+                    pointHoverRadius: 8
+                };
+            });
+        } else {
+            // Single series
+            datasets = [{
+                label: options.y_field + ' vs ' + options.x_field,
+                data: data.points || [],
+                backgroundColor: getColorByIndex(0),
+                borderColor: 'rgba(0, 0, 0, 0.1)',
+                pointRadius: 5,
+                pointHoverRadius: 8
+            }];
+        }
+        
+        // Create the chart
+        new Chart(ctx, {
+            type: 'scatter',
+            data: {
+                datasets: datasets
+            },
+            options: chartOptions
         });
     }
-
-    function toggleFullscreen() {
-        const chartContainer = document.querySelector('.widget-card');
-        if (!document.fullscreenElement) {
-            chartContainer.requestFullscreen();
-        } else {
-            document.exitFullscreen();
+    
+    function renderWordCloud(container, data, options) {
+        // Set up container for D3 cloud
+        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
+        svg.setAttribute("width", "100%");
+        svg.setAttribute("height", "100%");
+        container.appendChild(svg);
+        
+        // Set dimensions based on container
+        const width = container.clientWidth;
+        const height = container.clientHeight;
+        
+        // Get the word data
+        const words = Array.isArray(data) ? data : (data.words || []);
+        
+        if (words.length === 0) {
+            svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#64748b">No data available for word cloud</text>';
+            return;
+        }
+        
+        // Calculate max frequency for sizing
+        const maxSize = Math.max(...words.map(d => d.value || 0));
+        
+        // Configure cloud layout
+        const layout = d3.layout.cloud()
+            .size([width, height])
+            .words(words.map(d => ({
+                text: d.text || '',
+                size: ((d.value / maxSize) * 40) + 10 // Scale between 10 and 50
+            })))
+            .padding(5)
+            .rotate(() => ~~(Math.random() * 2) * 90)
+            .fontSize(d => d.size)
+            .on("end", draw);
+            
+        layout.start();
+        
+        function draw(words) {
+            d3.select(svg)
+                .append("g")
+                .attr("transform", `translate(${width/2},${height/2})`)
+                .selectAll("text")
+                .data(words)
+                .enter()
+                .append("text")
+                .style("font-size", d => `${d.size}px`)
+                .style("font-family", "Impact")
+                .style("fill", () => getColorByIndex(Math.floor(Math.random() * 10)))
+                .attr("text-anchor", "middle")
+                .attr("transform", d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
+                .text(d => d.text);
         }
     }
-
-    function downloadChart() {
-        const link = document.createElement('a');
-        link.download = '{{ visualization.title }}.png';
-        link.href = chart.toBase64Image();
-        link.click();
-    }
-
-    function refreshChart() {
-        const spinner = document.getElementById('chartSpinner');
-        spinner.classList.remove('d-none');
+    
+    function getColorArray(count) {
+        const baseColors = [
+            '#6366f1', // primary
+            '#818cf8', // primary-light
+            '#4f46e5', // primary-dark
+            '#10b981', // success
+            '#ef4444', // danger
+            '#f59e0b', // warning
+            '#3b82f6', // blue
+            '#8b5cf6', // purple
+            '#ec4899', // pink
+            '#f97316'  // orange
+        ];
         
-        // Simulate data refresh
-        setTimeout(() => {
-            spinner.classList.add('d-none');
-            // Update chart data here
-        }, 1000);
+        // If we need more colors than we have, reuse with opacity variations
+        const colors = [];
+        for (let i = 0; i < count; i++) {
+            colors.push(baseColors[i % baseColors.length]);
+        }
+        
+        return colors;
     }
-
-    function shareVisualization() {
-        // Implement sharing functionality
-        alert('Sharing functionality will be implemented here');
+    
+    function getColorByIndex(index) {
+        const colors = [
+            '#6366f1', // primary
+            '#818cf8', // primary-light
+            '#4f46e5', // primary-dark
+            '#10b981', // success
+            '#ef4444', // danger
+            '#f59e0b', // warning
+            '#3b82f6', // blue
+            '#8b5cf6', // purple
+            '#ec4899', // pink
+            '#f97316'  // orange
+        ];
+        
+        return colors[index % colors.length];
     }
-
-    // Initialize chart when the page loads
-    document.addEventListener('DOMContentLoaded', initChart);
-
-    // Handle settings changes
-    document.getElementById('chartStyle').addEventListener('change', function(e) {
-        // Update chart style
-    });
-
-    document.getElementById('colorScheme').addEventListener('change', function(e) {
-        // Update color scheme
-    });
-
-    document.getElementById('animationSpeed').addEventListener('input', function(e) {
-        // Update animation speed
-    });
-
-    document.getElementById('showLegend').addEventListener('change', function(e) {
-        chart.options.plugins.legend.display = e.target.checked;
-        chart.update();
-    });
+    
+    function getTransparentColor(hexColor, alpha) {
+        // Convert hex to RGB
+        const r = parseInt(hexColor.slice(1, 3), 16);
+        const g = parseInt(hexColor.slice(3, 5), 16);
+        const b = parseInt(hexColor.slice(5, 7), 16);
+        
+        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    
+    function exportChart(container, title) {
+        // Convert container to image
+        html2canvas(container).then(canvas => {
+            // Create download link
+            const link = document.createElement('a');
+            link.download = `${title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-visualization.png`;
+            link.href = canvas.toDataURL('image/png');
+            
+            // Trigger download
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+        });
+    }
+    
+    function toggleFullscreen(element) {
+        if (!document.fullscreenElement) {
+            if (element.requestFullscreen) {
+                element.requestFullscreen();
+            } else if (element.webkitRequestFullscreen) { /* Safari */
+                element.webkitRequestFullscreen();
+            } else if (element.msRequestFullscreen) { /* IE11 */
+                element.msRequestFullscreen();
+            }
+        } else {
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.webkitExitFullscreen) { /* Safari */
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) { /* IE11 */
+                document.msExitFullscreen();
+            }
+        }
+    }
+    
+    function shareVisualization(url) {
+        // Check if Web Share API is supported
+        if (navigator.share) {
+            navigator.share({
+                title: '{{ visualization.title }}',
+                text: '{{ visualization.description|truncatechars:100 }}',
+                url: url
+            })
+            .catch(error => console.error('Error sharing:', error));
+        } else {
+            // Fallback - copy to clipboard
+            navigator.clipboard.writeText(url)
+                .then(() => {
+                    alert('Link copied to clipboard!');
+                })
+                .catch(err => {
+                    console.error('Failed to copy: ', err);
+                    // Provide manual selection fallback
+                    const tempInput = document.createElement('input');
+                    document.body.appendChild(tempInput);
+                    tempInput.value = url;
+                    tempInput.select();
+                    document.execCommand('copy');
+                    document.body.removeChild(tempInput);
+                    alert('Link copied to clipboard!');
+                });
+        }
+    }
 </script>
 {% endblock %}
