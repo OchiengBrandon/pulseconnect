@@ -16,6 +16,13 @@ urlpatterns = [
     path('datasets/<uuid:uuid>/collaborators/add/', views.add_dataset_collaborator, name='add_dataset_collaborator'),
     path('datasets/<uuid:uuid>/collaborators/<int:user_id>/remove/', views.remove_dataset_collaborator, name='remove_dataset_collaborator'),
     path('datasets/<uuid:uuid>/export/', views.export_dataset, name='export_dataset'),
+
+    # UUID-based field retrieval (new primary method)
+    path('datasets/uuid/<uuid:uuid>/fields/', views.DatasetFieldsView.as_view(), name='dataset_fields_by_uuid'),
+    # ID-based field retrieval (legacy/compatibility)
+    path('datasets/<int:pk>/fields/', views.DatasetFieldsView.as_view(), name='dataset_fields'),
+    # Get UUID by ID (helper endpoint)
+    path('datasets/<int:pk>/get-uuid/', views.DatasetUUIDView.as_view(), name='dataset_get_uuid'),
     
     # Reports
     path('reports/', views.AnalysisReportListView.as_view(), name='report_list'),

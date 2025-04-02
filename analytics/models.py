@@ -51,6 +51,10 @@ class DataSet(models.Model):
     
     def get_absolute_url(self):
         return reverse('analytics:dataset_detail', kwargs={'uuid': self.uuid})
+    
+    def get_data(self):
+        """Return the dataset content as a dictionary."""
+        return self.data
 
 
 class AnalysisReport(models.Model):

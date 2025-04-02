@@ -1,233 +1,576 @@
-{% extends 'base.html' %}
-{% load static %}
-
-{% block title %}Create Visualization - Analytics{% endblock %}
-
-{% block content %}
-<div class="container-fluid">
-    <!-- Page Header -->
-    <div class="page-header">
-        <h1 class="page-title">Create New Visualization</h1>
-        <div class="d-flex gap-2">
-            <a href="{% url 'analytics:visualization_list' %}" class="btn btn-outline-primary">
-                <i class="ri-arrow-left-line"></i> Back to Visualizations
-            </a>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {% load custom_tags %}
+    <title>Create Visualization</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/css/bootstrap.min.css">
+    <style>
+        .field-container {
+            display: none;
+            margin-top: 1rem;
+        }
+        .field-container.active {
+            display: block;
+        }
+        .helper-text {
+            font-size: 0.85rem;
+            color: #6c757d;
+            margin-top: 0.25rem;
+        }
+    </style>
+</head>
+<body>
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-md-8 mx-auto">
+                <h1 class="mb-4">Create Visualization</h1>
+                
+                <form method="post" id="visualization-form">
+                    {% csrf_token %}
+                    
+                    <div class="card mb-4">
+                        <div class="card-header">
+                            <h5 class="mb-0">Basic Information</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+                                {{ form.title|add_class:"form-control" }}
+                                {% if form.title.errors %}
+                                <div class="invalid-feedback d-block">{{ form.title.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                                {{ form.description|add_class:"form-control" }}
+                                {% if form.description.errors %}
+                                <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
+                                {% endif %}
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.dataset.id_for_label }}" class="form-label">{{ form.dataset.label }}</label>
+                                {{ form.dataset|add_class:"form-control" }}
+                                {% if form.dataset.errors %}
+                                <div class="invalid-feedback d-block">{{ form.dataset.errors }}</div>
+                                {% endif %}
+                                <div class="helper-text">Select the dataset to visualize</div>
+                            </div>
+                            
+                            <div class="mb-3">
+                                <label for="{{ form.visualization_type.id_for_label }}" class="form-label">{{ form.visualization_type.label }}</label>
+                                {{ form.visualization_type|add_class:"form-control" }}
+                                {% if form.visualization_type.errors %}
+                                <div class="invalid-feedback d-block">{{ form.visualization_type.errors }}</div>
+                                {% endif %}
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="card mb-4" id="viz-settings">
+                        <div class="card-header">
+                            <h5 class="mb-0">Visualization Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="loading-fields" style="display: none;">
+                                <div class="d-flex align-items-center mb-3">
+                                    <div class="spinner-border spinner-border-sm me-2" role="status"></div>
+                                    <span>Loading dataset fields...</span>
+                                </div>
+                            </div>
+                            
+                            <div id="no-dataset-selected" class="alert alert-info">
+                                Please select a dataset first to configure visualization settings.
+                            </div>
+                            
+                            <!-- Bar Chart Fields -->
+                            <div id="bar-chart-fields" class="field-container">
+                                <div class="mb-3">
+                                    <label for="{{ form.category_field.id_for_label }}" class="form-label">{{ form.category_field.label }}</label>
+                                    {{ form.category_field }}
+                                    <div class="helper-text">Field to use for category labels</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.value_field.id_for_label }}" class="form-label">{{ form.value_field.label }}</label>
+                                    {{ form.value_field }}
+                                    <div class="helper-text">Field containing numeric values</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.limit.id_for_label }}" class="form-label">{{ form.limit.label }}</label>
+                                    <input type="number" name="limit" id="{{ form.limit.id_for_label }}" value="{{ form.limit.value|default:'10' }}" min="1" max="100" class="form-control" style="max-width: 200px;">
+                                    <div class="helper-text">{{ form.limit.help_text }}</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.chart_title.id_for_label }}" class="form-label">{{ form.chart_title.label }}</label>
+                                    <input type="text" name="chart_title" id="{{ form.chart_title.id_for_label }}" class="form-control">
+                                </div>
+                            </div>
+                            
+                            <!-- Pie Chart Fields -->
+                            <div id="pie-chart-fields" class="field-container">
+                                <div class="mb-3">
+                                    <label for="{{ form.category_field.id_for_label }}" class="form-label">{{ form.category_field.label }}</label>
+                                    {{ form.category_field }}
+                                    <div class="helper-text">Field to use for segment labels</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.value_field.id_for_label }}" class="form-label">{{ form.value_field.label }}</label>
+                                    {{ form.value_field }}
+                                    <div class="helper-text">Field containing numeric values</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.limit.id_for_label }}" class="form-label">{{ form.limit.label }}</label>
+                                    <input type="number" name="limit" id="{{ form.limit.id_for_label }}" value="{{ form.limit.value|default:'10' }}" min="1" max="100" class="form-control" style="max-width: 200px;">
+                                    <div class="helper-text">{{ form.limit.help_text }}</div>
+                                </div>
+                            </div>
+                            
+                            <!-- Line Chart Fields -->
+                            <div id="line-chart-fields" class="field-container">
+                                <div class="mb-3">
+                                    <label for="{{ form.time_field.id_for_label }}" class="form-label">{{ form.time_field.label }}</label>
+                                    {{ form.time_field }}
+                                    <div class="helper-text">Field containing date/time values (X-axis)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.value_field.id_for_label }}" class="form-label">{{ form.value_field.label }}</label>
+                                    {{ form.value_field }}
+                                    <div class="helper-text">Field containing numeric values (Y-axis)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.series_field.id_for_label }}" class="form-label">{{ form.series_field.label }}</label>
+                                    {{ form.series_field }}
+                                    <div class="helper-text">Field to split data into multiple series (optional)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.chart_title.id_for_label }}" class="form-label">{{ form.chart_title.label }}</label>
+                                    <input type="text" name="chart_title" id="{{ form.chart_title.id_for_label }}" class="form-control">
+                                </div>
+                            </div>
+                            
+                            <!-- Scatter Plot Fields -->
+                            <div id="scatter-plot-fields" class="field-container">
+                                <div class="mb-3">
+                                    <label for="{{ form.x_field.id_for_label }}" class="form-label">{{ form.x_field.label }}</label>
+                                    {{ form.x_field }}
+                                    <div class="helper-text">Field for X-axis (should be numeric)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.y_field.id_for_label }}" class="form-label">{{ form.y_field.label }}</label>
+                                    {{ form.y_field }}
+                                    <div class="helper-text">Field for Y-axis (should be numeric)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.series_field.id_for_label }}" class="form-label">{{ form.series_field.label }}</label>
+                                    {{ form.series_field }}
+                                    <div class="helper-text">Field to split data into categories (optional)</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.chart_title.id_for_label }}" class="form-label">{{ form.chart_title.label }}</label>
+                                    <input type="text" name="chart_title" id="{{ form.chart_title.id_for_label }}" class="form-control">
+                                </div>
+                            </div>
+                            
+                            <!-- Word Cloud Fields -->
+                            <div id="wordcloud-fields" class="field-container">
+                                <div class="mb-3">
+                                    <label for="{{ form.text_field.id_for_label }}" class="form-label">{{ form.text_field.label }}</label>
+                                    {{ form.text_field }}
+                                    <div class="helper-text">Field containing text to analyze</div>
+                                </div>
+                                
+                                <div class="mb-3">
+                                    <label for="{{ form.limit.id_for_label }}" class="form-label">{{ form.limit.label }}</label>
+                                    <input type="number" name="limit" id="{{ form.limit.id_for_label }}" value="{{ form.limit.value|default:'100' }}" min="1" max="500" class="form-control" style="max-width: 200px;">
+                                    <div class="helper-text">Maximum number of words to display</div>
+                                </div>
+                            </div>
+                            
+                            {{ form.config }}
+                            
+                            {% if form.non_field_errors %}
+                            <div class="alert alert-danger mt-3">
+                                {% for error in form.non_field_errors %}
+                                {{ error }}
+                                {% endfor %}
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                    
+                    <div class="d-flex justify-content-between">
+                        <a href="{% url 'analytics:visualization_list' %}" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-primary">Create Visualization</button>
+                    </div>
+                </form>
+            </div>
         </div>
     </div>
-
-    <!-- Main Form Card -->
-    <div class="widget-card">
-        <form method="POST" class="needs-validation" novalidate>
-            {% csrf_token %}
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.6.0/jquery.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.1.3/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        $(document).ready(function() {
+            // Initialize form state
+            updateVisibilityBasedOnType();
+            updateFieldVisibility();
             
-            <!-- Form Errors -->
-            {% if form.non_field_errors %}
-            <div class="alert alert-danger" role="alert">
-                {% for error in form.non_field_errors %}
-                    {{ error }}
-                {% endfor %}
-            </div>
-            {% endif %}
-
-            <!-- Title Field -->
-            <div class="mb-4">
-                <label for="{{ form.title.id_for_label }}" class="form-label">
-                    Visualization Title <span class="text-danger">*</span>
-                </label>
-                <input type="text" 
-                       class="form-control {% if form.title.errors %}is-invalid{% endif %}"
-                       id="{{ form.title.id_for_label }}"
-                       name="{{ form.title.name }}"
-                       value="{{ form.title.value|default:'' }}"
-                       required>
-                {% if form.title.errors %}
-                <div class="invalid-feedback">
-                    {% for error in form.title.errors %}
-                        {{ error }}
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Dataset Field -->
-            <div class="mb-4">
-                <label for="{{ form.dataset.id_for_label }}" class="form-label">
-                    Dataset <span class="text-danger">*</span>
-                </label>
-                <select class="form-select {% if form.dataset.errors %}is-invalid{% endif %}"
-                        id="{{ form.dataset.id_for_label }}"
-                        name="{{ form.dataset.name }}"
-                        required>
-                    <option value="">Select a dataset</option>
-                    {% for value, label in form.dataset.field.choices %}
-                    <option value="{{ value }}"
-                            {% if value == form.dataset.value|stringformat:"s" %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                    {% endfor %}
-                </select>
-                {% if form.dataset.errors %}
-                <div class="invalid-feedback">
-                    {% for error in form.dataset.errors %}
-                        {{ error }}
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Visualization Type Field -->
-            <div class="mb-4">
-                <label for="{{ form.visualization_type.id_for_label }}" class="form-label">
-                    Visualization Type <span class="text-danger">*</span>
-                </label>
-                <select class="form-select {% if form.visualization_type.errors %}is-invalid{% endif %}"
-                        id="{{ form.visualization_type.id_for_label }}"
-                        name="{{ form.visualization_type.name }}"
-                        required>
-                    <option value="">Select a visualization type</option>
-                    {% for value, label in form.visualization_type.field.choices %}
-                    <option value="{{ value }}"
-                            {% if value == form.visualization_type.value %}selected{% endif %}>
-                        {{ label }}
-                    </option>
-                    {% endfor %}
-                </select>
-                {% if form.visualization_type.errors %}
-                <div class="invalid-feedback">
-                    {% for error in form.visualization_type.errors %}
-                        {{ error }}
-                    {% endfor %}
-                </div>
-                {% endif %}
-            </div>
-
-            <!-- Configuration Field -->
-            <div class="mb-4">
-                <label for="{{ form.config.id_for_label }}" class="form-label">
-                    Configuration
-                </label>
-                <textarea class="form-control {% if form.config.errors %}is-invalid{% endif %}"
-                          id="{{ form.config.id_for_label }}"
-                          name="{{ form.config.name }}"
-                          rows="6"
-                          placeholder="Enter JSON configuration">{{ form.config.value|default:'{}' }}</textarea>
-                {% if form.config.errors %}
-                <div class="invalid-feedback">
-                    {% for error in form.config.errors %}
-                        {{ error }}
-                    {% endfor %}
-                </div>
-                {% endif %}
-                <div class="form-text">
-                    Enter visualization configuration in JSON format. The required fields will depend on the selected visualization type.
-                </div>
-            </div>
-
-            <!-- Form Actions -->
-            <div class="d-flex gap-2 justify-content-end">
-                <button type="button" 
-                        class="btn btn-outline-secondary" 
-                        onclick="history.back()">
-                    Cancel
-                </button>
-                <button type="submit" class="btn btn-primary">
-                    <i class="ri-line-chart-line"></i> Create Visualization
-                </button>
-            </div>
-        </form>
-    </div>
-
-    <!-- Configuration Help Card -->
-    <div class="widget-card mt-4">
-        <h5 class="mb-3">Configuration Help</h5>
-        <div class="config-help">
-            <div class="accordion" id="configHelp">
-                <!-- Bar Chart Config -->
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#barChartHelp">
-                            Bar Chart Configuration
-                        </button>
-                    </h2>
-                    <div id="barChartHelp" class="accordion-collapse collapse" data-bs-parent="#configHelp">
-                        <div class="accordion-body">
-                            <pre><code>{
-    "xAxis": "field_name",
-    "yAxis": "field_name",
-    "groupBy": "field_name",
-    "orientation": "vertical",
-    "stacked": false,
-    "colors": ["#hexcode", "#hexcode"]
-}</code></pre>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- Pie Chart Config -->
-                <div class="accordion-item">
-                    <h2 class="accordion-header">
-                        <button class="accordion-button collapsed" type="button" data-bs-toggle="collapse" data-bs-target="#pieChartHelp">
-                            Pie Chart Configuration
-                        </button>
-                    </h2>
-                    <div id="pieChartHelp" class="accordion-collapse collapse" data-bs-parent="#configHelp">
-                        <div class="accordion-body">
-                            <pre><code>{
-    "labels": "field_name",
-    "values": "field_name",
-    "donut": false,
-    "colors": ["#hexcode", "#hexcode"]
-}</code></pre>
-                        </div>
-                    </div>
-                </div>
-
-                <!-- More configuration help sections... -->
-            </div>
-        </div>
-    </div>
-</div>
-
-<!-- Form Validation Script -->
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Form validation
-    const forms = document.querySelectorAll('.needs-validation');
-    Array.from(forms).forEach(form => {
-        form.addEventListener('submit', event => {
-            if (!form.checkValidity()) {
-                event.preventDefault();
-                event.stopPropagation();
+            // Handle dataset selection change
+            $('#id_dataset').change(function() {
+                updateFieldVisibility();
+                
+                // Get the selected option and its data-uuid attribute
+                const selectedOption = $(this).find('option:selected');
+                
+                if (selectedOption.length && selectedOption.val()) {
+                    // Get the UUID from the data attribute or from a hidden field
+                    const datasetUuid = selectedOption.data('uuid');
+                    
+                    if (datasetUuid) {
+                        loadDatasetFields(datasetUuid);
+                    } else {
+                        // If dataset UUID isn't available via data attribute, we need to fetch it
+                        fetchDatasetUuid(selectedOption.val());
+                    }
+                } else {
+                    $('#no-dataset-selected').show();
+                    $('.field-selector').empty();
+                }
+            });
+            
+            // Handle visualization type change
+            $('#id_visualization_type').change(function() {
+                updateVisibilityBasedOnType();
+            });
+            
+            // Handle form submission
+            $('#visualization-form').submit(function(e) {
+                // Build configuration object based on selected visualization type
+                const vizType = $('#id_visualization_type').val();
+                let config = {};
+                
+                switch (vizType) {
+                    case 'bar':
+                    case 'pie':
+                        config = {
+                            category_field: $('#id_category_field').val(),
+                            value_field: $('#id_value_field').val(),
+                            limit: parseInt($('#id_limit').val()) || 10,
+                            sort_desc: true
+                        };
+                        
+                        if (vizType === 'bar') {
+                            config.chart_title = $('#id_chart_title').val();
+                        }
+                        break;
+                        
+                    case 'line':
+                        config = {
+                            time_field: $('#id_time_field').val(),
+                            value_field: $('#id_value_field').val(),
+                            series_field: $('#id_series_field').val(),
+                            chart_title: $('#id_chart_title').val(),
+                            fill: false
+                        };
+                        break;
+                        
+                    case 'scatter':
+                        config = {
+                            x_field: $('#id_x_field').val(),
+                            y_field: $('#id_y_field').val(),
+                            series_field: $('#id_series_field').val(),
+                            chart_title: $('#id_chart_title').val()
+                        };
+                        break;
+                        
+                    case 'wordcloud':
+                        config = {
+                            text_field: $('#id_text_field').val(),
+                            limit: parseInt($('#id_limit').val()) || 100,
+                            stopwords: ['and', 'the', 'to', 'a', 'of', 'for', 'in', 'is', 'on', 'that', 'by']
+                        };
+                        break;
+                }
+                
+                // Set the JSON-stringified config to hidden input
+                $('#id_config').val(JSON.stringify(config));
+            });
+            
+            // Initial setup: add data-uuid attributes to dataset options
+            setupDatasetOptions();
+            
+            // Initial load of dataset fields if dataset is preselected
+            const initialSelectedOption = $('#id_dataset option:selected');
+            if (initialSelectedOption.length && initialSelectedOption.val()) {
+                const initialDatasetUuid = initialSelectedOption.data('uuid');
+                if (initialDatasetUuid) {
+                    loadDatasetFields(initialDatasetUuid);
+                } else {
+                    fetchDatasetUuid(initialSelectedOption.val());
+                }
             }
-            form.classList.add('was-validated');
-        }, false);
-    });
-
-    // JSON validation for config field
-    const configField = document.getElementById('{{ form.config.id_for_label }}');
-    configField.addEventListener('change', function() {
-        try {
-            const config = JSON.parse(this.value);
-            this.value = JSON.stringify(config, null, 2);
-            this.classList.remove('is-invalid');
-        } catch (e) {
-            this.classList.add('is-invalid');
-        }
-    });
-
-    // Update configuration help based on selected visualization type
-    const vizTypeSelect = document.getElementById('{{ form.visualization_type.id_for_label }}');
-    vizTypeSelect.addEventListener('change', function() {
-        // Show/hide relevant configuration help sections based on selection
-        const selectedType = this.value;
-        document.querySelectorAll('.config-help .accordion-item').forEach(item => {
-            item.style.display = 'none';
         });
-        const helpSection = document.querySelector(`#${selectedType}Help`);
-        if (helpSection) {
-            helpSection.style.display = 'block';
+        
+        function setupDatasetOptions() {
+            // This function adds data-uuid attributes to all dataset options
+            // It requires the server to include this information in the rendered HTML
+            
+            // If the server doesn't include UUIDs directly, we can fetch them via AJAX
+            $('#id_dataset option').each(function() {
+                const optionValue = $(this).val();
+                if (optionValue) {
+                    // Get UUID from the option's data attribute, if it exists
+                    const uuid = $(this).data('uuid');
+                    
+                    // If no UUID is found in data attribute, we'll need to fetch it later
+                    if (!uuid) {
+                        // Mark this option as needing a UUID fetch
+                        $(this).addClass('needs-uuid-fetch');
+                    }
+                }
+            });
         }
-    });
-});
-</script>
-{% endblock %}
+        
+        function fetchDatasetUuid(datasetId) {
+            $('#loading-fields').show();
+            
+            // Make AJAX request to fetch dataset UUID by ID
+            $.ajax({
+                url: `/analytics/datasets/${datasetId}/get-uuid/`,
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    if (response.uuid) {
+                        // Store UUID in data attribute for future use
+                        $(`#id_dataset option[value="${datasetId}"]`).attr('data-uuid', response.uuid);
+                        
+                        // Load fields using the UUID
+                        loadDatasetFields(response.uuid);
+                    } else {
+                        $('#loading-fields').hide();
+                        alert('Could not retrieve dataset UUID.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#loading-fields').hide();
+                    
+                    // If the UUID endpoint doesn't exist, try direct field fetch with ID
+                    console.warn('Error fetching UUID, trying direct field fetch:', error);
+                    loadDatasetFieldsById(datasetId);
+                }
+            });
+        }
+        
+        function loadDatasetFieldsById(datasetId) {
+            $('#loading-fields').show();
+            
+            // Fallback: Try to load fields directly by ID if UUID endpoint is not available
+            $.ajax({
+                url: `/analytics/datasets/${datasetId}/fields/`,
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    $('#loading-fields').hide();
+                    
+                    if (response.fields && response.fields.length > 0) {
+                        populateFieldSelectors(response.fields);
+                    } else {
+                        alert('No fields found in this dataset.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#loading-fields').hide();
+                    alert('Error loading dataset fields. Please try again or contact support.');
+                    console.error('Error loading fields by ID:', error);
+                }
+            });
+        }
+        
+        function loadDatasetFields(datasetUuid) {
+            $('#loading-fields').show();
+            $('.field-selector').empty().append('<option value="">Select field</option>');
+            
+            // Make AJAX request to get dataset fields using UUID
+            $.ajax({
+                url: `/analytics/datasets/uuid/${datasetUuid}/fields/`,
+                method: 'GET',
+                dataType: 'json',
+                success: function(response) {
+                    $('#loading-fields').hide();
+                    
+                    if (response.fields && response.fields.length > 0) {
+                        populateFieldSelectors(response.fields);
+                    } else {
+                        alert('No fields found in this dataset.');
+                    }
+                },
+                error: function(xhr, status, error) {
+                    $('#loading-fields').hide();
+                    alert('Error loading dataset fields: ' + error);
+                    console.error('Error loading fields by UUID:', error);
+                }
+            });
+        }
+        
+        function updateVisibilityBasedOnType() {
+            const vizType = $('#id_visualization_type').val();
+            
+            // Hide all field containers
+            $('.field-container').removeClass('active');
+            
+            // Show container for selected type
+            switch (vizType) {
+                case 'bar':
+                    $('#bar-chart-fields').addClass('active');
+                    break;
+                case 'pie':
+                    $('#pie-chart-fields').addClass('active');
+                    break;
+                case 'line':
+                    $('#line-chart-fields').addClass('active');
+                    break;
+                case 'scatter':
+                    $('#scatter-plot-fields').addClass('active');
+                    break;
+                case 'wordcloud':
+                    $('#wordcloud-fields').addClass('active');
+                    break;
+            }
+            
+            updateFieldVisibility();
+        }
+        
+        function updateFieldVisibility() {
+            const datasetSelected = $('#id_dataset').val() ? true : false;
+            
+            if (datasetSelected) {
+                $('#no-dataset-selected').hide();
+                $('#viz-settings').show();
+            } else {
+                $('#no-dataset-selected').show();
+                $('#viz-settings .field-container').removeClass('active');
+            }
+        }
+        
+        function populateFieldSelectors(fields) {
+            // Clear and populate all field selectors
+            $('.field-selector').each(function() {
+                const selector = $(this);
+                const currentId = selector.attr('id');
+                
+                // Keep the first empty option
+                selector.find('option:not(:first)').remove();
+                
+                // Add options based on field type requirements
+                fields.forEach(function(field) {
+                    let shouldAdd = false;
+                    
+                    if (currentId === 'id_category_field') {
+                        // Categories can be any type
+                        shouldAdd = true;
+                    } else if (currentId === 'id_value_field' || 
+                               currentId === 'id_x_field' || 
+                               currentId === 'id_y_field') {
+                        // Numeric fields only
+                        shouldAdd = field.type === 'int' || 
+                                   field.type === 'float' || 
+                                   field.type === 'number';
+                    } else if (currentId === 'id_time_field') {
+                        // Date/time fields or string fields that could be dates
+                        shouldAdd = field.type === 'date' || 
+                                   field.type === 'datetime' || 
+                                   field.type === 'str' || 
+                                   field.type === 'string';
+                    } else if (currentId === 'id_text_field') {
+                        // Text fields
+                        shouldAdd = field.type === 'str' || 
+                                   field.type === 'string';
+                    } else if (currentId === 'id_series_field') {
+                        // Series can be any category type
+                        shouldAdd = true;
+                    }
+                    
+                    if (shouldAdd) {
+                        selector.append(`<option value="${field.name}">${field.name}</option>`);
+                    }
+                });
+            });
+        }
+
+        // Add this to your existing JavaScript in the template
+        function setupDatasetOptions() {
+            // Get UUID mapping from data attribute if available
+            const uuidData = $('#id_dataset').data('uuids');
+            let datasetUuids = {};
+            
+            if (uuidData) {
+                try {
+                    datasetUuids = JSON.parse(uuidData);
+                } catch (e) {
+                    console.error('Error parsing dataset UUIDs:', e);
+                }
+            }
+            
+            // Apply UUIDs to dataset options
+            $('#id_dataset option').each(function() {
+                const optionValue = $(this).val();
+                if (optionValue && datasetUuids[optionValue]) {
+                    $(this).attr('data-uuid', datasetUuids[optionValue]);
+                }
+            });
+        }
+
+        // Modified dataset change handler
+        $('#id_dataset').change(function() {
+            updateFieldVisibility();
+            
+            const selectedOption = $(this).find('option:selected');
+            if (selectedOption.length && selectedOption.val()) {
+                const datasetUuid = selectedOption.data('uuid');
+                
+                if (datasetUuid) {
+                    // Use UUID directly if available on the option
+                    loadDatasetFields(datasetUuid);
+                } else {
+                    // Try to get UUID from our mapping
+                    const datasetId = selectedOption.val();
+                    const uuidData = $('#id_dataset').data('uuids');
+                    
+                    if (uuidData) {
+                        try {
+                            const datasetUuids = JSON.parse(uuidData);
+                            if (datasetUuids[datasetId]) {
+                                loadDatasetFields(datasetUuids[datasetId]);
+                                return;
+                            }
+                        } catch (e) {
+                            console.error('Error parsing dataset UUIDs:', e);
+                        }
+                    }
+                    
+                    // If we still don't have a UUID, fetch it
+                    fetchDatasetUuid(datasetId);
+                }
+            } else {
+                $('#no-dataset-selected').show();
+                $('.field-selector').empty();
+            }
+        });
+    </script>
+</body>
+</html>

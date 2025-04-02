@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from .models import DataSet, AnalysisReport, Visualization, AnalyticsJob
 from polls.models import Poll
 from django.db import models
+import json
 
 class DataSetForm(forms.ModelForm):
     class Meta:
@@ -73,29 +74,180 @@ class AnalysisReportForm(forms.ModelForm):
             ).distinct()
 
 
+
 class VisualizationForm(forms.ModelForm):
     class Meta:
         model = Visualization
-        fields = ['title', 'description', 'visualization_type', 'dataset', 'config']
+        fields = ['title', 'description', 'dataset', 'visualization_type', 'config']
         widgets = {
             'description': forms.Textarea(attrs={'rows': 3}),
-            'config': forms.HiddenInput(),
+            'config': forms.HiddenInput(),  # Will be populated via JavaScript
         }
     
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
         
-        for field_name in self.fields:
-            self.fields[field_name].widget.attrs.update({'class': 'form-control'})
-        
-        # Filter datasets based on user access
+        # Limit dataset choices to those accessible by the user
         if self.user:
             self.fields['dataset'].queryset = DataSet.objects.filter(
                 models.Q(creator=self.user) | 
-                models.Q(collaborators=self.user) |
                 models.Q(is_public=True)
-            ).distinct()
+            )
+
+        # Add UUID data attributes to dataset choices
+        self.fields['dataset'].widget.attrs['class'] = 'form-control dataset-selector'
+        
+        # Create a list of dataset UUIDs for JavaScript
+        dataset_uuids = {
+            str(dataset.id): str(dataset.uuid) 
+            for dataset in self.fields['dataset'].queryset
+        }
+        
+        # Store UUIDs as data attribute
+        self.fields['dataset'].widget.attrs['data-uuids'] = json.dumps(dataset_uuids)
+        
+        # Visualization type choices
+        self.fields['visualization_type'] = forms.ChoiceField(
+            choices=[
+                ('bar', _('Bar Chart')),
+                ('pie', _('Pie Chart')),
+                ('line', _('Line Chart')),
+                ('scatter', _('Scatter Plot')),
+                ('wordcloud', _('Word Cloud')),
+            ],
+            widget=forms.Select(attrs={'class': 'form-control'})
+        )
+        
+        # Fields for different viz types (will be shown/hidden via JS)
+        self.fields['category_field'] = forms.CharField(
+            required=False, 
+            label=_('Category Field'),
+            widget=forms.Select(attrs={'class': 'form-control field-selector'})
+        )
+        
+        self.fields['value_field'] = forms.CharField(
+            required=False, 
+            label=_('Value Field'),
+            widget=forms.Select(attrs={'class': 'form-control field-selector'})
+        )
+        
+        self.fields['time_field'] = forms.CharField(
+            required=False, 
+            label=_('Time Field'),
+            widget=forms.Select(attrs={'class': 'form-control field-selector'})
+        )
+        
+        self.fields['x_field'] = forms.CharField(
+            required=False, 
+            label=_('X-Axis Field'),
+            widget=forms.Select(attrs={'class': 'form-control field-selector'})
+        )
+        
+        self.fields['y_field'] = forms.CharField(
+            required=False, 
+            label=_('Y-Axis Field'),
+            widget=forms.Select(attrs={'class': 'form-control field-selector'})
+        )
+        
+        self.fields['series_field'] = forms.CharField(
+            required=False, 
+            label=_('Series Field (Optional)'),
+            widget=forms.Select(attrs={'class': 'form-control field-selector'})
+        )
+        
+        self.fields['text_field'] = forms.CharField(
+            required=False, 
+            label=_('Text Field'),
+            widget=forms.Select(attrs={'class': 'form-control field-selector'})
+        )
+        
+        self.fields['limit'] = forms.IntegerField(
+            required=False,
+            initial=10,
+            min_value=1,
+            max_value=100,
+            label=_('Limit'),
+            help_text=_('Maximum number of items to display')
+        )
+        
+        self.fields['chart_title'] = forms.CharField(
+            required=False,
+            label=_('Chart Title')
+        )
+    
+    def clean(self):
+        cleaned_data = super().clean()
+        viz_type = cleaned_data.get('visualization_type')
+        
+        # Build configuration object based on visualization type
+        config = {}
+        
+        if viz_type == 'bar' or viz_type == 'pie':
+            category_field = cleaned_data.get('category_field')
+            value_field = cleaned_data.get('value_field')
+            
+            if not category_field:
+                self.add_error('category_field', _('Category field is required for this visualization type'))
+            if not value_field:
+                self.add_error('value_field', _('Value field is required for this visualization type'))
+                
+            config.update({
+                'category_field': category_field,
+                'value_field': value_field,
+                'sort_desc': True,
+                'limit': cleaned_data.get('limit', 10)
+            })
+            
+        elif viz_type == 'line':
+            time_field = cleaned_data.get('time_field')
+            value_field = cleaned_data.get('value_field')
+            
+            if not time_field:
+                self.add_error('time_field', _('Time field is required for line charts'))
+            if not value_field:
+                self.add_error('value_field', _('Value field is required for line charts'))
+                
+            config.update({
+                'time_field': time_field,
+                'value_field': value_field,
+                'series_field': cleaned_data.get('series_field'),
+                'chart_title': cleaned_data.get('chart_title'),
+                'fill': False
+            })
+            
+        elif viz_type == 'scatter':
+            x_field = cleaned_data.get('x_field')
+            y_field = cleaned_data.get('y_field')
+            
+            if not x_field:
+                self.add_error('x_field', _('X-axis field is required for scatter plots'))
+            if not y_field:
+                self.add_error('y_field', _('Y-axis field is required for scatter plots'))
+                
+            config.update({
+                'x_field': x_field,
+                'y_field': y_field,
+                'series_field': cleaned_data.get('series_field'),
+                'chart_title': cleaned_data.get('chart_title')
+            })
+            
+        elif viz_type == 'wordcloud':
+            text_field = cleaned_data.get('text_field')
+            
+            if not text_field:
+                self.add_error('text_field', _('Text field is required for word clouds'))
+                
+            config.update({
+                'text_field': text_field,
+                'limit': cleaned_data.get('limit', 100),
+                'stopwords': ['and', 'the', 'to', 'a', 'of', 'for', 'in', 'is', 'on', 'that', 'by']
+            })
+        
+        # Store configuration
+        cleaned_data['config'] = config
+        
+        return cleaned_data
 
 
 class DataImportForm(forms.Form):

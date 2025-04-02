@@ -3,6 +3,7 @@ from django.urls import reverse, reverse_lazy
 from django.http import HttpResponseForbidden, JsonResponse, HttpResponse
 from django.contrib.auth.decorators import login_required
 from django.contrib.auth.mixins import LoginRequiredMixin, UserPassesTestMixin
+from django.views import View
 from django.views.generic import (
     ListView, DetailView, CreateView, UpdateView, DeleteView, TemplateView
 )
@@ -692,7 +693,7 @@ class VisualizationListView(LoginRequiredMixin, ListView):
 @method_decorator(login_required, name='dispatch')
 class VisualizationCreateView(CreateView):
     model = Visualization
-    form_class = VisualizationForm
+    form_class = VisualizationForm  
     template_name = 'analytics/visualization_form.html'
     
     def get_form_kwargs(self):
@@ -734,111 +735,378 @@ class VisualizationCreateView(CreateView):
     
     def _generate_visualization_data(self, dataset, viz_type, config):
         """Generate visualization data based on dataset and config"""
-        # This is a simplified implementation
-        # In a real application, you would process the dataset according to the visualization type
+        # Load the dataset data
+        data = dataset.get_data()
         
+        if not data:
+            raise ValueError("Dataset contains no data")
+        
+        # Process data based on visualization type
         if viz_type == 'bar':
-            return self._generate_bar_chart_data(dataset, config)
+            return self._generate_bar_chart_data(data, config)
         elif viz_type == 'pie':
-            return self._generate_pie_chart_data(dataset, config)
+            return self._generate_pie_chart_data(data, config)
         elif viz_type == 'line':
-            return self._generate_line_chart_data(dataset, config)
+            return self._generate_line_chart_data(data, config)
         elif viz_type == 'scatter':
-            return self._generate_scatter_plot_data(dataset, config)
+            return self._generate_scatter_plot_data(data, config)
         elif viz_type == 'wordcloud':
-            return self._generate_wordcloud_data(dataset, config)
+            return self._generate_wordcloud_data(data, config)
         else:
-            # Default to returning raw data
-            return {'raw_data': dataset.data[:10]}  # First 10 items
+            # Default to returning sample of raw data
+            return {'raw_data': data[:10]}  # First 10 items
     
-    def _generate_bar_chart_data(self, dataset, config):
-        # Simplified implementation
-        return {
-            'labels': ['Category A', 'Category B', 'Category C', 'Category D'],
-            'datasets': [{
-                'label': 'Sample Data',
-                'data': [12, 19, 3, 5],
-                'backgroundColor': [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)',
-                    'rgba(75, 192, 192, 0.2)'
-                ],
-                'borderColor': [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)'
-                ],
-                'borderWidth': 1
-            }]
-        }
+    def _generate_bar_chart_data(self, data, config):
+        """Generate data for a bar chart."""
+        try:
+            # Extract configuration options
+            category_field = config.get('category_field')
+            value_field = config.get('value_field')
+            
+            if not category_field or not value_field:
+                raise ValueError("Both category_field and value_field must be specified for bar charts")
+            
+            # Extract labels and values from the dataset
+            categories = {}
+            
+            # Aggregate data by category
+            for item in data:
+                category = str(item.get(category_field, 'Unknown'))
+                value = float(item.get(value_field, 0))
+                
+                if category in categories:
+                    categories[category] += value
+                else:
+                    categories[category] = value
+            
+            # Convert to sorted lists for the chart
+            sorted_categories = sorted(categories.items(), 
+                                      key=lambda x: x[1], 
+                                      reverse=config.get('sort_desc', True))
+            
+            # Limit to top N categories if specified
+            limit = config.get('limit', len(sorted_categories))
+            top_categories = sorted_categories[:limit]
+            
+            labels = [item[0] for item in top_categories]
+            values = [item[1] for item in top_categories]
+            
+            # Generate colors based on the number of categories
+            colors = self._generate_colors(len(labels))
+            
+            return {
+                'labels': labels,
+                'datasets': [{
+                    'label': config.get('chart_title', 'Data by ' + category_field),
+                    'data': values,
+                    'backgroundColor': [color + '0.2)' for color in colors],
+                    'borderColor': [color + '1)' for color in colors],
+                    'borderWidth': 1
+                }]
+            }
+        except Exception as e:
+            raise ValueError(f"Error generating bar chart data: {str(e)}")
     
-    def _generate_pie_chart_data(self, dataset, config):
-        # Simplified implementation
-        return {
-            'labels': ['Red', 'Blue', 'Yellow', 'Green'],
-            'datasets': [{
-                'data': [12, 19, 3, 5],
-                'backgroundColor': [
-                    'rgba(255, 99, 132, 0.2)',
-                    'rgba(54, 162, 235, 0.2)',
-                    'rgba(255, 206, 86, 0.2)',
-                    'rgba(75, 192, 192, 0.2)'
-                ],
-                'borderColor': [
-                    'rgba(255, 99, 132, 1)',
-                    'rgba(54, 162, 235, 1)',
-                    'rgba(255, 206, 86, 1)',
-                    'rgba(75, 192, 192, 1)'
-                ],
-                'borderWidth': 1
-            }]
-        }
+    def _generate_pie_chart_data(self, data, config):
+        """Generate data for a pie chart."""
+        try:
+            # Extract configuration options
+            category_field = config.get('category_field')
+            value_field = config.get('value_field')
+            
+            if not category_field or not value_field:
+                raise ValueError("Both category_field and value_field must be specified for pie charts")
+            
+            # Extract labels and values from the dataset
+            categories = {}
+            
+            # Aggregate data by category
+            for item in data:
+                category = str(item.get(category_field, 'Unknown'))
+                value = float(item.get(value_field, 0))
+                
+                if category in categories:
+                    categories[category] += value
+                else:
+                    categories[category] = value
+            
+            # Convert to sorted lists for the chart
+            sorted_categories = sorted(categories.items(), 
+                                      key=lambda x: x[1], 
+                                      reverse=config.get('sort_desc', True))
+            
+            # Limit to top N categories if specified
+            limit = config.get('limit', len(sorted_categories))
+            top_categories = sorted_categories[:limit]
+            
+            labels = [item[0] for item in top_categories]
+            values = [item[1] for item in top_categories]
+            
+            # Generate colors based on the number of categories
+            colors = self._generate_colors(len(labels))
+            
+            return {
+                'labels': labels,
+                'datasets': [{
+                    'data': values,
+                    'backgroundColor': [color + '0.7)' for color in colors],
+                    'borderColor': [color + '1)' for color in colors],
+                    'borderWidth': 1
+                }]
+            }
+        except Exception as e:
+            raise ValueError(f"Error generating pie chart data: {str(e)}")
     
-    def _generate_line_chart_data(self, dataset, config):
-        # Simplified implementation
-        return {
-            'labels': ['January', 'February', 'March', 'April', 'May', 'June'],
-            'datasets': [{
-                'label': 'Sample Data',
-                'data': [12, 19, 3, 5, 2, 3],
-                'fill': False,
-                'borderColor': 'rgb(75, 192, 192)',
-                'tension': 0.1
-            }]
-        }
+    def _generate_line_chart_data(self, data, config):
+        """Generate data for a line chart."""
+        try:
+            # Extract configuration options
+            time_field = config.get('time_field')
+            value_field = config.get('value_field')
+            series_field = config.get('series_field')
+            
+            if not time_field or not value_field:
+                raise ValueError("Both time_field and value_field must be specified for line charts")
+            
+            # Sort data by time field
+            sorted_data = sorted(data, key=lambda x: x.get(time_field, ''))
+            
+            if series_field:
+                # Create multiple series
+                series = {}
+                times = set()
+                
+                for item in sorted_data:
+                    time_value = str(item.get(time_field, ''))
+                    series_value = str(item.get(series_field, 'Unknown'))
+                    value = float(item.get(value_field, 0))
+                    
+                    times.add(time_value)
+                    
+                    if series_value not in series:
+                        series[series_value] = {}
+                    
+                    if time_value in series[series_value]:
+                        series[series_value][time_value] += value
+                    else:
+                        series[series_value][time_value] = value
+                
+                # Sort times
+                sorted_times = sorted(list(times))
+                
+                # Generate datasets
+                datasets = []
+                colors = self._generate_colors(len(series))
+                
+                for i, (series_name, values) in enumerate(series.items()):
+                    # Ensure all time periods have values (fill gaps with 0)
+                    series_data = [values.get(time, 0) for time in sorted_times]
+                    
+                    datasets.append({
+                        'label': series_name,
+                        'data': series_data,
+                        'fill': False,
+                        'borderColor': colors[i] + '1)',
+                        'backgroundColor': colors[i] + '0.2)',
+                        'tension': 0.1
+                    })
+                
+                return {
+                    'labels': sorted_times,
+                    'datasets': datasets
+                }
+            else:
+                # Single series
+                times = []
+                values = []
+                
+                for item in sorted_data:
+                    times.append(str(item.get(time_field, '')))
+                    values.append(float(item.get(value_field, 0)))
+                
+                return {
+                    'labels': times,
+                    'datasets': [{
+                        'label': config.get('chart_title', 'Trend Data'),
+                        'data': values,
+                        'fill': config.get('fill', False),
+                        'borderColor': 'rgb(75, 192, 192)',
+                        'backgroundColor': 'rgba(75, 192, 192, 0.2)',
+                        'tension': 0.1
+                    }]
+                }
+        except Exception as e:
+            raise ValueError(f"Error generating line chart data: {str(e)}")
     
-    def _generate_scatter_plot_data(self, dataset, config):
-        # Simplified implementation
-        return {
-            'datasets': [{
-                'label': 'Scatter Dataset',
-                'data': [
-                    {'x': -10, 'y': 0},
-                    {'x': 0, 'y': 10},
-                    {'x': 10, 'y': 5},
-                    {'x': 0.5, 'y': 5.5}
-                ],
-                'backgroundColor': 'rgb(255, 99, 132)'
-            }]
-        }
+    def _generate_scatter_plot_data(self, data, config):
+        """Generate data for a scatter plot."""
+        try:
+            # Extract configuration options
+            x_field = config.get('x_field')
+            y_field = config.get('y_field')
+            series_field = config.get('series_field')
+            
+            if not x_field or not y_field:
+                raise ValueError("Both x_field and y_field must be specified for scatter plots")
+            
+            if series_field:
+                # Create multiple series
+                series = {}
+                
+                for item in data:
+                    x_value = float(item.get(x_field, 0))
+                    y_value = float(item.get(y_field, 0))
+                    series_value = str(item.get(series_field, 'Unknown'))
+                    
+                    if series_value not in series:
+                        series[series_value] = []
+                    
+                    series[series_value].append({'x': x_value, 'y': y_value})
+                
+                # Generate datasets
+                datasets = []
+                colors = self._generate_colors(len(series))
+                
+                for i, (series_name, points) in enumerate(series.items()):
+                    datasets.append({
+                        'label': series_name,
+                        'data': points,
+                        'backgroundColor': colors[i] + '0.7)'
+                    })
+                
+                return {'datasets': datasets}
+            else:
+                # Single series
+                points = []
+                
+                for item in data:
+                    points.append({
+                        'x': float(item.get(x_field, 0)),
+                        'y': float(item.get(y_field, 0))
+                    })
+                
+                return {
+                    'datasets': [{
+                        'label': config.get('chart_title', 'Scatter Data'),
+                        'data': points,
+                        'backgroundColor': 'rgb(255, 99, 132)'
+                    }]
+                }
+        except Exception as e:
+            raise ValueError(f"Error generating scatter plot data: {str(e)}")
     
-    def _generate_wordcloud_data(self, dataset, config):
-        # Simplified implementation
-        return {
-            'words': [
-                {'text': 'Hello', 'value': 15},
-                {'text': 'World', 'value': 12},
-                {'text': 'Data', 'value': 8},
-                {'text': 'Visualization', 'value': 20},
-                {'text': 'Analytics', 'value': 10},
-                {'text': 'PulseConnect', 'value': 25}
-            ]
-        }
+    def _generate_wordcloud_data(self, data, config):
+        """Generate data for a word cloud."""
+        try:
+            # Extract configuration
+            text_field = config.get('text_field')
+            weight_field = config.get('weight_field')
+            
+            if not text_field:
+                raise ValueError("text_field must be specified for wordclouds")
+            
+            # Process text data
+            word_counts = {}
+            
+            for item in data:
+                text = str(item.get(text_field, '')).lower()
+                
+                # If a weight field is provided, use it for word weighting
+                if weight_field:
+                    weight = float(item.get(weight_field, 1))
+                else:
+                    weight = 1
+                
+                # Simple text normalization
+                words = ''.join(c if c.isalnum() or c.isspace() else ' ' for c in text).split()
+                
+                # Remove stopwords if configured
+                stopwords = config.get('stopwords', [])
+                filtered_words = [w for w in words if w.lower() not in stopwords]
+                
+                # Count words
+                for word in filtered_words:
+                    if len(word) > 2:  # Skip very short words
+                        if word in word_counts:
+                            word_counts[word] += weight
+                        else:
+                            word_counts[word] = weight
+            
+            # Sort and limit words
+            limit = config.get('limit', 100)
+            sorted_words = sorted(word_counts.items(), key=lambda x: x[1], reverse=True)[:limit]
+            
+            words = [{'text': word, 'value': int(count)} for word, count in sorted_words]
+            
+            return {'words': words}
+        except Exception as e:
+            raise ValueError(f"Error generating wordcloud data: {str(e)}")
+    
+    def _generate_colors(self, count):
+        """Generate a list of colors for charts."""
+        # Predefined colors for consistency
+        base_colors = [
+            'rgba(255, 99, 132, ',   # Red
+            'rgba(54, 162, 235, ',   # Blue
+            'rgba(255, 206, 86, ',   # Yellow
+            'rgba(75, 192, 192, ',   # Green
+            'rgba(153, 102, 255, ',  # Purple
+            'rgba(255, 159, 64, ',   # Orange
+            'rgba(199, 199, 199, ',  # Gray
+            'rgba(83, 102, 255, ',   # Indigo
+            'rgba(255, 99, 255, ',   # Pink
+            'rgba(0, 168, 133, '     # Teal
+        ]
+        
+        # If we need more colors than predefined, generate them
+        colors = []
+        for i in range(count):
+            if i < len(base_colors):
+                colors.append(base_colors[i])
+            else:
+                # Generate random colors for additional items
+                r = (i * 23) % 256
+                g = (i * 47) % 256
+                b = (i * 91) % 256
+                colors.append(f'rgba({r}, {g}, {b}, ')
+        
+        return colors
     
     def get_success_url(self):
         return reverse('analytics:visualization_detail', kwargs={'pk': self.object.pk})
+
+
+# FETCH DATASET FIELDS BY UUID
+class DatasetFieldsView(View):
+    """View to return fields of a dataset based on its UUID."""
+    
+    def get(self, request, uuid):
+        # Get the dataset by UUID
+        dataset = get_object_or_404(DataSet, uuid=uuid)
+        
+        # Extract fields from dataset data
+        fields = []
+        if hasattr(dataset, 'data') and dataset.data:
+            if isinstance(dataset.data, list) and dataset.data:
+                first_record = dataset.data[0]  # Get the first record to infer fields
+                fields = [{'name': key, 'type': type(value).__name__} for key, value in first_record.items()]
+            elif isinstance(dataset.data, dict):
+                # If data is a dict, use its keys as fields
+                fields = [{'name': key, 'type': type(value).__name__} for key, value in dataset.data.items()]
+        
+        # Return fields as JSON response
+        return JsonResponse({'fields': fields})
+
+# Additional view to get UUID by ID if needed (for compatibility)
+class DatasetUUIDView(View):
+    """View to return UUID of a dataset based on its ID."""
+    
+    def get(self, request, pk):
+        try:
+            dataset = get_object_or_404(DataSet, pk=pk)
+            return JsonResponse({'uuid': str(dataset.uuid)})
+        except DataSet.DoesNotExist:
+            return JsonResponse({'error': 'Dataset not found'}, status=404)
 
 
 class VisualizationDetailView(LoginRequiredMixin, UserPassesTestMixin, DetailView):
