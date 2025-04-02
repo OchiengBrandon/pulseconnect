@@ -43,6 +43,7 @@ urlpatterns = [
     path('visualizations/<int:pk>/', views.VisualizationDetailView.as_view(), name='visualization_detail'),
     path('visualizations/delete/<int:pk>/', views.VisualizationDeleteView.as_view(), name='visualization_delete'),
     path('visualizations/edit/<int:pk>/', views.VisualizationUpdateView.as_view(), name='visualization_edit'),
+    path('visualizations/export/<int:pk>/', views.visualization_export, name='visualization_export'),
     
     # Data import/export
     path('import/', views.data_import, name='data_import'),

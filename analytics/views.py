@@ -1140,6 +1140,28 @@ class VisualizationUpdateView(LoginRequiredMixin, UserPassesTestMixin, UpdateVie
         return reverse_lazy('analytics:visualization_detail', kwargs={'pk': self.object.pk})
     
 
+@login_required
+def visualization_export(request, pk):
+    """Export a visualization in JSON format."""
+    visualization = get_object_or_404(Visualization, pk=pk)
+
+    # Check if the user has access to the visualization
+    if visualization.creator != request.user and not visualization.dataset.is_public:
+        return HttpResponseForbidden()
+
+    # Prepare the response data
+    response_data = {
+        'title': visualization.title,
+        'data': visualization.data,
+        'config': visualization.config,
+    }
+
+    # Return the response as JSON
+    response = HttpResponse(json.dumps(response_data, indent=2), content_type='application/json')
+    response['Content-Disposition'] = f'attachment; filename="{visualization.title}.json"'
+    return response
+
+
 class VisualizationDetailView(LoginRequiredMixin, DetailView):
     model = Visualization
     template_name = 'analytics/visualization_detail.html'
@@ -1155,7 +1177,7 @@ class VisualizationDetailView(LoginRequiredMixin, DetailView):
         # Add visualization config for rendering
         context['viz_config'] = {
             'type': visualization.visualization_type,
-            'data': visualization.data,
+            'data': visualization.data,  # The pre-processed data
             'config': visualization.config
         }
         

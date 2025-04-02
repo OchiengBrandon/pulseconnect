@@ -1,787 +1,379 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load static %}
 
-{% block title %}{{ visualization.title }} - PulseConnect{% endblock %}
+{% block title %}{{ visualization.title }} - Visualization | PulseConnect{% endblock %}
 
 {% block page_title %}{{ visualization.title }}{% endblock %}
 
-{% block content %}
-<div class="widget-card mb-4">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <div>
-            <h2 class="h4 mb-1">{{ visualization.title }}</h2>
-            <p class="text-2 mb-0">Created by {{ visualization.creator.get_full_name|default:visualization.creator.username }} on {{ visualization.created_at|date:"M d, Y" }}</p>
-        </div>
-        
-        {% if is_creator %}
-        <div class="d-flex gap-2">
-            <a href="{% url 'analytics:visualization_edit' visualization.pk %}" class="btn btn-primary btn-sm">
-                <i class="ri-edit-line"></i> Edit
-            </a>
-            <button type="button" class="btn btn-outline-danger btn-sm" data-bs-toggle="modal" data-bs-target="#deleteModal">
-                <i class="ri-delete-bin-line"></i> Delete
-            </button>
-        </div>
-        {% endif %}
-    </div>
-    
-    {% if visualization.description %}
-    <p>{{ visualization.description }}</p>
-    {% endif %}
-    
-    <div class="border-top border-bottom py-3 my-3">
-        <div class="row g-3 align-items-center">
-            <div class="col-md-6">
-                <div class="d-flex align-items-center">
-                    <i class="ri-database-2-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Dataset</small>
-                        <span>{{ dataset.title }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-pie-chart-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Type</small>
-                        <span>{{ viz_config.type|capfirst }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-eye-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Visibility</small>
-                        <span>{{ dataset.is_public|yesno:"Public,Private" }}</span>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-    
-    <!-- Visualization Container -->
-    <div class="visualization-container mb-3" style="height: 400px; width: 100%;" id="visualization-container">
-        <div class="d-flex justify-content-center align-items-center h-100">
-            <div class="spinner"></div>
-        </div>
-    </div>
-    
-    <!-- Additional visualization controls if needed -->
-    <div class="d-flex justify-content-between">
-        <div class="btn-group" role="group" aria-label="Visualization controls">
-            <button type="button" class="btn btn-outline-primary btn-sm" id="download-chart">
-                <i class="ri-download-line"></i> Export
-            </button>
-            <button type="button" class="btn btn-outline-primary btn-sm" id="fullscreen-chart">
-                <i class="ri-fullscreen-line"></i> Fullscreen
-            </button>
-        </div>
-        
-        <button type="button" class="btn btn-outline-primary btn-sm" id="share-chart">
-            <i class="ri-share-line"></i> Share
-        </button>
-    </div>
-</div>
-
-<!-- Configuration Details Section -->
-<div class="widget-card mb-4">
-    <h3 class="h5 mb-3">Visualization Configuration</h3>
-    <div class="row">
-        {% if viz_config.type == "bar" or viz_config.type == "pie" %}
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-hashtag-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Category Field</small>
-                        <span>{{ viz_config.config.category_field }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-scales-3-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Value Field</small>
-                        <span>{{ viz_config.config.value_field }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-sort-desc me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Sort Direction</small>
-                        <span>{{ viz_config.config.sort_desc|yesno:"Descending,Ascending" }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-numbers-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Data Limit</small>
-                        <span>{{ viz_config.config.limit }} items</span>
-                    </div>
-                </div>
-            </div>
-        {% elif viz_config.type == "line" %}
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-calendar-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Time Field</small>
-                        <span>{{ viz_config.config.time_field }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-scales-3-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Value Field</small>
-                        <span>{{ viz_config.config.value_field }}</span>
-                    </div>
-                </div>
-            </div>
-            {% if viz_config.config.series_field %}
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-split-cells-horizontal me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Series Field</small>
-                        <span>{{ viz_config.config.series_field }}</span>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-fill-color-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Fill Area</small>
-                        <span>{{ viz_config.config.fill|yesno:"Yes,No" }}</span>
-                    </div>
-                </div>
-            </div>
-        {% elif viz_config.type == "scatter" %}
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-align-bottom me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">X-Axis Field</small>
-                        <span>{{ viz_config.config.x_field }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-align-left me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Y-Axis Field</small>
-                        <span>{{ viz_config.config.y_field }}</span>
-                    </div>
-                </div>
-            </div>
-            {% if viz_config.config.series_field %}
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-split-cells-horizontal me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Series Field</small>
-                        <span>{{ viz_config.config.series_field }}</span>
-                    </div>
-                </div>
-            </div>
-            {% endif %}
-        {% elif viz_config.type == "wordcloud" %}
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-text me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Text Field</small>
-                        <span>{{ viz_config.config.text_field }}</span>
-                    </div>
-                </div>
-            </div>
-            <div class="col-md-6 mb-3">
-                <div class="d-flex align-items-center">
-                    <i class="ri-numbers-line me-2" style="color: var(--primary);"></i>
-                    <div>
-                        <small class="d-block text-2">Word Limit</small>
-                        <span>{{ viz_config.config.limit }} words</span>
-                    </div>
-                </div>
-            </div>
-        {% endif %}
-        
-        {% if viz_config.config.chart_title %}
-        <div class="col-md-6 mb-3">
-            <div class="d-flex align-items-center">
-                <i class="ri-heading me-2" style="color: var(--primary);"></i>
-                <div>
-                    <small class="d-block text-2">Chart Title</small>
-                    <span>{{ viz_config.config.chart_title }}</span>
-                </div>
-            </div>
-        </div>
-        {% endif %}
-    </div>
-</div>
-
-<!-- Insights and Analysis Section -->
-<div class="row">
-    <div class="col-lg-7">
-        <div class="widget-card">
-            <h3 class="h5 mb-3">Insights</h3>
-            {% if visualization.insights %}
-                {{ visualization.insights|linebreaks }}
-            {% else %}
-                <p class="text-2">No insights recorded for this visualization.</p>
-                {% if is_creator %}
-                <a href="{% url 'analytics:visualization_edit' visualization.pk %}" class="btn btn-outline-primary btn-sm">
-                    <i class="ri-add-line"></i> Add Insights
-                </a>
-                {% endif %}
-            {% endif %}
-        </div>
-    </div>
-    
-    <div class="col-lg-5">
-        <div class="widget-card">
-            <h3 class="h5 mb-3">Dataset Details</h3>
-            <div class="mb-3">
-                <p class="mb-1"><strong>Name:</strong> {{ dataset.title }}</p>
-                <p class="mb-1"><strong>Rows:</strong> {{ dataset.row_count|default:"Unknown" }}</p>
-                <p class="mb-1"><strong>Last Updated:</strong> {{ dataset.updated_at|date:"M d, Y" }}</p>
-            </div>
-            
-            <a href="{% url 'analytics:dataset_detail' dataset.uuid %}" class="btn btn-outline-primary btn-sm">
-                <i class="ri-database-2-line"></i> View Dataset
-            </a>
-        </div>
-    </div>
-</div>
-
-<!-- Delete Confirmation Modal -->
-{% if is_creator %}
-<div class="modal fade" id="deleteModal" tabindex="-1" aria-labelledby="deleteModalLabel" aria-hidden="true">
-    <div class="modal-dialog">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="deleteModalLabel">Confirm Deletion</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body">
-                Are you sure you want to delete the visualization "{{ visualization.title }}"? This action cannot be undone.
-            </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-outline-secondary" data-bs-dismiss="modal">Cancel</button>
-                <form method="post" action="{% url 'analytics:visualization_delete' visualization.id %}">
-                    {% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Delete Visualization</button>
-                </form>
-            </div>
-        </div>
-    </div>
-</div>
-{% endif %}
+{% block extra_js %}
+<!-- Chart.js for visualization rendering -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<!-- For word cloud visualization -->
+<script src="https://cdn.jsdelivr.net/npm/d3@7.8.2/dist/d3.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/build/d3.layout.cloud.min.js"></script>
 {% endblock %}
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js@3.7.1/dist/chart.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3/7.8.0/d3.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/d3-cloud/1.2.5/d3.layout.cloud.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/0.5.0-beta4/html2canvas.min.js"></script>
+{% block content %}
+<div class="container-fluid px-0">
+    <!-- Visualization Card -->
+    <div class="widget-card mb-4">
+        <div class="d-flex justify-content-between align-items-start mb-3">
+            <div>
+                <h2 class="mb-1">{{ visualization.title }}</h2>
+                <div class="text-muted">
+                    <i class="ri-database-2-line me-1"></i> {{ dataset.title }}
+                </div>
+            </div>
+            {% if is_creator %}
+            <div class="dropdown">
+                <button class="btn btn-icon" data-bs-toggle="dropdown" aria-expanded="false">
+                    <i class="ri-more-2-fill"></i>
+                </button>
+                <ul class="dropdown-menu">
+                    <li><a class="dropdown-item" href="{% url 'analytics:visualization_edit' visualization.pk %}">
+                        <i class="ri-edit-line me-2"></i> Edit
+                    </a></li>
+                    <li><a class="dropdown-item" href="{% url 'analytics:visualization_export' visualization.pk %}">
+                        <i class="ri-download-line me-2"></i> Export
+                    </a></li>
+                    <li><hr class="dropdown-divider"></li>
+                    <li>
+                        <form action="{% url 'analytics:visualization_delete' visualization.id %}" method="post" class="d-inline">
+                            {% csrf_token %}
+                            <button type="submit" class="dropdown-item text-danger" onclick="return confirm('Are you sure you want to delete this visualization?')">
+                                <i class="ri-delete-bin-line me-2"></i> Delete
+                            </button>
+                        </form>
+                    </li>
+                </ul>
+            </div>
+            {% endif %}
+        </div>
+        
+        {% if visualization.description %}
+        <div class="mb-4">
+            <p>{{ visualization.description }}</p>
+        </div>
+        {% endif %}
+        
+        <!-- Visualization Canvas Container -->
+        <div class="visualization-container" style="height: 400px; position: relative;">
+            {% if viz_config.type == 'wordcloud' %}
+            <div id="wordcloud-container" style="width: 100%; height: 100%;"></div>
+            {% else %}
+            <canvas id="visualization-canvas" style="width: 100%; height: 100%;"></canvas>
+            {% endif %}
+        </div>
+    </div>
+    
+    <!-- Metadata Section -->
+    <div class="row">
+        <div class="col-md-6">
+            <div class="widget-card">
+                <h3 class="h5 mb-3">Visualization Details</h3>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Type</th>
+                            <td>
+                                {% if viz_config.type == 'bar' %}
+                                <span class="badge bg-primary"><i class="ri-bar-chart-line me-1"></i> Bar Chart</span>
+                                {% elif viz_config.type == 'pie' %}
+                                <span class="badge bg-primary"><i class="ri-pie-chart-line me-1"></i> Pie Chart</span>
+                                {% elif viz_config.type == 'line' %}
+                                <span class="badge bg-primary"><i class="ri-line-chart-line me-1"></i> Line Chart</span>
+                                {% elif viz_config.type == 'scatter' %}
+                                <span class="badge bg-primary"><i class="ri-bubble-chart-line me-1"></i> Scatter Plot</span>
+                                {% elif viz_config.type == 'wordcloud' %}
+                                <span class="badge bg-primary"><i class="ri-cloud-line me-1"></i> Word Cloud</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Created</th>
+                            <td>{{ visualization.created_at|date:"M d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Last Updated</th>
+                            <td>{{ visualization.updated_at|date:"M d, Y" }}</td>
+                        </tr>
+                        <tr>
+                            <th>Creator</th>
+                            <td>
+                                <a href="{% url 'accounts:profile' visualization.creator.username %}" class="d-flex align-items-center text-decoration-none">
+                                    <img src="{% if visualization.creator.profile_picture %}{{ visualization.creator.profile_picture.url }}{% else %}data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24' viewBox='0 0 24 24'%3E%3Ccircle cx='12' cy='12' r='12' fill='%23e2e8f0'/%3E%3Cpath d='M12 14a5 5 0 1 0 0-10 5 5 0 0 0 0 10zm0 2c-3.33 0-10 1.67-10 5v1c0 .55.45 1 1 1h18c.55 0 1-.45 1-1v-1c0-3.33-6.67-5-10-5z' fill='%2394a3b8'/%3E%3C/svg%3E{% endif %}" 
+                                        alt="{{ visualization.creator.get_short_name }}" 
+                                        class="rounded-circle me-2" 
+                                        width="24" height="24">
+                                    {{ visualization.creator.get_full_name }}
+                                </a>
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="widget-card">
+                <h3 class="h5 mb-3">Dataset Information</h3>
+                <table class="table">
+                    <tbody>
+                        <tr>
+                            <th style="width: 150px;">Dataset</th>
+                            <td>
+                                <a href="{% url 'analytics:dataset_detail' dataset.uuid %}" class="text-decoration-none">
+                                    {{ dataset.title }}
+                                </a>
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Source</th>
+                            <td>
+                                {% if dataset.source_polls.exists %}
+                                {% for poll in dataset.source_polls.all %}
+                                <a href="{% url 'polls:poll_detail' poll.id %}" class="badge bg-secondary me-1 text-decoration-none">
+                                    {{ poll.title }}
+                                </a>
+                                {% endfor %}
+                                {% else %}
+                                <span class="text-muted">External data source</span>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        <tr>
+                            <th>Configuration</th>
+                            <td>
+                                {% if viz_config.type == 'bar' or viz_config.type == 'pie' %}
+                                Category: {{ viz_config.config.category_field }}<br>
+                                Value: {{ viz_config.config.value_field }}
+                                {% elif viz_config.type == 'line' %}
+                                Time: {{ viz_config.config.time_field }}<br>
+                                Value: {{ viz_config.config.value_field }}
+                                {% if viz_config.config.series_field %}
+                                <br>Series: {{ viz_config.config.series_field }}
+                                {% endif %}
+                                {% elif viz_config.type == 'scatter' %}
+                                X-Axis: {{ viz_config.config.x_field }}<br>
+                                Y-Axis: {{ viz_config.config.y_field }}
+                                {% if viz_config.config.series_field %}
+                                <br>Series: {{ viz_config.config.series_field }}
+                                {% endif %}
+                                {% elif viz_config.type == 'wordcloud' %}
+                                Text Field: {{ viz_config.config.text_field }}<br>
+                                Word Limit: {{ viz_config.config.limit }}
+                                {% endif %}
+                            </td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Related Visualizations Section -->
+    {% if related_visualizations %}
+    <div class="widget-card mt-4">
+        <h3 class="h5 mb-3">Related Visualizations</h3>
+        <div class="row">
+            {% for related_viz in related_visualizations %}
+            <div class="col-md-4 mb-3">
+                <a href="{% url 'analytics:visualization_detail' related_viz.id %}" class="card text-decoration-none h-100">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ related_viz.title }}</h5>
+                        <p class="card-text text-muted">{{ related_viz.visualization_type|title }} Chart</p>
+                    </div>
+                </a>
+            </div>
+            {% endfor %}
+        </div>
+    </div>
+    {% endif %}
+</div>
 
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Print visualization config to console to debug
-        console.log("Visualization Config:", {{ viz_config|safe }});
+        const vizConfig = {{ viz_config|safe }};
         
-        // Get the visualization container
-        const container = document.getElementById('visualization-container');
-        
-        // Clear loading spinner
-        container.innerHTML = '';
-        
-        try {
-            // Get visualization data
-            const vizConfig = {{ viz_config|safe }};
-            
-            if (!vizConfig) {
-                throw new Error("Visualization configuration is missing");
-            }
-            
-            // Handle visualization based on type
-            switch(vizConfig.type) {
-                case 'bar':
-                    renderBarChart(container, vizConfig);
-                    break;
-                case 'pie':
-                    renderPieChart(container, vizConfig);
-                    break;
-                case 'line':
-                    renderLineChart(container, vizConfig);
-                    break;
-                case 'scatter':
-                    renderScatterPlot(container, vizConfig);
-                    break;
-                case 'wordcloud':
-                    renderWordCloud(container, vizConfig);
-                    break;
-                default:
-                    throw new Error(`Unsupported visualization type: ${vizConfig.type}`);
-            }
-        } catch (error) {
-            console.error("Error rendering visualization:", error);
-            container.innerHTML = `
-                <div class="alert alert-danger">
-                    <i class="ri-error-warning-line me-2"></i>
-                    Error rendering visualization: ${error.message}
-                </div>
-            `;
-        }
-        
-        // Setup export functionality
-        document.getElementById('download-chart').addEventListener('click', function() {
-            exportChart(container, '{{ visualization.title }}');
-        });
-        
-        // Setup fullscreen functionality
-        document.getElementById('fullscreen-chart').addEventListener('click', function() {
-            toggleFullscreen(container);
-        });
-        
-        // Setup share functionality
-        document.getElementById('share-chart').addEventListener('click', function() {
-            shareVisualization('{{ request.build_absolute_uri }}');
-        });
+        {% if viz_config.type == 'wordcloud' %}
+        // Word Cloud Rendering
+        renderWordCloud(vizConfig);
+        {% else %}
+        // Chart.js Rendering
+        renderChart(vizConfig);
+        {% endif %}
     });
-    
-    function renderBarChart(container, vizConfig) {
-        // Create canvas for Chart.js
-        const canvas = document.createElement('canvas');
-        canvas.id = 'viz-chart';
-        container.appendChild(canvas);
+
+    function renderChart(config) {
+        const canvas = document.getElementById('visualization-canvas');
+        const ctx = canvas.getContext('2d');
         
-        // Parse data if it's a string
-        let data = vizConfig.data;
-        if (typeof data === 'string') {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                console.error("Error parsing data:", e);
-                throw new Error("Invalid data format for bar chart");
-            }
-        }
-        
-        // Create Chart.js dataset
-        const chart = new Chart(canvas, {
-            type: 'bar',
-            data: {
-                labels: data.labels || [],
-                datasets: [{
-                    label: vizConfig.config?.value_field || 'Value',
-                    data: data.values || [],
-                    backgroundColor: getColorArray(data.labels?.length || 0),
-                    borderColor: 'rgba(0, 0, 0, 0.1)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    legend: {
-                        display: false
-                    },
-                    title: {
-                        display: !!vizConfig.config?.chart_title,
-                        text: vizConfig.config?.chart_title || ''
-                    }
+        // Common chart options
+        const commonOptions = {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'top',
                 },
-                scales: {
-                    y: {
-                        beginAtZero: true
+                title: {
+                    display: config.config.chart_title ? true : false,
+                    text: config.config.chart_title || '',
+                    font: {
+                        size: 16
                     }
                 }
             }
-        });
-    }
-    
-    function renderPieChart(container, vizConfig) {
-        // Create canvas for Chart.js
-        const canvas = document.createElement('canvas');
-        canvas.id = 'viz-chart';
-        container.appendChild(canvas);
+        };
         
-        // Parse data if it's a string
-        let data = vizConfig.data;
-        if (typeof data === 'string') {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                console.error("Error parsing data:", e);
-                throw new Error("Invalid data format for pie chart");
-            }
-        }
-        
-        // Create Chart.js dataset
-        const chart = new Chart(canvas, {
-            type: 'pie',
-            data: {
-                labels: data.labels || [],
-                datasets: [{
-                    data: data.values || [],
-                    backgroundColor: getColorArray(data.labels?.length || 0),
-                    borderColor: 'rgba(255, 255, 255, 0.8)',
-                    borderWidth: 1
-                }]
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: !!vizConfig.config?.chart_title,
-                        text: vizConfig.config?.chart_title || ''
-                    }
-                }
-            }
-        });
-    }
-    
-    function renderLineChart(container, vizConfig) {
-        // Create canvas for Chart.js
-        const canvas = document.createElement('canvas');
-        canvas.id = 'viz-chart';
-        container.appendChild(canvas);
-        
-        // Parse data if it's a string
-        let data = vizConfig.data;
-        if (typeof data === 'string') {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                console.error("Error parsing data:", e);
-                throw new Error("Invalid data format for line chart");
-            }
-        }
-        
-        // Determine if we have series or a single dataset
-        let datasets = [];
-        const useSeries = data.series && Array.isArray(data.series);
-        
-        if (useSeries) {
-            // Process multiple series
-            datasets = data.series.map((series, index) => {
-                const color = getColorByIndex(index);
-                return {
-                    label: series.name || `Series ${index + 1}`,
-                    data: series.data || [],
-                    borderColor: color,
-                    backgroundColor: vizConfig.config?.fill ? getTransparentColor(color, 0.2) : 'transparent',
-                    fill: !!vizConfig.config?.fill,
-                    tension: 0.1
-                };
-            });
-        } else {
-            // Single dataset
-            const color = getColorByIndex(0);
-            datasets = [{
-                label: vizConfig.config?.value_field || 'Value',
-                data: data.values || [],
-                borderColor: color,
-                backgroundColor: vizConfig.config?.fill ? getTransparentColor(color, 0.2) : 'transparent',
-                fill: !!vizConfig.config?.fill,
-                tension: 0.1
-            }];
-        }
-        
-        // Create the chart
-        const chart = new Chart(canvas, {
-            type: 'line',
-            data: {
-                labels: data.labels || [],
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: !!vizConfig.config?.chart_title,
-                        text: vizConfig.config?.chart_title || ''
-                    }
-                },
-                scales: {
-                    y: {
-                        beginAtZero: true
-                    }
-                }
-            }
-        });
-    }
-    
-    function renderScatterPlot(container, vizConfig) {
-        // Create canvas for Chart.js
-        const canvas = document.createElement('canvas');
-        canvas.id = 'viz-chart';
-        container.appendChild(canvas);
-        
-        // Parse data if it's a string
-        let data = vizConfig.data;
-        if (typeof data === 'string') {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                console.error("Error parsing data:", e);
-                throw new Error("Invalid data format for scatter plot");
-            }
-        }
-        
-        // Determine if we have series or a single dataset
-        let datasets = [];
-        const useSeries = data.series && Array.isArray(data.series);
-        
-        if (useSeries) {
-            // Process multiple series
-            datasets = data.series.map((series, index) => {
-                const color = getColorByIndex(index);
-                return {
-                    label: series.name || `Series ${index + 1}`,
-                    data: series.data || [],
-                    backgroundColor: color,
-                    pointRadius: 5,
-                    pointHoverRadius: 8
-                };
-            });
-        } else {
-            // Single dataset
-            datasets = [{
-                label: `${vizConfig.config?.y_field || 'Y'} vs ${vizConfig.config?.x_field || 'X'}`,
-                data: data.points || [],
-                backgroundColor: getColorByIndex(0),
-                pointRadius: 5,
-                pointHoverRadius: 8
-            }];
-        }
-        
-        // Create the chart
-        const chart = new Chart(canvas, {
-            type: 'scatter',
-            data: {
-                datasets: datasets
-            },
-            options: {
-                responsive: true,
-                maintainAspectRatio: false,
-                plugins: {
-                    title: {
-                        display: !!vizConfig.config?.chart_title,
-                        text: vizConfig.config?.chart_title || ''
-                    }
-                },
-                scales: {
-                    x: {
-                        title: {
-                            display: true,
-                            text: vizConfig.config?.x_field || 'X-Axis'
-                        }
-                    },
-                    y: {
-                        title: {
-                            display: true,
-                            text: vizConfig.config?.y_field || 'Y-Axis'
+        // Use the pre-processed data directly
+        if (config.type === 'bar') {
+            // The data is already processed in the Python view
+            new Chart(ctx, {
+                type: 'bar',
+                data: config.data,
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        y: {
+                            beginAtZero: true
                         }
                     }
                 }
-            }
-        });
+            });
+        } else if (config.type === 'pie') {
+            // The data is already processed in the Python view
+            new Chart(ctx, {
+                type: 'pie',
+                data: config.data,
+                options: commonOptions
+            });
+        } else if (config.type === 'line') {
+            // The data is already processed in the Python view
+            new Chart(ctx, {
+                type: 'line',
+                data: config.data,
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        y: {
+                            beginAtZero: true
+                        }
+                    }
+                }
+            });
+        } else if (config.type === 'scatter') {
+            // The data is already processed in the Python view
+            new Chart(ctx, {
+                type: 'scatter',
+                data: config.data,
+                options: {
+                    ...commonOptions,
+                    scales: {
+                        x: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: config.config.x_field || ''
+                            }
+                        },
+                        y: {
+                            beginAtZero: true,
+                            title: {
+                                display: true,
+                                text: config.config.y_field || ''
+                            }
+                        }
+                    }
+                }
+            });
+        }
     }
-    
-    function renderWordCloud(container, vizConfig) {
-        // Set container styles
-        container.style.position = 'relative';
+
+    function renderWordCloud(config) {
+        const container = document.getElementById('wordcloud-container');
+        const width = container.offsetWidth;
+        const height = container.offsetHeight;
         
-        // Create SVG for D3 cloud
-        const svg = document.createElementNS("http://www.w3.org/2000/svg", "svg");
-        svg.setAttribute("width", "100%");
-        svg.setAttribute("height", "100%");
-        svg.id = 'viz-cloud';
-        svg.style.display = 'block';
-        container.appendChild(svg);
+        // Use the pre-processed words data
+        const wordFrequency = config.data.words.map(item => ({
+            text: item.text,
+            size: item.value
+        }));
         
-        // Set dimensions based on container
-        const width = container.clientWidth;
-        const height = container.clientHeight;
+        // Create SVG
+        const svg = d3.select(container)
+            .append('svg')
+            .attr('width', width)
+            .attr('height', height)
+            .append('g')
+            .attr('transform', `translate(${width/2},${height/2})`);
         
-        // Parse data if it's a string
-        let data = vizConfig.data;
-        if (typeof data === 'string') {
-            try {
-                data = JSON.parse(data);
-            } catch (e) {
-                console.error("Error parsing data:", e);
-                throw new Error("Invalid data format for word cloud");
-            }
-        }
-        
-        // Get word data - handle both array format and object with words property
-        const words = Array.isArray(data) ? data : (data.words || []);
-        
-        if (!words || words.length === 0) {
-            svg.innerHTML = '<text x="50%" y="50%" text-anchor="middle" dominant-baseline="middle" fill="#64748b">No data available for word cloud</text>';
-            return;
-        }
-        
-        // Calculate max frequency for sizing
-        const maxSize = Math.max(...words.map(d => d.value || 0));
-        
-        // Configure cloud layout
+        // Create word cloud layout
         const layout = d3.layout.cloud()
             .size([width, height])
-            .words(words.map(d => ({
-                text: d.text || '',
-                size: ((d.value / maxSize) * 40) + 10 // Scale between 10 and 50
-            })))
+            .words(wordFrequency)
             .padding(5)
             .rotate(() => ~~(Math.random() * 2) * 90)
-            .fontSize(d => d.size)
-            .on("end", draw);
-            
+            .font('Impact')
+            .fontSize(d => Math.sqrt(d.size) * 5) // Adjust scaling factor
+            .on('end', draw);
+        
+        layout.start();
+        
         function draw(words) {
-            d3.select(svg)
-                .append("g")
-                .attr("transform", `translate(${width/2},${height/2})`)
-                .selectAll("text")
+            svg.selectAll('text')
                 .data(words)
                 .enter()
-                .append("text")
-                .style("font-size", d => `${d.size}px`)
-                .style("font-family", "Impact")
-                .style("fill", () => getColorByIndex(Math.floor(Math.random() * 10)))
-                .attr("text-anchor", "middle")
-                .attr("transform", d => `translate(${d.x},${d.y}) rotate(${d.rotate})`)
+                .append('text')
+                .style('font-size', d => `${d.size}px`)
+                .style('font-family', 'Impact')
+                .style('fill', (d, i) => d3.interpolateViridis(i / words.length))
+                .attr('text-anchor', 'middle')
+                .attr('transform', d => `translate(${d.x},${d.y})rotate(${d.rotate})`)
                 .text(d => d.text);
         }
-        
-        // Start the layout
-        layout.start();
     }
-    
-    function getColorArray(count) {
-        const baseColors = [
-            '#6366f1', // primary
-            '#818cf8', // primary-light
-            '#4f46e5', // primary-dark
-            '#10b981', // success
-            '#ef4444', // danger
-            '#f59e0b', // warning
-            '#3b82f6', // blue
-            '#8b5cf6', // purple
-            '#ec4899', // pink
-            '#f97316'  // orange
-        ];
-        
-        // If we need more colors than we have, reuse them
+
+    // Utility Functions
+    function generateColors(count) {
         const colors = [];
         for (let i = 0; i < count; i++) {
-            colors.push(baseColors[i % baseColors.length]);
+            const hue = (i * 360 / count) % 360;
+            colors.push(`hsl(${hue}, 70%, 60%)`);
         }
-        
         return colors;
     }
-    
-    function getColorByIndex(index) {
-        const colors = [
-            '#6366f1', // primary
-            '#818cf8', // primary-light
-            '#4f46e5', // primary-dark
-            '#10b981', // success
-            '#ef4444', // danger
-            '#f59e0b', // warning
-            '#3b82f6', // blue
-            '#8b5cf6', // purple
-            '#ec4899', // pink
-            '#f97316'  // orange
-        ];
-        
-        return colors[index % colors.length];
+
+    function getColorComponents(index, total) {
+        const hue = (index * 360 / total) % 360;
+        const rgb = hslToRgb(hue/360, 0.7, 0.6);
+        return `${rgb[0]}, ${rgb[1]}, ${rgb[2]}`;
     }
-    
-    function getTransparentColor(hexColor, alpha) {
-        // Convert hex to RGB
-        const r = parseInt(hexColor.slice(1, 3), 16);
-        const g = parseInt(hexColor.slice(3, 5), 16);
-        const b = parseInt(hexColor.slice(5, 7), 16);
-        
-        return `rgba(${r}, ${g}, ${b}, ${alpha})`;
-    }
-    
-    function exportChart(container, title) {
-        // Convert container to image
-        html2canvas(container).then(canvas => {
-            // Create download link
-            const link = document.createElement('a');
-            link.download = `${title.replace(/[^a-z0-9]/gi, '-').toLowerCase()}-visualization.png`;
-            link.href = canvas.toDataURL('image/png');
-            
-            // Trigger download
-            document.body.appendChild(link);
-            link.click();
-            document.body.removeChild(link);
-        });
-    }
-    
-    function toggleFullscreen(element) {
-        if (!document.fullscreenElement) {
-            if (element.requestFullscreen) {
-                element.requestFullscreen();
-            } else if (element.webkitRequestFullscreen) { /* Safari */
-                element.webkitRequestFullscreen();
-            } else if (element.msRequestFullscreen) { /* IE11 */
-                element.msRequestFullscreen();
-            }
+
+    function hslToRgb(h, s, l) {
+        let r, g, b;
+
+        if (s === 0) {
+            r = g = b = l; // achromatic
         } else {
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.webkitExitFullscreen) { /* Safari */
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) { /* IE11 */
-                document.msExitFullscreen();
-            }
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+
+            const q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            const p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
         }
-    }
-    
-    function shareVisualization(url) {
-        // Check if Web Share API is supported
-        if (navigator.share) {
-            navigator.share({
-                title: '{{ visualization.title }}',
-                text: '{{ visualization.description|truncatechars:100 }}',
-                url: url
-            })
-            .catch(error => console.error('Error sharing:', error));
-        } else {
-            // Fallback - copy to clipboard
-            navigator.clipboard.writeText(url)
-                .then(() => {
-                    alert('Link copied to clipboard!');
-                })
-                .catch(err => {
-                    console.error('Failed to copy: ', err);
-                    // Provide manual selection fallback
-                    const tempInput = document.createElement('input');
-                    document.body.appendChild(tempInput);
-                    tempInput.value = url;
-                    tempInput.select();
-                    document.execCommand('copy');
-                    document.body.removeChild(tempInput);
-                    alert('Link copied to clipboard!');
-                });
-        }
+
+        return [Math.round(r * 255), Math.round(g * 255), Math.round(b * 255)];
     }
 </script>
 {% endblock %}
