@@ -11,12 +11,14 @@
     <div class="widget-card mb-4">
         <div class="d-flex justify-content-between align-items-start mb-4">
             <div class="d-flex gap-3">
-                <img src="{{ poll.creator.profile_picture.url|default:'https://via.placeholder.com/48' }}" 
-                     class="rounded-circle" width="48" height="48">
+                <a href="{% url 'accounts:profile' poll.creator.username %}">
+                    <img src="{{ poll.creator.profile_picture.url|default:'https://via.placeholder.com/48' }}" 
+                         class="rounded-circle" width="48" height="48" alt="{{ poll.creator.get_full_name }}">
+                </a>
                 <div>
                     <h4 class="mb-1">{{ poll.title }}</h4>
                     <div class="d-flex align-items-center gap-2 text-muted">
-                        <span>Created by {{ poll.creator.get_full_name }}</span>
+                        <span>Created by <a href="{% url 'accounts:profile' poll.creator.username %}">{{ poll.creator.get_full_name }}</a></span>
                         <span>•</span>
                         <span>{{ poll.created_at|timesince }} ago</span>
                         {% if poll.end_date %}
@@ -212,7 +214,7 @@
                         <h6 class="mb-2">{{ related_poll.title }}</h6>
                         <div class="d-flex align-items-center text-muted small">
                             <img src="{{ related_poll.creator.profile_picture.url|default:'https://via.placeholder.com/24' }}" 
-                                 class="rounded-circle me-2" width="24" height="24">
+                                 class="rounded-circle me-2" width="24" height="24" alt="{{ related_poll.creator.get_full_name }}">
                             <span>{{ related_poll.creator.get_short_name }}</span>
                             <span class="mx-2">•</span>
                             <span>{{ related_poll.created_at|timesince }} ago</span>
@@ -243,8 +245,10 @@
                     {% for comment in comments %}
                     <div class="comment-card p-3 rounded mb-3">
                         <div class="d-flex gap-3">
-                            <img src="{{ comment.user.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
-                                 class="rounded-circle" width="32" height="32">
+                            <a href="{% url 'accounts:profile' comment.user.username %}">
+                                <img src="{{ comment.user.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
+                                     class="rounded-circle" width="32" height="32" alt="{{ comment.user.get_full_name }}">
+                            </a>
                             <div class="flex-grow-1">
                                 <div class="d-flex justify-content-between align-items-center mb-2">
                                     <div class="fw-medium">{{ comment.user.get_full_name }}</div>

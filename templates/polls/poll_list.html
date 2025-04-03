@@ -55,10 +55,14 @@
             <div class="col-md-6 col-lg-4">
                 <div class="widget-card h-100 featured-poll-card">
                     <div class="d-flex align-items-center mb-3">
-                        <img src="{{ poll.creator.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
-                             class="rounded-circle me-2" width="32" height="32">
+                        <a href="{% url 'accounts:profile' poll.creator.username %}">
+                            <img src="{{ poll.creator.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
+                                 class="rounded-circle me-2" width="32" height="32" alt="{{ poll.creator.get_full_name }}">
+                        </a>
                         <div>
-                            <div class="fw-medium">{{ poll.creator.get_full_name }}</div>
+                            <a href="{% url 'accounts:profile' poll.creator.username %}" class="fw-medium">
+                                {{ poll.creator.get_full_name }}
+                            </a>
                             <div class="text-muted small">{{ poll.created_at|timesince }} ago</div>
                         </div>
                     </div>
@@ -93,10 +97,14 @@
             <div class="widget-card h-100 poll-card">
                 <div class="d-flex justify-content-between mb-3">
                     <div class="d-flex align-items-center">
-                        <img src="{{ poll.creator.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
-                             class="rounded-circle me-2" width="32" height="32">
+                        <a href="{% url 'accounts:profile' poll.creator.username %}">
+                            <img src="{{ poll.creator.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
+                                 class="rounded-circle me-2" width="32" height="32" alt="{{ poll.creator.get_full_name }}">
+                        </a>
                         <div>
-                            <div class="fw-medium">{{ poll.creator.get_full_name }}</div>
+                            <a href="{% url 'accounts:profile' poll.creator.username %}" class="fw-medium">
+                                {{ poll.creator.get_full_name }}
+                            </a>
                             <div class="text-muted small">{{ poll.created_at|timesince }} ago</div>
                         </div>
                     </div>
