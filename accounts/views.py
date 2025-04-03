@@ -87,6 +87,21 @@ def follow_user(request, username):
 
     return JsonResponse({'error': 'Invalid request'}, status=400)
 
+@login_required
+def unfollow_user(request, username):
+    target_user = get_object_or_404(User, username=username)
+
+    if request.method == 'POST':
+        if request.user.is_following(target_user):
+            request.user.unfollow(target_user)
+            is_following = False
+        else:
+            return JsonResponse({'error': 'You are not following this user'}, status=400)
+
+        return JsonResponse({'is_following': is_following})
+
+    return JsonResponse({'error': 'Invalid request'}, status=400)
+
 def verify_email(request, token):
     verification = get_object_or_404(
         UserVerification, 
@@ -171,11 +186,19 @@ class ProfileDetailView(DetailView):
         context['discussions_created'] = Discussion.objects.filter(creator=user).count()
         context['comments_made'] = Comment.objects.filter(user=user).count()
         
+        # Get follower and following counts
+        context['followers_count'] = user.followers.count()
+        context['following_count'] = user.following.count()
+        
         # Get gamification data
         from gamification.models import UserPoints, Badge
         
         context['user_points'] = UserPoints.objects.filter(user=user).first()
         context['badges'] = Badge.objects.filter(users=user)
+        
+        # Add follow status if user is authenticated
+        if self.request.user.is_authenticated and self.request.user != user:
+            context['is_following'] = self.request.user.is_following(user)
         
         return context
 

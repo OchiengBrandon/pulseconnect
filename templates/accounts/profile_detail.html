@@ -40,7 +40,7 @@
                     {% if user.is_authenticated and user != profile_user %}
                     <div class="d-flex gap-2">
                         <button class="btn btn-primary follow-btn" data-username="{{ profile_user.username }}">
-                            {% if user.is_following %}
+                            {% if is_following %}
                             <i class="ri-user-unfollow-line me-1"></i>Unfollow
                             {% else %}
                             <i class="ri-user-follow-line me-1"></i>Follow
@@ -73,6 +73,16 @@
                     <div class="text-center">
                         <h4 class="mb-1">{{ comments_made }}</h4>
                         <p class="text-muted small mb-0">Comments Made</p>
+                    </div>
+
+                     <!-- Followers and Following Count -->
+                    <div class="text-center">
+                        <h4 class="mb-1">{{ followers_count }}</h4>
+                        <p class="text-muted small mb-0">Followers</p>
+                    </div>
+                    <div class="text-center">
+                        <h4 class="mb-1">{{ following_count }}</h4>
+                        <p class="text-muted small mb-0">Following</p>
                     </div>
                 </div>
             </div>
@@ -159,10 +169,11 @@ document.querySelectorAll('.follow-btn').forEach(btn => {
     btn.addEventListener('click', async function() {
         const username = this.dataset.username;
         try {
-            const response = await fetch(`/accounts/${username}/follow/`, {
+            const response = await fetch(`/accounts/follow/${username}/`, {
                 method: 'POST',
                 headers: {
                     'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                    'Content-Type': 'application/json'
                 },
             });
             const data = await response.json();
