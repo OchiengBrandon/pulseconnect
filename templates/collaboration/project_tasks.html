@@ -1,235 +1,387 @@
 {% extends 'base.html' %}
 {% load i18n %}
-{% load static %}
 
-{% block title %}{% trans "Project Tasks" %} - {{ project.title }}{% endblock %}
+{% block title %}{{ project.title }} - Tasks{% endblock %}
+
+{% block page_title %}{{ project.title }} - Tasks{% endblock %}
 
 {% block content %}
-<div class="container py-4">
-    <nav aria-label="breadcrumb">
-        <ol class="breadcrumb">
-            <li class="breadcrumb-item"><a href="{% url 'collaboration:project_list' %}">{% trans "Projects" %}</a></li>
-            <li class="breadcrumb-item"><a href="{% url 'collaboration:project_detail' pk=project.pk %}">{{ project.title }}</a></li>
-            <li class="breadcrumb-item active" aria-current="page">{% trans "Tasks" %}</li>
-        </ol>
-    </nav>
-
-    <div class="card shadow-sm mb-4">
-        <div class="card-header d-flex justify-content-between align-items-center">
-            <h2 class="h4 mb-0">{% trans "Project Tasks" %}</h2>
-            <a href="{% url 'collaboration:project_detail' pk=project.pk %}" class="btn btn-outline-secondary btn-sm">
-                {% trans "Back to Project" %}
-            </a>
-        </div>
-        <div class="card-body">
-            <div class="row mb-4">
-                <div class="col-md-12">
-                    {% if can_edit %}
-                        <button class="btn btn-primary mb-3" type="button" data-bs-toggle="collapse" data-bs-target="#newTaskForm" aria-expanded="false" aria-controls="newTaskForm">
-                            <i class="bi bi-plus-circle"></i> {% trans "Add New Task" %}
-                        </button>
-                        <div class="collapse mb-4" id="newTaskForm">
-                            <div class="card card-body bg-light">
-                                <h3 class="h5 mb-3">{% trans "Create New Task" %}</h3>
-                                <form method="post">
-                                    {% csrf_token %}
-                                    <div class="row">
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="{{ form.title.id_for_label }}" class="form-label">{% trans "Title" %}*</label>
-                                                {{ form.title }}
-                                                {% if form.title.errors %}
-                                                    <div class="text-danger">{{ form.title.errors }}</div>
-                                                {% endif %}
-                                            </div>
-                                            <div class="mb-3">
-                                                <label for="{{ form.description.id_for_label }}" class="form-label">{% trans "Description" %}</label>
-                                                {{ form.description }}
-                                                {% if form.description.errors %}
-                                                    <div class="text-danger">{{ form.description.errors }}</div>
-                                                {% endif %}
-                                            </div>
-                                        </div>
-                                        <div class="col-md-6">
-                                            <div class="mb-3">
-                                                <label for="{{ form.assigned_to.id_for_label }}" class="form-label">{% trans "Assigned To" %}</label>
-                                                {{ form.assigned_to }}
-                                                {% if form.assigned_to.errors %}
-                                                    <div class="text-danger">{{ form.assigned_to.errors }}</div>
-                                                {% endif %}
-                                            </div>
-                                            <div class="row">
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="{{ form.due_date.id_for_label }}" class="form-label">{% trans "Due Date" %}</label>
-                                                        {{ form.due_date }}
-                                                        {% if form.due_date.errors %}
-                                                            <div class="text-danger">{{ form.due_date.errors }}</div>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                                <div class="col-md-6">
-                                                    <div class="mb-3">
-                                                        <label for="{{ form.priority.id_for_label }}" class="form-label">{% trans "Priority" %}</label>
-                                                        {{ form.priority }}
-                                                        {% if form.priority.errors %}
-                                                            <div class="text-danger">{{ form.priority.errors }}</div>
-                                                        {% endif %}
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                    <div class="text-end">
-                                        <button type="button" class="btn btn-secondary" data-bs-toggle="collapse" data-bs-target="#newTaskForm">{% trans "Cancel" %}</button>
-                                        <button type="submit" class="btn btn-success">{% trans "Create Task" %}</button>
-                                    </div>
-                                </form>
-                            </div>
-                        </div>
-                    {% endif %}
-
-                    <div class="row">
-                        {% for status, tasks in tasks_by_status.items %}
-                            <div class="col-md-4 mb-4">
-                                <div class="card h-100">
-                                    <div class="card-header 
-                                        {% if status == 'pending' %}bg-warning text-dark{% endif %}
-                                        {% if status == 'in_progress' %}bg-info text-dark{% endif %}
-                                        {% if status == 'completed' %}bg-success text-white{% endif %}
-                                    ">
-                                        <h5 class="mb-0">
-                                            {% if status == 'pending' %}
-                                                <i class="bi bi-clock"></i> {% trans "Pending" %}
-                                            {% elif status == 'in_progress' %}
-                                                <i class="bi bi-play-circle"></i> {% trans "In Progress" %}
-                                            {% elif status == 'completed' %}
-                                                <i class="bi bi-check-circle"></i> {% trans "Completed" %}
-                                            {% endif %}
-                                            <span class="badge bg-light text-dark float-end">{{ tasks|length }}</span>
-                                        </h5>
-                                    </div>
-                                    <div class="card-body">
-                                        <div class="task-list">
-                                            {% for task in tasks %}
-                                                <div class="card mb-2 task-card">
-                                                    <div class="card-body p-3">
-                                                        <div class="d-flex justify-content-between align-items-start">
-                                                            <h6 class="card-title mb-1">{{ task.title }}</h6>
-                                                            <div class="dropdown">
-                                                                <button class="btn btn-sm btn-outline-secondary dropdown-toggle" type="button" id="dropdownMenuButton{{ task.pk }}" data-bs-toggle="dropdown" aria-expanded="false">
-                                                                    <i class="bi bi-three-dots"></i>
-                                                                </button>
-                                                                <ul class="dropdown-menu dropdown-menu-end" aria-labelledby="dropdownMenuButton{{ task.pk }}">
-                                                                    {% if can_edit %}
-                                                                        <li><a class="dropdown-item" href="{% url 'collaboration:edit_task' task_pk=task.pk %}">{% trans "Edit" %}</a></li>
-                                                                        <li><hr class="dropdown-divider"></li>
-                                                                        {% if task.status != 'pending' %}
-                                                                            <li>
-                                                                                <form method="post" action="{% url 'collaboration:update_task_status' task_pk=task.pk %}">
-                                                                                    {% csrf_token %}
-                                                                                    <input type="hidden" name="status" value="pending">
-                                                                                    <button type="submit" class="dropdown-item">{% trans "Mark as Pending" %}</button>
-                                                                                </form>
-                                                                            </li>
-                                                                        {% endif %}
-                                                                        {% if task.status != 'in_progress' %}
-                                                                            <li>
-                                                                                <form method="post" action="{% url 'collaboration:update_task_status' task_pk=task.pk %}">
-                                                                                    {% csrf_token %}
-                                                                                    <input type="hidden" name="status" value="in_progress">
-                                                                                    <button type="submit" class="dropdown-item">{% trans "Mark as In Progress" %}</button>
-                                                                                </form>
-                                                                            </li>
-                                                                        {% endif %}
-                                                                        {% if task.status != 'completed' %}
-                                                                            <li>
-                                                                                <form method="post" action="{% url 'collaboration:update_task_status' task_pk=task.pk %}">
-                                                                                    {% csrf_token %}
-                                                                                    <input type="hidden" name="status" value="completed">
-                                                                                    <button type="submit" class="dropdown-item">{% trans "Mark as Completed" %}</button>
-                                                                                </form>
-                                                                            </li>
-                                                                        {% endif %}
-                                                                        <li><hr class="dropdown-divider"></li>
-                                                                        <li>
-                                                                            <button type="button" class="dropdown-item text-danger" data-bs-toggle="modal" data-bs-target="#deleteTaskModal{{ task.pk }}">
-                                                                                {% trans "Delete" %}
-                                                                            </button>
-                                                                        </li>
-                                                                    {% endif %}
-                                                                </ul>
-                                                            </div>
-                                                        </div>
-                                                        
-                                                        {% if task.description %}
-                                                            <p class="card-text small mb-2">{{ task.description|truncatechars:100 }}</p>
-                                                        {% endif %}
-                                                        
-                                                        <div class="d-flex justify-content-between align-items-center mt-2">
-                                                            <div>
-                                                                {% if task.assigned_to %}
-                                                                    <span class="badge bg-secondary">
-                                                                        <i class="bi bi-person"></i> {{ task.assigned_to.get_full_name|default:task.assigned_to.username }}
-                                                                    </span>
-                                                                {% endif %}
-                                                                
-                                                                {% if task.priority == 'high' %}
-                                                                    <span class="badge bg-danger">{% trans "High" %}</span>
-                                                                {% elif task.priority == 'medium' %}
-                                                                    <span class="badge bg-warning text-dark">{% trans "Medium" %}</span>
-                                                                {% elif task.priority == 'low' %}
-                                                                    <span class="badge bg-info text-dark">{% trans "Low" %}</span>
-                                                                {% endif %}
-                                                            </div>
-                                                            
-                                                            {% if task.due_date %}
-                                                                <small class="text-muted">
-                                                                    <i class="bi bi-calendar"></i> {{ task.due_date|date:"M d, Y" }}
-                                                                </small>
-                                                            {% endif %}
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                                
-                                                <!-- Delete Task Modal -->
-                                                <div class="modal fade" id="deleteTaskModal{{ task.pk }}" tabindex="-1" aria-labelledby="deleteTaskModalLabel{{ task.pk }}" aria-hidden="true">
-                                                    <div class="modal-dialog">
-                                                        <div class="modal-content">
-                                                            <div class="modal-header">
-                                                                <h5 class="modal-title" id="deleteTaskModalLabel{{ task.pk }}">{% trans "Delete Task" %}</h5>
-                                                                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                                                            </div>
-                                                            <div class="modal-body">
-                                                                <p>{% trans "Are you sure you want to delete this task?" %}</p>
-                                                                <div class="alert alert-warning">
-                                                                    <strong>{{ task.title }}</strong> {% trans "will be permanently removed." %}
-                                                                </div>
-                                                            </div>
-                                                            <div class="modal-footer">
-                                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">{% trans "Cancel" %}</button>
-                                                                <form method="post" action="{% url 'collaboration:delete_task' task_pk=task.pk %}">
-                                                                    {% csrf_token %}
-                                                                    <button type="submit" class="btn btn-danger">{% trans "Delete" %}</button>
-                                                                </form>
-                                                            </div>
-                                                        </div>
-                                                    </div>
-                                                </div>
-                                            {% empty %}
-                                                <div class="text-center py-4">
-                                                    <p class="text-muted mb-0">{% trans "No tasks" %}</p>
-                                                </div>
-                                            {% endfor %}
-                                        </div>
-                                    </div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
+<div class="task-board-container">
+    <!-- Task Board Header -->
+    <div class="board-header">
+        <div class="d-flex align-items-center gap-3 flex-wrap">
+            <div class="project-stats">
+                <div class="stat-badge">
+                    <i class="ri-task-line"></i>
+                    <span>{{ tasks_by_status.todo|length }} Todo</span>
                 </div>
+                <div class="stat-badge">
+                    <i class="ri-time-line"></i>
+                    <span>{{ tasks_by_status.in_progress|length }} In Progress</span>
+                </div>
+                <div class="stat-badge">
+                    <i class="ri-checkbox-circle-line"></i>
+                    <span>{{ tasks_by_status.completed|length }} Completed</span>
+                </div>
+            </div>
+
+            {% if can_edit %}
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#addTaskModal">
+                <i class="ri-add-line"></i> Add Task
+            </button>
+            {% endif %}
+        </div>
+
+        <!-- Task Filters -->
+        <div class="task-filters">
+            <div class="search-bar">
+                <i class="ri-search-line search-icon"></i>
+                <input type="text" id="taskSearch" class="search-input" placeholder="Search tasks...">
+            </div>
+            <select class="form-select" id="priorityFilter">
+                <option value="">All Priorities</option>
+                <option value="high">High Priority</option>
+                <option value="medium">Medium Priority</option>
+                <option value="low">Low Priority</option>
+            </select>
+            <select class="form-select" id="assigneeFilter">
+                <option value="">All Assignees</option>
+                {% for member in project.members.all %}
+                <option value="{{ member.id }}">{{ member.get_full_name }}</option>
+                {% endfor %}
+            </select>
+        </div>
+    </div>
+
+    <!-- Kanban Board -->
+    <div class="kanban-board">
+        <!-- Todo Column -->
+        <div class="kanban-column" data-status="todo">
+            <div class="column-header">
+                <h3><i class="ri-list-check"></i> Todo</h3>
+                <span class="task-count">{{ tasks_by_status.todo|length }}</span>
+            </div>
+            <div class="task-list" id="todo-tasks">
+                {% for task in tasks_by_status.todo %}
+                {% include "collaboration/includes/task_card.html" with task=task %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- In Progress Column -->
+        <div class="kanban-column" data-status="in_progress">
+            <div class="column-header">
+                <h3><i class="ri-time-line"></i> In Progress</h3>
+                <span class="task-count">{{ tasks_by_status.in_progress|length }}</span>
+            </div>
+            <div class="task-list" id="in-progress-tasks">
+                {% for task in tasks_by_status.in_progress %}
+                {% include "collaboration/includes/task_card.html" with task=task %}
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Completed Column -->
+        <div class="kanban-column" data-status="completed">
+            <div class="column-header">
+                <h3><i class="ri-checkbox-circle-line"></i> Completed</h3>
+                <span class="task-count">{{ tasks_by_status.completed|length }}</span>
+            </div>
+            <div class="task-list" id="completed-tasks">
+                {% for task in tasks_by_status.completed %}
+                {% include "collaboration/includes/task_card.html" with task=task %}
+                {% endfor %}
             </div>
         </div>
     </div>
 </div>
+
+<!-- Add Task Modal -->
+{% if can_edit %}
+<div class="modal fade" id="addTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Task</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <form method="post" action="{% url 'collaboration:project_tasks' project.pk %}">
+                {% csrf_token %}
+                <div class="modal-body">
+                    {{ form.as_div }}
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Create Task</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endif %}
+
+<!-- Task Edit Modal -->
+<div class="modal fade" id="editTaskModal" tabindex="-1">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <!-- Content loaded dynamically via JS -->
+        </div>
+    </div>
+</div>
+
+<style>
+/* Task Board Styles */
+.task-board-container {
+    background: var(--surface);
+    border-radius: var(--radius-lg);
+    padding: 1.5rem;
+    box-shadow: var(--shadow);
+}
+
+.board-header {
+    margin-bottom: 2rem;
+}
+
+.project-stats {
+    display: flex;
+    gap: 1rem;
+    flex-wrap: wrap;
+}
+
+.stat-badge {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.5rem 1rem;
+    background: var(--surface-2);
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+}
+
+.task-filters {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1rem;
+    flex-wrap: wrap;
+}
+
+.task-filters .search-bar {
+    flex: 1;
+    min-width: 200px;
+}
+
+.task-filters .form-select {
+    min-width: 150px;
+}
+
+/* Kanban Board */
+.kanban-board {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-top: 1.5rem;
+}
+
+.kanban-column {
+    background: var(--surface-2);
+    border-radius: var(--radius-lg);
+    padding: 1rem;
+}
+
+.column-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding-bottom: 1rem;
+    border-bottom: 1px solid var(--border);
+    margin-bottom: 1rem;
+}
+
+.column-header h3 {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.task-count {
+    background: var(--surface-3);
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius);
+    font-size: 0.875rem;
+}
+
+.task-list {
+    min-height: 200px;
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Task Card Styles in task_card.html */
+.task-card {
+    background: var(--surface);
+    border-radius: var(--radius);
+    padding: 1rem;
+    box-shadow: var(--shadow);
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+    cursor: grab;
+}
+
+.task-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.task-card.dragging {
+    opacity: 0.5;
+    cursor: grabbing;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .kanban-board {
+        grid-template-columns: 1fr;
+    }
+    
+    .task-filters {
+        flex-direction: column;
+    }
+    
+    .task-filters .search-bar,
+    .task-filters .form-select {
+        width: 100%;
+    }
+}
+</style>
+
+{% endblock %}
+
+{% block extra_js %}
+<script>
+// Task Search and Filter
+document.getElementById('taskSearch').addEventListener('input', filterTasks);
+document.getElementById('priorityFilter').addEventListener('change', filterTasks);
+document.getElementById('assigneeFilter').addEventListener('change', filterTasks);
+
+function filterTasks() {
+    const searchTerm = document.getElementById('taskSearch').value.toLowerCase();
+    const priority = document.getElementById('priorityFilter').value;
+    const assignee = document.getElementById('assigneeFilter').value;
+    
+    document.querySelectorAll('.task-card').forEach(card => {
+        const title = card.querySelector('.task-title').textContent.toLowerCase();
+        const cardPriority = card.dataset.priority;
+        const cardAssignee = card.dataset.assignee;
+        
+        const matchesSearch = title.includes(searchTerm);
+        const matchesPriority = !priority || cardPriority === priority;
+        const matchesAssignee = !assignee || cardAssignee === assignee;
+        
+        card.style.display = (matchesSearch && matchesPriority && matchesAssignee) ? 'block' : 'none';
+    });
+}
+
+// Drag and Drop Functionality
+document.querySelectorAll('.task-card').forEach(card => {
+    card.setAttribute('draggable', true);
+    card.addEventListener('dragstart', handleDragStart);
+    card.addEventListener('dragend', handleDragEnd);
+});
+
+document.querySelectorAll('.task-list').forEach(list => {
+    list.addEventListener('dragover', handleDragOver);
+    list.addEventListener('drop', handleDrop);
+});
+
+let draggedTask = null;
+
+function handleDragStart(e) {
+    draggedTask = this;
+    this.classList.add('dragging');
+}
+
+function handleDragEnd(e) {
+    this.classList.remove('dragging');
+}
+
+function handleDragOver(e) {
+    e.preventDefault();
+}
+
+function handleDrop(e) {
+    e.preventDefault();
+    if (!draggedTask) return;
+    
+    const newStatus = this.closest('.kanban-column').dataset.status;
+    const taskId = draggedTask.dataset.taskId;
+    
+    // Update task status via AJAX
+    fetch(`{% url 'collaboration:update_task_status' 0 %}`.replace('0', taskId), {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/x-www-form-urlencoded',
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        },
+        body: `status=${newStatus}`
+    })
+    .then(response => {
+        if (response.ok) {
+            this.appendChild(draggedTask);
+            updateTaskCounts();
+        }
+    });
+}
+
+function updateTaskCounts() {
+    document.querySelectorAll('.kanban-column').forEach(column => {
+        const count = column.querySelectorAll('.task-card:not([style*="display: none"])').length;
+        column.querySelector('.task-count').textContent = count;
+    });
+}
+
+// Edit Task Modal
+function openEditModal(taskId) {
+    const modal = document.getElementById('editTaskModal');
+    fetch(`{% url 'collaboration:edit_task' 0 %}`.replace('0', taskId), {
+        headers: {
+            'X-Requested-With': 'XMLHttpRequest'
+        }
+    })
+    .then(response => response.text())
+    .then(html => {
+        modal.querySelector('.modal-content').innerHTML = html;
+        const editModal = new bootstrap.Modal(modal);
+        editModal.show();
+        
+        // Handle form submission
+        const form = modal.querySelector('#editTaskForm');
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            fetch(this.action, {
+                method: 'POST',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest',
+                    'X-CSRFToken': this.querySelector('[name=csrfmiddlewaretoken]').value
+                },
+                body: new FormData(this)
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    editModal.hide();
+                    // Refresh the page or update the task card
+                    window.location.reload();
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+            });
+        });
+    });
+}
+</script>
 {% endblock %}

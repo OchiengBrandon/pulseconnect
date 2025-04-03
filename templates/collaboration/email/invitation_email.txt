@@ -1,0 +1,24 @@
+Project Invitation - {{ invitation.project.title }}
+
+Hello!
+
+You've been invited to join the project: {{ invitation.project.title }}
+
+{{ invitation.message }}
+
+Project Details:
+- Invited by: {{ invitation.invited_by.get_full_name }}
+- Role: {{ invitation.role }}
+- Project: {{ invitation.project.title }}
+
+To accept this invitation, visit:
+{{ accept_url }}
+
+To decline this invitation, visit:
+{{ decline_url }}
+
+If you received this invitation by mistake, please ignore this email or decline the invitation.
+
+This is an automated message from PulseConnect. Please do not reply to this email.
+
+© {% now "Y" %} PulseConnect. All rights reserved.

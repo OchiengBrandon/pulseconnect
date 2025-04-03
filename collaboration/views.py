@@ -387,10 +387,20 @@ def edit_task(request, task_pk):
         if form.is_valid():
             form.save()
             
+            if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+                return JsonResponse({'success': True})
+            
             messages.success(request, _('Task updated successfully!'))
             return redirect('collaboration:project_tasks', pk=project.pk)
     else:
         form = ProjectTaskForm(instance=task, project=project)
+    
+    if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+        return render(request, 'collaboration/includes/task_edit_modal.html', {
+            'form': form,
+            'task': task,
+            'project': project
+        })
     
     return render(request, 'collaboration/task_edit.html', {
         'form': form,
