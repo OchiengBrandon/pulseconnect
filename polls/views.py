@@ -437,6 +437,16 @@ def submit_poll_response(request, slug):
     })
 
 
+from django.views.generic import DetailView
+from django.db.models import Count, Avg, Sum, Q
+from django.utils import timezone
+from datetime import timedelta
+from django.contrib.auth.mixins import LoginRequiredMixin
+from django.shortcuts import get_object_or_404
+
+from .models import Poll, PollResponse, Choice
+
+
 class PollResultsView(DetailView):
     model = Poll
     template_name = 'polls/poll_results.html'
@@ -446,18 +456,339 @@ class PollResultsView(DetailView):
         context = super().get_context_data(**kwargs)
         poll = self.get_object()
         
-        # Prepare data for charts
-        context['chart_data'] = []
+        # Basic poll statistics
+        total_responses = poll.total_responses
+        total_participants = poll.total_participants
+        
+        # Calculate completion rate (if poll has multiple questions)
+        completion_rate = 0
+        if poll.questions.count() > 0:
+            completion_rate = (total_responses / (poll.questions.count() * total_participants)) * 100 if total_participants > 0 else 0
+        
+        # Get time-based metrics
+        response_timeline = self.get_response_timeline(poll)
+        
+        # User demographic data if available and not anonymous
+        demographics = {}
+        if poll.poll_type != 'anonymous':
+            demographics = self.get_demographic_data(poll)
+        
+        # Prepare detailed data for each question
+        questions_data = []
         
         for question in poll.questions.all():
             question_data = {
-                'question': question.text,
+                'id': question.id,
+                'text': question.text,
                 'type': question.question_type.slug,
-                'data': question.response_data
+                'response_count': question.responses.count(),
+                'chart_data': self.prepare_chart_data(question),
+                'statistics': self.get_question_statistics(question),
+                'correlations': self.get_correlations(question, poll) if poll.questions.count() > 1 else {},
             }
-            context['chart_data'].append(question_data)
+            questions_data.append(question_data)
+        
+        # Add data to context
+        context.update({
+            'total_responses': total_responses,
+            'total_participants': total_participants,
+            'completion_rate': completion_rate,
+            'response_timeline': response_timeline,
+            'demographics': demographics,
+            'questions_data': questions_data,
+            'has_correlations': poll.questions.count() > 1,
+            'average_completion_time': self.get_average_completion_time(poll),
+            'is_active': poll.status == 'active',
+            'end_date': poll.end_date,
+            'days_remaining': (poll.end_date - timezone.now()).days if poll.end_date and poll.end_date > timezone.now() else 0,
+            'can_export': self.request.user == poll.creator or (hasattr(self.request.user, 'user_type') and self.request.user.user_type == 'researcher'),
+        })
         
         return context
+    
+    def prepare_chart_data(self, question):
+        """Prepare data for charts based on question type"""
+        question_type = question.question_type.slug
+        chart_data = {
+            'labels': [],
+            'datasets': [],
+            'chart_type': 'bar'  # Default chart type
+        }
+        
+        if question_type in ['single_choice', 'multiple_choice', 'true_false']:
+            # Count responses for each choice
+            choices = Choice.objects.filter(question=question).order_by('order')
+            response_counts = []
+            
+            for choice in choices:
+                chart_data['labels'].append(choice.text)
+                
+                # Count responses that include this choice
+                count = PollResponse.objects.filter(
+                    question=question,
+                    response_data__contains=str(choice.id)
+                ).count()
+                
+                response_counts.append(count)
+            
+            chart_data['datasets'].append({
+                'label': 'Responses',
+                'data': response_counts,
+                'backgroundColor': self.get_chart_colors(len(choices))
+            })
+            
+        elif question_type == 'rating_scale':
+            # For rating scales, show distribution of ratings
+            min_value = question.min_value or 1
+            max_value = question.max_value or 5
+            
+            for value in range(min_value, max_value + 1):
+                chart_data['labels'].append(str(value))
+                
+            # Count responses for each rating value
+            counts = []
+            for value in range(min_value, max_value + 1):
+                count = PollResponse.objects.filter(
+                    question=question,
+                    response_data=str(value)
+                ).count()
+                counts.append(count)
+            
+            chart_data['datasets'].append({
+                'label': 'Rating Distribution',
+                'data': counts,
+                'backgroundColor': self.get_chart_colors(max_value - min_value + 1)
+            })
+            
+        elif question_type == 'likert_scale':
+            # Similar to rating but with text labels
+            choices = Choice.objects.filter(question=question).order_by('order')
+            response_counts = []
+            
+            for choice in choices:
+                chart_data['labels'].append(choice.text)
+                count = PollResponse.objects.filter(
+                    question=question,
+                    response_data=str(choice.id)
+                ).count()
+                response_counts.append(count)
+            
+            chart_data['datasets'].append({
+                'label': 'Responses',
+                'data': response_counts,
+                'backgroundColor': self.get_chart_colors(len(choices))
+            })
+            
+        elif question_type in ['open_ended', 'short_answer', 'essay']:
+            # For text responses, provide word frequency data
+            chart_data['chart_type'] = 'wordcloud'
+            # Word frequency would be calculated in the template or via an API
+            
+        return chart_data
+    
+    def get_chart_colors(self, count):
+        """Generate a list of colors for charts"""
+        base_colors = [
+            'rgba(54, 162, 235, 0.7)',   # Blue
+            'rgba(255, 99, 132, 0.7)',   # Pink
+            'rgba(255, 206, 86, 0.7)',   # Yellow
+            'rgba(75, 192, 192, 0.7)',   # Teal
+            'rgba(153, 102, 255, 0.7)',  # Purple
+            'rgba(255, 159, 64, 0.7)',   # Orange
+            'rgba(199, 199, 199, 0.7)',  # Gray
+            'rgba(83, 102, 255, 0.7)',   # Indigo
+            'rgba(255, 99, 71, 0.7)',    # Tomato
+            'rgba(50, 205, 50, 0.7)',    # Lime
+        ]
+        
+        # If we need more colors than we have base colors, repeat the pattern
+        colors = []
+        for i in range(count):
+            colors.append(base_colors[i % len(base_colors)])
+        
+        return colors
+    
+    def get_response_timeline(self, poll):
+        """Get response data over time"""
+        # Get all responses for this poll
+        responses = PollResponse.objects.filter(question__poll=poll).order_by('created_at')
+        
+        if not responses.exists():
+            return {'dates': [], 'counts': []}
+        
+        # Get response counts by date
+        from collections import Counter
+        from django.db.models.functions import TruncDate
+        
+        date_counts = responses.annotate(date=TruncDate('created_at')).values('date').annotate(count=Count('id')).order_by('date')
+        
+        dates = []
+        counts = []
+        cumulative_count = 0
+        
+        for item in date_counts:
+            dates.append(item['date'].strftime('%Y-%m-%d'))
+            cumulative_count += item['count']
+            counts.append(cumulative_count)
+        
+        return {
+            'dates': dates,
+            'counts': counts
+        }
+    
+    def get_demographic_data(self, poll):
+        """Get demographic information of poll respondents if available"""
+        # This is a placeholder - actual implementation depends on your user model
+        demographics = {
+            'gender': {},
+            'age_groups': {},
+            'locations': {}
+        }
+        
+        # Example: Get gender distribution
+        # Requires User model to have a gender field
+        responses = PollResponse.objects.filter(question__poll=poll).select_related('user').distinct('user')
+        
+        # This is commented out because it depends on your specific User model
+        # gender_counts = responses.values('user__gender').annotate(count=Count('user__gender'))
+        # for item in gender_counts:
+        #     if item['user__gender']:
+        #         demographics['gender'][item['user__gender']] = item['count']
+        
+        return demographics
+    
+    def get_question_statistics(self, question):
+        """Get statistical data for the question responses"""
+        stats = {
+            'count': question.responses.count(),
+            'skip_rate': 0,
+        }
+        
+        question_type = question.question_type.slug
+        
+        # Add type-specific statistics
+        if question_type in ['rating_scale', 'likert_scale']:
+            # For numeric ratings
+            if question_type == 'rating_scale':
+                # Try to calculate average rating
+                try:
+                    # Assuming response_data contains numeric values
+                    avg_rating = PollResponse.objects.filter(question=question).exclude(
+                        response_data=''
+                    ).aggregate(avg=Avg('response_data'))['avg']
+                    
+                    if avg_rating is not None:
+                        stats['average'] = float(avg_rating)
+                except:
+                    stats['average'] = None
+            
+        elif question_type in ['single_choice', 'multiple_choice']:
+            # Most common response
+            most_common = None
+            max_count = 0
+            
+            for choice in question.choices.all():
+                count = PollResponse.objects.filter(
+                    question=question,
+                    response_data__contains=str(choice.id)
+                ).count()
+                
+                if count > max_count:
+                    max_count = count
+                    most_common = choice.text
+            
+            stats['most_common'] = most_common
+            stats['most_common_count'] = max_count
+            
+            # Calculate diversity of answers (how spread out the responses are)
+            total = question.responses.count()
+            if total > 0:
+                choice_counts = []
+                for choice in question.choices.all():
+                    count = PollResponse.objects.filter(
+                        question=question,
+                        response_data__contains=str(choice.id)
+                    ).count()
+                    choice_counts.append(count / total)
+                
+                # Calculate entropy as a measure of diversity
+                import math
+                entropy = 0
+                for p in choice_counts:
+                    if p > 0:
+                        entropy -= p * math.log2(p)
+                stats['diversity'] = entropy / math.log2(len(choice_counts)) if len(choice_counts) > 1 else 0
+        
+        return stats
+    
+    def get_correlations(self, question, poll):
+        """Find correlations between this question and others"""
+        correlations = []
+        
+        # Skip for text questions or if there are too few responses
+        question_type = question.question_type.slug
+        if question_type in ['open_ended', 'short_answer', 'essay'] or question.responses.count() < 10:
+            return correlations
+        
+        # Look for correlations with other questions
+        for other_question in poll.questions.exclude(id=question.id):
+            other_type = other_question.question_type.slug
+            
+            # Skip text questions
+            if other_type in ['open_ended', 'short_answer', 'essay']:
+                continue
+            
+            # Simple correlation check: do people who choose X for question 1 tend to choose Y for question 2?
+            # This is a simplified example
+            if question_type in ['single_choice', 'multiple_choice'] and other_type in ['single_choice', 'multiple_choice']:
+                for choice in question.choices.all():
+                    for other_choice in other_question.choices.all():
+                        # Count how many selected both choices
+                        joint_count = PollResponse.objects.filter(
+                            question=question,
+                            response_data__contains=str(choice.id),
+                            user__in=PollResponse.objects.filter(
+                                question=other_question,
+                                response_data__contains=str(other_choice.id)
+                            ).values('user')
+                        ).count()
+                        
+                        # If significant correlation
+                        if joint_count >= 3:  # Arbitrary threshold
+                            correlations.append({
+                                'question': other_question.text,
+                                'this_choice': choice.text,
+                                'other_choice': other_choice.text,
+                                'count': joint_count
+                            })
+        
+        return correlations
+    
+    def get_average_completion_time(self, poll):
+        """Estimate average time to complete the poll"""
+        # This is just an estimate - actual implementation depends on tracking when users start and finish
+        # A simple estimate could be based on question count
+        question_count = poll.questions.count()
+        
+        # Assume average time per question based on question type
+        avg_seconds_per_question = {
+            'single_choice': 10,
+            'multiple_choice': 15,
+            'open_ended': 60,
+            'short_answer': 30,
+            'true_false': 5,
+            'rating_scale': 8,
+            'likert_scale': 12,
+            'essay': 180
+        }
+        
+        total_seconds = 0
+        for question in poll.questions.all():
+            q_type = question.question_type.slug
+            total_seconds += avg_seconds_per_question.get(q_type, 20)  # Default 20 seconds
+        
+        # Return as minutes
+        return round(total_seconds / 60, 1)
 
 
 @login_required

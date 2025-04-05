@@ -1,257 +1,535 @@
-{# templates/polls/poll_results.html #}
-{% extends "base.html" %}
-{% load i18n %}
+{% extends 'base.html' %}
+{% load static %}
 
-{% block extra_css %}
-{{ block.super }}
-<style>
-  .results-card {
-    @apply bg-white rounded-xl shadow-lg p-6 mb-6;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-  }
+{% block title %}{{ poll.title }} Results - PulseConnect{% endblock %}
 
-  .chart-container {
-    @apply relative bg-white rounded-lg p-4 mb-6;
-    min-height: 300px;
-  }
-
-  .response-bar {
-    @apply relative h-8 bg-gray-200 rounded-full overflow-hidden mb-4;
-  }
-
-  .response-bar-fill {
-    @apply absolute top-0 left-0 h-full bg-blue-500 rounded-full transition-all duration-1000;
-  }
-
-  .response-label {
-    @apply absolute inset-y-0 left-4 flex items-center text-sm font-medium;
-  }
-
-  .response-percentage {
-    @apply absolute inset-y-0 right-4 flex items-center text-sm font-medium;
-  }
-
-  .stats-grid {
-    @apply grid grid-cols-1 md:grid-cols-3 gap-6 mb-8;
-  }
-
-  .stat-card {
-    @apply bg-white rounded-xl shadow-lg p-6 text-center;
-    background: rgba(255, 255, 255, 0.9);
-    backdrop-filter: blur(10px);
-  }
-</style>
-{% endblock %}
-
-{% block poll_content %}
-<div class="max-w-4xl mx-auto">
-  <!-- Poll Header -->
-  <div class="results-card">
-    <h1 class="text-3xl font-bold text-gray-900 mb-4">{{ poll.title }} - Results</h1>
-    <p class="text-gray-600 mb-6">{{ poll.description }}</p>
-
-    <!-- Statistics Overview -->
-    <div class="stats-grid">
-      <div class="stat-card">
-        <div class="text-4xl font-bold text-blue-600 mb-2">{{ poll.total_responses }}</div>
-        <div class="text-gray-500">{% trans "Total Responses" %}</div>
-      </div>
-      <div class="stat-card">
-        <div class="text-4xl font-bold text-green-600 mb-2">{{ poll.total_participants }}</div>
-        <div class="text-gray-500">{% trans "Unique Participants" %}</div>
-      </div>
-      <div class="stat-card">
-        <div class="text-4xl font-bold text-purple-600 mb-2">
-          {{ poll.questions.count }}
-        </div>
-        <div class="text-gray-500">{% trans "Questions" %}</div>
-      </div>
-    </div>
-  </div>
-
-  <!-- Question Results -->
-  {% for question in poll.questions.all %}
-  <div class="results-card">
-    <h2 class="text-xl font-semibold text-gray-900 mb-6">{{ question.text }}</h2>
-
-    {% if question.question_type.slug == 'single_choice' or question.question_type.slug == 'multiple_choice' %}
-    <!-- Bar Chart -->
-    <div class="chart-container">
-      <canvas id="chart-{{ question.id }}"></canvas>
-    </div>
-
-    <!-- Detailed Breakdown -->
-    <div class="space-y-4">
-      {% for choice in question.choices.all %}
-      {% with response_data=choice.response_data %}
-      <div>
-        <div class="flex justify-between text-sm text-gray-600 mb-1">
-          <span>{{ choice.text }}</span>
-          <span>{{ response_data.count }} responses</span>
-        </div>
-        <div class="response-bar">
-          <div class="response-bar-fill" style="width: {{ response_data.percentage }}%"></div>
-          <span class="response-label text-white">{{ choice.text }}</span>
-          <span class="response-percentage text-gray-700">{{ response_data.percentage }}%</span>
-        </div>
-      </div>
-      {% endwith %}
-      {% endfor %}
-    </div>
-
-    {% elif question.question_type.slug == 'rating' %}
-    <!-- Rating Distribution Chart -->
-    <div class="chart-container">
-      <canvas id="chart-{{ question.id }}"></canvas>
-    </div>
-
-    <div class="text-center mt-4">
-      <div class="text-2xl font-bold text-gray-900">
-        {{ question.average_rating|floatformat:1 }}
-      </div>
-      <div class="text-gray-500">{% trans "Average Rating" %}</div>
-    </div>
-
-    {% elif question.question_type.slug == 'text' %}
-    <!-- Text Responses -->
-    <div class="space-y-4">
-      {% for response in question.responses.all %}
-      <div class="bg-gray-50 rounded-lg p-4">
-        <p class="text-gray-700">{{ response.response_data.text }}</p>
-        <div class="text-sm text-gray-500 mt-2">
-          {% if not poll.is_anonymous %}
-          <span>{{ response.user.username }} - </span>
-          {% endif %}
-          <span>{{ response.created_at|date:"M d, Y H:i" }}</span>
-        </div>
-      </div>
-      {% endfor %}
-    </div>
-    {% endif %}
-  </div>
-  {% endfor %}
-
-  <!-- Share Results -->
-  <div class="results-card">
-    <h2 class="text-xl font-semibold text-gray-900 mb-4">{% trans "Share Results" %}</h2>
-    <div class="flex space-x-4">
-      <button class="btn-secondary" onclick="shareResults('twitter')">
-        <i class="fab fa-twitter mr-2"></i> Twitter
-      </button>
-      <button class="btn-secondary" onclick="shareResults('facebook')">
-        <i class="fab fa-facebook mr-2"></i> Facebook
-      </button>
-      <button class="btn-secondary" onclick="shareResults('linkedin')">
-        <i class="fab fa-linkedin mr-2"></i> LinkedIn
-      </button>
-      <button class="btn-secondary" onclick="copyShareLink()">
-        <i class="fas fa-link mr-2"></i> {% trans "Copy Link" %}
-      </button>
-    </div>
-  </div>
-</div>
-{% endblock %}
+{% block page_title %}Poll Results: {{ poll.title }}{% endblock %}
 
 {% block extra_js %}
-{{ block.super }}
-<script>
-document.addEventListener('DOMContentLoaded', function() {
-  // Initialize charts for each question
-  {% for question in poll.questions.all %}
-  {% if question.question_type.slug == 'single_choice' or question.question_type.slug == 'multiple_choice' %}
-  new Chart(document.getElementById('chart-{{ question.id }}').getContext('2d'), {
-    type: 'bar',
-    data: {
-      labels: {{ question.chart_labels|safe }},
-      datasets: [{
-        label: '{% trans "Responses" %}',
-        data: {{ question.chart_data|safe }},
-        backgroundColor: 'rgba(59, 130, 246, 0.5)',
-        borderColor: 'rgb(59, 130, 246)',
-        borderWidth: 1
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            precision: 0
-          }
-        }
-      }
-    }
-  });
-  {% elif question.question_type.slug == 'rating' %}
-  new Chart(document.getElementById('chart-{{ question.id }}').getContext('2d'), {
-    type: 'line',
-    data: {
-      labels: {{ question.rating_labels|safe }},
-      datasets: [{
-        label: '{% trans "Distribution" %}',
-        data: {{ question.rating_distribution|safe }},
-        fill: true,
-        backgroundColor: 'rgba(59, 130, 246, 0.2)',
-        borderColor: 'rgb(59, 130, 246)',
-        tension: 0.4
-      }]
-    },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: {
-        legend: {
-          display: false
-        }
-      },
-      scales: {
-        y: {
-          beginAtZero: true,
-          ticks: {
-            precision: 0
-          }
-        }
-      }
-    }
-  });
-  {% endif %}
-  {% endfor %}
-});
+<!-- Chart.js for visualizations -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<!-- D3.js for advanced visualizations -->
+<script src="https://d3js.org/d3.v7.min.js"></script>
+<!-- ApexCharts for timeline -->
+<script src="https://cdn.jsdelivr.net/npm/apexcharts"></script>
+<!-- WordCloud for text analysis -->
+<script src="https://cdn.jsdelivr.net/npm/d3-cloud@1.2.5/build/d3.layout.cloud.min.js"></script>
+{% endblock %}
 
-// Share functionality
-function shareResults(platform) {
-  const url = window.location.href;
-  const title = '{{ poll.title }}';
-  
-  let shareUrl;
-  switch (platform) {
-    case 'twitter':
-      shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`;
-      break;
-    case 'facebook':
-      shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
-      break;
-    case 'linkedin':
-      shareUrl = `https://www.linkedin.com/sharing/share-offsite/?url=${encodeURIComponent(url)}`;
-      break;
-  }
-  
-  window.open(shareUrl, '_blank');
+{% block content %}
+<div class="results-container">
+    <!-- Overview Stats Cards -->
+    <div class="stats-grid mb-4">
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="ri-team-line"></i>
+            </div>
+            <div>
+                <h3 class="stat-value">{{ total_participants }}</h3>
+                <p class="stat-label">Total Participants</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon green">
+                <i class="ri-chat-poll-line"></i>
+            </div>
+            <div>
+                <h3 class="stat-value">{{ total_responses }}</h3>
+                <p class="stat-label">Total Responses</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon blue">
+                <i class="ri-percent-line"></i>
+            </div>
+            <div>
+                <h3 class="stat-value">{{ completion_rate|floatformat:1 }}%</h3>
+                <p class="stat-label">Completion Rate</p>
+            </div>
+        </div>
+
+        <div class="stat-card">
+            <div class="stat-icon purple">
+                <i class="ri-time-line"></i>
+            </div>
+            <div>
+                <h3 class="stat-value">{{ average_completion_time }} min</h3>
+                <p class="stat-label">Avg. Completion Time</p>
+            </div>
+        </div>
+    </div>
+
+    <!-- Response Timeline -->
+    <div class="widget-card mb-4">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h2 class="card-title">Response Timeline</h2>
+            <div class="btn-group">
+                <button class="btn btn-sm btn-outline-primary active" data-range="week">Week</button>
+                <button class="btn btn-sm btn-outline-primary" data-range="month">Month</button>
+                <button class="btn btn-sm btn-outline-primary" data-range="all">All</button>
+            </div>
+        </div>
+        <div id="timeline-chart" style="height: 300px;"></div>
+    </div>
+
+    <!-- Demographics Section (if not anonymous) -->
+    {% if poll.poll_type != 'anonymous' and demographics %}
+    <div class="widget-card mb-4">
+        <h2 class="card-title">Demographics</h2>
+        <div class="demographics-grid">
+            <!-- Gender Distribution -->
+            <div class="demographic-chart">
+                <h3>Gender Distribution</h3>
+                <canvas id="genderChart"></canvas>
+            </div>
+            
+            <!-- Age Groups -->
+            <div class="demographic-chart">
+                <h3>Age Groups</h3>
+                <canvas id="ageChart"></canvas>
+            </div>
+            
+            <!-- Locations -->
+            <div class="demographic-chart">
+                <h3>Top Locations</h3>
+                <canvas id="locationChart"></canvas>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    <!-- Questions Results -->
+    <div class="questions-results">
+        {% for question in questions_data %}
+        <div class="widget-card question-result mb-4" id="question-{{ question.id }}">
+            <div class="card-header">
+                <h2 class="question-title">{{ question.text }}</h2>
+                <div class="question-meta">
+                    <span class="badge bg-primary">{{ question.type|title }}</span>
+                    <span class="response-count">{{ question.response_count }} responses</span>
+                </div>
+            </div>
+
+            <div class="question-content">
+                <!-- Chart Container -->
+                <div class="chart-container">
+                    {% if question.type in 'single_choice,multiple_choice,true_false,rating_scale,likert_scale' %}
+                    <canvas id="chart-{{ question.id }}"></canvas>
+                    {% elif question.type in 'open_ended,short_answer,essay' %}
+                    <div id="wordcloud-{{ question.id }}" class="wordcloud-container"></div>
+                    {% endif %}
+                </div>
+
+                <!-- Statistics -->
+                <div class="statistics-panel">
+                    <h3>Key Statistics</h3>
+                    <div class="stats-list">
+                        {% if question.statistics.average %}
+                        <div class="stat-item">
+                            <span class="stat-label">Average Rating</span>
+                            <span class="stat-value">{{ question.statistics.average|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if question.statistics.most_common %}
+                        <div class="stat-item">
+                            <span class="stat-label">Most Common</span>
+                            <span class="stat-value">{{ question.statistics.most_common }}</span>
+                        </div>
+                        {% endif %}
+                        
+                        {% if question.statistics.diversity %}
+                        <div class="stat-item">
+                            <span class="stat-label">Response Diversity</span>
+                            <span class="stat-value">{{ question.statistics.diversity|floatformat:2 }}</span>
+                        </div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Correlations (if available) -->
+            {% if question.correlations %}
+            <div class="correlations-section">
+                <h3>Correlations</h3>
+                <div class="correlations-grid">
+                    {% for correlation in question.correlations %}
+                    <div class="correlation-card">
+                        <div class="correlation-header">
+                            <i class="ri-link"></i>
+                            <span>{{ correlation.question }}</span>
+                        </div>
+                        <div class="correlation-details">
+                            <p>"{{ correlation.this_choice }}" often chosen with "{{ correlation.other_choice }}"</p>
+                            <span class="correlation-count">{{ correlation.count }} times</span>
+                        </div>
+                    </div>
+                    {% endfor %}
+                </div>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+
+    <!-- Export Options -->
+    {% if can_export %}
+    <div class="export-section text-end mb-4">
+        <div class="btn-group">
+            <button class="btn btn-primary" onclick="exportResults('pdf')">
+                <i class="ri-file-pdf-line"></i> Export PDF
+            </button>
+            <button class="btn btn-primary" onclick="exportResults('csv')">
+                <i class="ri-file-excel-line"></i> Export CSV
+            </button>
+            <button class="btn btn-primary" onclick="exportResults('json')">
+                <i class="ri-file-code-line"></i> Export JSON
+            </button>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+<style>
+/* Results Container Styles */
+.results-container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 0 1rem;
 }
 
-function copyShareLink() {
-  const url = window.location.href;
-  navigator.clipboard.writeText(url).then(() => {
-    alert('{% trans "Link copied to clipboard!" %}');
-  });
+/* Enhanced Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-md);
+}
+
+.stat-icon {
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 1.5rem;
+}
+
+.stat-value {
+    font-size: 1.5rem;
+    font-weight: 600;
+    margin: 0;
+    line-height: 1.2;
+}
+
+.stat-label {
+    color: var(--text-2);
+    margin: 0;
+    font-size: 0.875rem;
+}
+
+/* Question Results Card */
+.question-result {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+
+.card-header {
+    padding: 1.5rem;
+    border-bottom: 1px solid var(--border);
+}
+
+.question-title {
+    font-size: 1.25rem;
+    margin: 0 0 0.5rem;
+}
+
+.question-meta {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.badge {
+    padding: 0.25rem 0.75rem;
+    border-radius: var(--radius-sm);
+    font-weight: 500;
+}
+
+.response-count {
+    color: var(--text-2);
+    font-size: 0.875rem;
+}
+
+.question-content {
+    padding: 1.5rem;
+    display: grid;
+    grid-template-columns: 2fr 1fr;
+    gap: 2rem;
+}
+
+/* Chart Containers */
+.chart-container {
+    min-height: 300px;
+    position: relative;
+}
+
+.wordcloud-container {
+    height: 300px;
+    background: var(--surface-2);
+    border-radius: var(--radius);
+}
+
+/* Statistics Panel */
+.statistics-panel {
+    background: var(--surface-2);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+}
+
+.statistics-panel h3 {
+    margin: 0 0 1rem;
+    font-size: 1rem;
+    color: var(--text-2);
+}
+
+.stats-list {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.stat-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: var(--surface);
+    border-radius: var(--radius-sm);
+}
+
+/* Correlations Section */
+.correlations-section {
+    padding: 1.5rem;
+    border-top: 1px solid var(--border);
+}
+
+.correlations-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 1rem;
+    margin-top: 1rem;
+}
+
+.correlation-card {
+    background: var(--surface-2);
+    border-radius: var(--radius);
+    padding: 1rem;
+}
+
+.correlation-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 0.5rem;
+    color: var(--primary);
+}
+
+.correlation-details {
+    font-size: 0.875rem;
+}
+
+.correlation-count {
+    display: inline-block;
+    padding: 0.25rem 0.5rem;
+    background: var(--surface-3);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    color: var(--text-2);
+}
+
+/* Export Section */
+.export-section {
+    margin-top: 2rem;
+}
+
+/* Responsive Adjustments */
+@media (max-width: 768px) {
+    .question-content {
+        grid-template-columns: 1fr;
+    }
+    
+    .statistics-panel {
+        margin-top: 1rem;
+    }
+}
+
+@media (max-width: 576px) {
+    .card-header {
+        padding: 1rem;
+    }
+    
+    .question-content {
+        padding: 1rem;
+    }
+    
+    .correlations-section {
+        padding: 1rem;
+    }
+}
+</style>
+
+<script>
+// Initialize all charts and visualizations
+document.addEventListener('DOMContentLoaded', function() {
+    // Timeline Chart
+    const timelineData = {{ response_timeline|safe }};
+    initializeTimelineChart(timelineData);
+    
+    // Initialize charts for each question
+    {% for question in questions_data %}
+    const questionData = {{ question.chart_data|safe }};
+    initializeQuestionChart('{{ question.id }}', questionData, '{{ question.type }}');
+    {% endfor %}
+    
+    {% if poll.poll_type != 'anonymous' and demographics %}
+    // Demographics Charts
+    initializeDemographicsCharts({{ demographics|safe }});
+    {% endif %}
+});
+
+function initializeTimelineChart(data) {
+    const options = {
+        series: [{
+            name: 'Responses',
+            data: data.counts
+        }],
+        chart: {
+            type: 'area',
+            height: 300,
+            toolbar: {
+                show: false
+            }
+        },
+        stroke: {
+            curve: 'smooth'
+        },
+        fill: {
+            type: 'gradient',
+            gradient: {
+                shadeIntensity: 1,
+                opacityFrom: 0.7,
+                opacityTo: 0.3
+            }
+        },
+        xaxis: {
+            categories: data.dates,
+            type: 'datetime'
+        },
+        yaxis: {
+            labels: {
+                formatter: function(val) {
+                    return Math.round(val);
+                }
+            }
+        }
+    };
+
+    const chart = new ApexCharts(document.querySelector("#timeline-chart"), options);
+    chart.render();
+}
+
+function initializeQuestionChart(questionId, data, type) {
+    if (type === 'open_ended' || type === 'short_answer' || type === 'essay') {
+        initializeWordCloud(questionId, data);
+        return;
+    }
+
+    const ctx = document.getElementById(`chart-${questionId}`).getContext('2d');
+    new Chart(ctx, {
+        type: data.chart_type,
+        data: {
+            labels: data.labels,
+            datasets: data.datasets
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                }
+            }
+        }
+    });
+}
+
+function initializeWordCloud(questionId, data) {
+    // Word cloud implementation using D3
+    const words = data.words.map(w => ({
+        text: w.text,
+        size: 10 + Math.sqrt(w.count) * 10
+    }));
+
+    const layout = d3.layout.cloud()
+        .size([500, 300])
+        .words(words)
+        .padding(5)
+        .rotate(() => ~~(Math.random() * 2) * 90)
+        .font("Arial")
+        .fontSize(d => d.size)
+        .on("end", draw);
+
+    layout.start();
+
+    function draw(words) {
+        d3.select(`#wordcloud-${questionId}`)
+            .append("svg")
+            .attr("width", layout.size()[0])
+            .attr("height", layout.size()[1])
+            .append("g")
+            .attr("transform", `translate(${layout.size()[0]/2},${layout.size()[1]/2})`)
+            .selectAll("text")
+            .data(words)
+            .enter().append("text")
+            .style("font-size", d => `${d.size}px`)
+            .style("font-family", "Arial")
+            .style("fill", () => `hsl(${Math.random() * 360}, 70%, 50%)`)
+            .attr("text-anchor", "middle")
+            .attr("transform", d => `translate(${[d.x, d.y]})rotate(${d.rotate})`)
+            .text(d => d.text);
+    }
+}
+
+function initializeDemographicsCharts(demographics) {
+    // Initialize demographics charts implementation
+    // (Gender, Age, Location charts using Chart.js)
+}
+
+function exportResults(format) {
+    // Implementation for exporting results
+    console.log(`Exporting results in ${format} format`);
 }
 </script>
 {% endblock %}

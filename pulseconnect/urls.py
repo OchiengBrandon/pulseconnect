@@ -7,8 +7,8 @@ from django.views.generic import TemplateView
 urlpatterns = [
     path('admin/', admin.site.urls),
     path('', TemplateView.as_view(template_name="home.html"), name='home'),
-    path('accounts/', include('accounts.urls')),
-    path('accounts/', include('allauth.urls')),  # Added allauth URLs here
+    path('accounts/', include('accounts.urls')),  # Custom accounts URLs
+    path('accounts/', include('allauth.urls')),  # Django Allauth URLs for authentication
     path('polls/', include('polls.urls')),
     path('analytics/', include('analytics.urls')),
     path('community/', include('community.urls')),
