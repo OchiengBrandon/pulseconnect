@@ -163,11 +163,10 @@ class PollCreateView(CreateView):
         
         # Group question types by category for better UX
         question_types_by_category = {
-            'basic': QuestionType.objects.filter(slug__in=['single_choice', 'multiple_choice', 'open_ended']),
-            'scale': QuestionType.objects.filter(slug__in=['rating', 'likert', 'slider']),
-            'advanced': QuestionType.objects.exclude(
-                slug__in=['single_choice', 'multiple_choice', 'open_ended', 'rating', 'likert', 'slider']
-            )
+            'basic': QuestionType.objects.filter(slug__in=['open_ended', 'short_answer', 'true_false']),
+            'choice': QuestionType.objects.filter(slug__in=['single_choice', 'multiple_choice']),
+            'scale': QuestionType.objects.filter(slug__in=['rating_scale', 'likert_scale']),
+            'text': QuestionType.objects.filter(slug__in=['essay']),
         }
         context['question_types_by_category'] = question_types_by_category
         
@@ -198,38 +197,68 @@ class PollCreateView(CreateView):
                 question.poll = self.object
                 question.save()
                 
-                # Process choices for questions that need them
+                # Process question type specific requirements
                 question_type = question.question_type
-                if question_type.requires_choices or question_type.slug in ['single_choice', 'multiple_choice']:
-                    # Get choices from the POST data
-                    choice_prefix = f"question_{i}"
-                    
-                    # Extract all choice fields for this question
-                    choices_data = []
-                    choice_index = 0
-                    
-                    # Keep looking for choices until we don't find any more
-                    while True:
-                        choice_key = f'{choice_prefix}_choice_{choice_index}'
-                        if choice_key in self.request.POST and self.request.POST[choice_key].strip():
-                            choices_data.append(self.request.POST[choice_key].strip())
+                question_slug = question_type.slug
+                
+                # Handle question types that need choices
+                if question_type.requires_choices or question_slug in ['single_choice', 'multiple_choice', 'true_false']:
+                    # For true/false, add predefined choices if none exist
+                    if question_slug == 'true_false':
+                        Choice.objects.create(question=question, text=_('True'), order=1)
+                        Choice.objects.create(question=question, text=_('False'), order=2)
+                    else:
+                        # Get choices from the POST data
+                        choice_prefix = f"question_{i}"
+                        
+                        # Extract all choice fields for this question
+                        choices_data = []
+                        choice_index = 0
+                        
+                        # Keep looking for choices until we don't find any more
+                        while f'{choice_prefix}_choice_{choice_index}' in self.request.POST:
+                            choice_value = self.request.POST[f'{choice_prefix}_choice_{choice_index}'].strip()
+                            if choice_value:
+                                choices_data.append(choice_value)
                             choice_index += 1
-                        else:
-                            break
-                    
-                    # If no choices were found using the index approach, try the older method
-                    if not choices_data:
-                        for key, value in self.request.POST.items():
-                            if key.startswith(f'{choice_prefix}_choice_') and value.strip():
-                                choices_data.append(value.strip())
-                    
-                    # Create choices
-                    for j, choice_text in enumerate(choices_data):
+                        
+                        # If no choices were found using the index approach, try the older method
+                        if not choices_data:
+                            for key, value in self.request.POST.items():
+                                if key.startswith(f'{choice_prefix}_choice_') and value.strip():
+                                    choices_data.append(value.strip())
+                        
+                        # Create choices
+                        for j, choice_text in enumerate(choices_data):
+                            Choice.objects.create(
+                                question=question,
+                                text=choice_text,
+                                order=j + 1
+                            )
+                
+                # Handle Likert scale default options if no custom options provided
+                if question_slug == 'likert_scale' and not question.choices.exists():
+                    likert_options = [
+                        (_('Strongly Disagree'), 1),
+                        (_('Disagree'), 2),
+                        (_('Neutral'), 3),
+                        (_('Agree'), 4),
+                        (_('Strongly Agree'), 5)
+                    ]
+                    for text, order in likert_options:
                         Choice.objects.create(
                             question=question,
-                            text=choice_text,
-                            order=j + 1
+                            text=text,
+                            order=order
                         )
+                
+                # Handle rating scale default values if not provided
+                if question_slug == 'rating_scale':
+                    if question.min_value is None:
+                        question.min_value = 1
+                    if question.max_value is None:
+                        question.max_value = 5
+                    question.save()
         
         # Handle deleted questions
         for deleted_form in question_formset.deleted_forms:
@@ -290,7 +319,6 @@ class PollCreateView(CreateView):
                     return JsonResponse({'error': 'Question type not found'}, status=404)
         
         return JsonResponse({'error': 'Invalid request'}, status=400)
-@method_decorator(login_required, name='dispatch')
 class PollUpdateView(UserPassesTestMixin, SuccessMessageMixin, UpdateView):
     model = Poll
     form_class = PollForm
