@@ -109,7 +109,7 @@
                             </li>
                             {% endif %}
                             <li>
-                                <a class="dropdown-item" href="{% url 'analytics:visualization_create' %}?dataset={{ dataset.pk }}">
+                                <a class="dropdown-item" href="{% url 'analytics:visualization_create' %}?dataset={{ dataset.uuid }}">
                                     <i class="ri-bar-chart-line me-2"></i>Create Visualization
                                 </a>
                             </li>
