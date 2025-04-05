@@ -3,6 +3,7 @@ from django.utils.translation import gettext_lazy as _
 from django.forms import inlineformset_factory
 from taggit.forms import TagField
 import json
+from django.db import transaction
 
 from accounts.models import InstitutionProfile
 
@@ -222,70 +223,151 @@ class PollResponseForm(forms.Form):
         self.user = kwargs.pop('user')
         super().__init__(*args, **kwargs)
 
-        for question in self.poll.questions.all().order_by('order'):
+        # Get all questions for this poll, respecting the order specified during creation
+        questions = self.poll.questions.all().order_by('order')
+        
+        for question in questions:
             field_name = f'question_{question.id}'
             question_type = question.question_type.slug
             
+            # Parse any custom settings defined during poll creation
+            settings = {}
+            if question.settings:
+                try:
+                    settings = json.loads(question.settings)
+                except json.JSONDecodeError:
+                    pass
+            
+            # Apply any field-level settings from the question settings
+            field_attrs = {
+                'class': f'question-field question-type-{question_type}',
+                'data-question-id': question.id
+            }
+            
+            # Handle each question type according to how it was defined in creation
             if question_type == 'single_choice':
-                choices = [(choice.id, choice.text) for choice in question.choices.all()]
+                choices = [(choice.id, choice.text) for choice in question.choices.all().order_by('order')]
                 self.fields[field_name] = forms.ChoiceField(
                     label=question.text,
                     choices=choices,
-                    widget=forms.RadioSelect,
-                    required=question.is_required
+                    widget=forms.RadioSelect(attrs=field_attrs),
+                    required=question.is_required,
+                    help_text=settings.get('help_text', '')
                 )
             
             elif question_type == 'multiple_choice':
-                choices = [(choice.id, choice.text) for choice in question.choices.all()]
+                choices = [(choice.id, choice.text) for choice in question.choices.all().order_by('order')]
                 self.fields[field_name] = forms.MultipleChoiceField(
                     label=question.text,
                     choices=choices,
-                    widget=forms.CheckboxSelectMultiple,
-                    required=question.is_required
+                    widget=forms.CheckboxSelectMultiple(attrs=field_attrs),
+                    required=question.is_required,
+                    help_text=settings.get('help_text', '')
                 )
             
-            elif question_type == 'open_ended':
+            elif question_type == 'open_ended' or question_type == 'short_answer':
+                # Apply any specific settings for open-ended questions
+                rows = settings.get('rows', 3)
+                placeholder = settings.get('placeholder', '')
+                max_length = settings.get('max_length', None)
+                
+                widget_attrs = field_attrs.copy()
+                widget_attrs.update({
+                    'rows': rows,
+                    'placeholder': placeholder,
+                    'class': f"{field_attrs.get('class', '')} form-control"
+                })
+                
+                widget = forms.Textarea if question_type == 'open_ended' else forms.TextInput
+                
                 self.fields[field_name] = forms.CharField(
                     label=question.text,
-                    widget=forms.Textarea(attrs={'rows': 3}),
-                    required=question.is_required
+                    widget=widget(attrs=widget_attrs),
+                    required=question.is_required,
+                    max_length=max_length,
+                    help_text=settings.get('help_text', '')
                 )
             
-            elif question_type == 'rating':
-                choices = [(i, str(i)) for i in range(question.min_value, question.max_value + 1)]
+            elif question_type == 'essay':
+                # Apply any specific settings for essay questions
+                rows = settings.get('rows', 6)
+                placeholder = settings.get('placeholder', '')
+                max_length = settings.get('max_length', None)
+                
+                widget_attrs = field_attrs.copy()
+                widget_attrs.update({
+                    'rows': rows,
+                    'placeholder': placeholder,
+                    'class': f"{field_attrs.get('class', '')} form-control"
+                })
+                
+                self.fields[field_name] = forms.CharField(
+                    label=question.text,
+                    widget=forms.Textarea(attrs=widget_attrs),
+                    required=question.is_required,
+                    max_length=max_length,
+                    help_text=settings.get('help_text', '')
+                )
+            
+            elif question_type == 'rating_scale':
+                # Use min_value and max_value as defined in question creation
+                min_val = question.min_value if question.min_value is not None else 1
+                max_val = question.max_value if question.max_value is not None else 5
+                
+                choices = [(i, str(i)) for i in range(min_val, max_val + 1)]
+                
+                widget_attrs = field_attrs.copy()
+                widget_attrs['class'] = f"{field_attrs.get('class', '')} rating-select"
+                
                 self.fields[field_name] = forms.ChoiceField(
                     label=question.text,
                     choices=choices,
-                    widget=forms.RadioSelect(attrs={'class': 'rating-select'}),
-                    required=question.is_required
+                    widget=forms.RadioSelect(attrs=widget_attrs),
+                    required=question.is_required,
+                    help_text=settings.get('help_text', '')
                 )
             
-            elif question_type == 'likert':
-                choices = [
-                    ('strongly_disagree', _('Strongly Disagree')),
-                    ('disagree', _('Disagree')),
-                    ('neutral', _('Neutral')),
-                    ('agree', _('Agree')),
-                    ('strongly_agree', _('Strongly Agree')),
-                ]
+            elif question_type == 'likert_scale':
+                # Use choices defined during creation
+                choices = [(choice.id, choice.text) for choice in question.choices.all().order_by('order')]
+                
+                # If no custom choices were created, use the default ones created in PollCreateView
+                if not choices:
+                    choices = [
+                        (1, _('Strongly Disagree')),
+                        (2, _('Disagree')),
+                        (3, _('Neutral')),
+                        (4, _('Agree')),
+                        (5, _('Strongly Agree'))
+                    ]
+                
                 self.fields[field_name] = forms.ChoiceField(
                     label=question.text,
                     choices=choices,
-                    widget=forms.RadioSelect,
-                    required=question.is_required
+                    widget=forms.RadioSelect(attrs=field_attrs),
+                    required=question.is_required,
+                    help_text=settings.get('help_text', '')
                 )
             
-            elif question_type == 'slider':
-                self.fields[field_name] = forms.FloatField(
+            elif question_type == 'true_false':
+                # True/False questions use the choices created in PollCreateView
+                choices = [(choice.id, choice.text) for choice in question.choices.all().order_by('order')]
+                
+                self.fields[field_name] = forms.ChoiceField(
                     label=question.text,
-                    min_value=question.min_value,
-                    max_value=question.max_value,
-                    widget=forms.NumberInput(attrs={
-                        'type': 'range',
-                        'step': question.step_value or 1,
-                        'class': 'form-range'
-                    }),
-                    required=question.is_required
+                    choices=choices,
+                    widget=forms.RadioSelect(attrs=field_attrs),
+                    required=question.is_required,
+                    help_text=settings.get('help_text', '')
+                )
+            
+            # Add support for any other question types defined in QuestionType model
+            else:
+                # Generic fallback for custom question types
+                self.fields[field_name] = forms.CharField(
+                    label=question.text,
+                    required=question.is_required,
+                    help_text=f"Question type '{question_type}' may not be fully supported"
                 )
 
     def save(self):
@@ -294,26 +376,44 @@ class PollResponseForm(forms.Form):
             raise ValueError("Form must be valid before saving")
         
         saved_responses = []
-        for field_name, response_value in self.cleaned_data.items():
-            if field_name.startswith('question_'):
-                question_id = int(field_name.split('_')[1])
-                question = Question.objects.get(id=question_id)
-                
-                if question.question_type.slug == 'multiple_choice':
-                    response_data = json.dumps(list(response_value))  # Save as JSON
-                else:
-                    response_data = str(response_value)
-                
-                response, created = PollResponse.objects.update_or_create(
-                    question=question,
-                    user=self.user,
-                    defaults={'response_data': response_data}
-                )
-                
-                saved_responses.append(response)
+        
+        # Begin a transaction to ensure all responses are saved atomically
+        with transaction.atomic():
+            for field_name, response_value in self.cleaned_data.items():
+                if field_name.startswith('question_'):
+                    question_id = int(field_name.split('_')[1])
+                    
+                    try:
+                        question = Question.objects.get(id=question_id)
+                    except Question.DoesNotExist:
+                        continue  # Skip if question was deleted
+                    
+                    # Format response data based on question type
+                    question_type = question.question_type.slug
+                    
+                    if question_type == 'multiple_choice':
+                        # For multiple choice, store as JSON array
+                        response_data = json.dumps(list(response_value))
+                    elif question_type in ['rating_scale', 'likert_scale']:
+                        # Store numeric values as numbers, not strings
+                        try:
+                            response_data = float(response_value)
+                        except (ValueError, TypeError):
+                            response_data = str(response_value)
+                    else:
+                        # For other types, store as string
+                        response_data = str(response_value)
+                    
+                    # Create or update the response - don't include poll directly
+                    response, created = PollResponse.objects.update_or_create(
+                        question=question,
+                        user=self.user,
+                        defaults={'response_data': response_data}
+                    )
+                    
+                    saved_responses.append(response)
         
         return saved_responses
-
 
 class PollTemplateForm(forms.ModelForm):
     class Meta:

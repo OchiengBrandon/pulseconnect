@@ -128,16 +128,7 @@ class PollDetailView(DetailView):
         
         return context
 
-
-from django.views.generic.edit import CreateView
-from django.db import transaction
-from django.contrib import messages
-from django.urls import reverse
-from django.http import JsonResponse
-from .models import Poll, QuestionType, Choice, InstitutionProfile
-from .forms import PollForm, QuestionFormSet
-from django.utils.translation import gettext as _
-
+# Poll Creation
 @method_decorator(login_required, name='dispatch')
 class PollCreateView(CreateView):
     model = Poll
@@ -163,7 +154,7 @@ class PollCreateView(CreateView):
         
         # Group question types by category for better UX
         question_types_by_category = {
-            'basic': QuestionType.objects.filter(slug__in=['open_ended', 'short_answer', 'true_false']),
+            'basic': QuestionType.objects.filter(slug__in=['single_choice', 'multiple_choice', 'open_ended', 'short_answer', 'true_false']),
             'choice': QuestionType.objects.filter(slug__in=['single_choice', 'multiple_choice']),
             'scale': QuestionType.objects.filter(slug__in=['rating_scale', 'likert_scale']),
             'text': QuestionType.objects.filter(slug__in=['essay']),
@@ -412,6 +403,7 @@ def submit_poll_response(request, slug):
     poll = get_object_or_404(Poll, slug=slug, status='active')
 
     # Check if the user has already responded
+    # Fixed query: Accessing poll through question instead of directly
     if PollResponse.objects.filter(question__poll=poll, user=request.user).exists():
         messages.error(request, _('You have already responded to this poll.'))
         return redirect('polls:detail', slug=slug)
@@ -431,11 +423,11 @@ def submit_poll_response(request, slug):
     else:
         form = PollResponseForm(poll=poll, user=request.user)
 
-    # Prepare rating ranges for questions of type 'rating' or 'slider'
+    # Prepare rating ranges for questions of type 'rating_scale'
     rating_ranges = {
-        question.id: range(question.min_value, question.max_value + 1)
+        question.id: range(question.min_value or 1, (question.max_value or 5) + 1)
         for question in poll.questions.all()
-        if question.question_type.slug in ['rating', 'slider']
+        if question.question_type.slug == 'rating_scale'
     }
 
     return render(request, 'polls/poll_respond.html', {

@@ -1,594 +1,249 @@
-{% extends 'base.html' %}
+{% extends "base.html" %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}Respond to {{ poll.title }} - PulseConnect{% endblock %}
-
-{% block page_title %}Respond to Poll{% endblock %}
+{% block title %}{{ poll.title }} | {% trans "Respond" %}{% endblock %}
 
 {% block content %}
-<div class="response-container">
-    <!-- Poll Overview Card -->
-    <div class="overview-card">
-        <div class="poll-status-bar">
-            <div class="status-indicator {% if poll.is_active %}active{% else %}inactive{% endif %}">
-                <i class="ri-time-line"></i>
-                {% if poll.is_active %}
-                    <span>{{ poll.end_date|timeuntil }} remaining</span>
-                {% else %}
-                    <span>Poll closed</span>
-                {% endif %}
-            </div>
-            <div class="progress-wrapper">
-                <div class="progress-text">Question <span id="currentQuestion">1</span> of {{ poll.questions.count }}</div>
-                <div class="progress-bar">
-                    <div class="progress" id="progressBar" style="width: 0%"></div>
-                </div>
-            </div>
+<div class="container my-4">
+    <div class="card shadow">
+        <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+            <h2 class="mb-0">{{ poll.title }}</h2>
+            <span class="badge badge-light">{{ poll.category.name|default:"Uncategorized" }}</span>
         </div>
-
-        <div class="poll-meta">
-            <div class="creator-info">
-                <img src="{{ poll.creator.profile_picture.url|default:'https://via.placeholder.com/40' }}" 
-                     alt="{{ poll.creator.get_full_name }}"
-                     class="creator-avatar">
-                <div class="meta-text">
-                    <h2 class="poll-title">{{ poll.title }}</h2>
-                    <p class="creator-name">Created by {{ poll.creator.get_full_name }}</p>
+        
+        <div class="card-body">
+            <div class="mb-4">
+                <p class="lead">{{ poll.description }}</p>
+                {% if poll.end_date %}
+                <div class="alert alert-info">
+                    <i class="fas fa-clock"></i> {% trans "This poll ends on" %} {{ poll.end_date|date:"F j, Y" }}
                 </div>
-            </div>
-            <div class="poll-tags">
-                {% if poll.category %}
-                <span class="tag category" style="background-color: {{ poll.category.color }}">
-                    {{ poll.category.name }}
-                </span>
                 {% endif %}
-                <span class="tag type">{{ poll.get_poll_type_display }}</span>
             </div>
+            
+            <form method="post" id="poll-response-form">
+                {% csrf_token %}
+                {% if form.non_field_errors %}
+                <div class="alert alert-danger">
+                    {% for error in form.non_field_errors %}
+                    <p>{{ error }}</p>
+                    {% endfor %}
+                </div>
+                {% endif %}
+                
+                {% for field in form %}
+                    {% if field.name|slice:":9" == "question_" %}
+                        {% with question_id=field.name|slice:"9:" %}
+                        <div class="question card mb-4" id="question-{{ question_id }}">
+                            <div class="card-header {% if field.field.required %}bg-light{% else %}bg-light text-muted{% endif %}">
+                                <h4 class="mb-0">
+                                    {{ field.label }}
+                                    {% if not field.field.required %}
+                                    <small class="text-muted">({% trans "Optional" %})</small>
+                                    {% endif %}
+                                </h4>
+                            </div>
+                            <div class="card-body">
+                                {% if field.errors %}
+                                <div class="alert alert-danger">
+                                    {% for error in field.errors %}
+                                    <p>{{ error }}</p>
+                                    {% endfor %}
+                                </div>
+                                {% endif %}
+                                
+                                {% if field.help_text %}
+                                <p class="text-muted small mb-3">{{ field.help_text }}</p>
+                                {% endif %}
+
+                                {% if "single_choice" in field.field.widget.attrs.class %}
+                                    <div class="options-list">
+                                        {{ field }}
+                                    </div>
+                                {% elif "multiple_choice" in field.field.widget.attrs.class %}
+                                    <div class="options-list">
+                                        {{ field }}
+                                    </div>
+                                {% elif "open_ended" in field.field.widget.attrs.class %}
+                                    {{ field }}
+                                    {% if field.field.max_length %}
+                                    <div class="small text-muted mt-1">
+                                        <span id="{{ field.id_for_label }}-count">0</span>/{{ field.field.max_length }}
+                                    </div>
+                                    {% endif %}
+                                {% elif "rating" in field.field.widget.attrs.class %}
+                                    <div class="rating-selector">
+                                        {% for radio in field %}
+                                        <div class="rating-option">
+                                            {{ radio.tag }}
+                                            <label for="{{ radio.id_for_label }}" class="rating-label">{{ radio.choice_label }}</label>
+                                        </div>
+                                        {% endfor %}
+                                    </div>
+                                {% elif "likert" in field.field.widget.attrs.class %}
+                                    <div class="likert-scale">
+                                        <div class="likert-options">
+                                            {{ field }}
+                                        </div>
+                                    </div>
+                                {% elif "slider" in field.field.widget.attrs.class %}
+                                    <div class="slider-container">
+                                        {{ field }}
+                                        <div class="slider-value" id="{{ field.name }}_value">
+                                            {{ field.value|default:field.field.widget.attrs.min }}
+                                        </div>
+                                    </div>
+                                    <div class="slider-labels d-flex justify-content-between">
+                                        <span>{{ field.field.widget.attrs.min }}</span>
+                                        <span>{{ field.field.widget.attrs.max }}</span>
+                                    </div>
+                                {% else %}
+                                    {{ field }}
+                                {% endif %}
+                            </div>
+                        </div>
+                        {% endwith %}
+                    {% endif %}
+                {% endfor %}
+                
+                <div class="d-flex justify-content-between mt-4">
+                    <a href="{% url 'polls:detail' slug=poll.slug %}" class="btn btn-secondary">
+                        <i class="fas fa-arrow-left"></i> {% trans "Back" %}
+                    </a>
+                    <button type="submit" class="btn btn-primary">
+                        <i class="fas fa-paper-plane"></i> {% trans "Submit Response" %}
+                    </button>
+                </div>
+            </form>
         </div>
     </div>
-
-    <!-- Response Form -->
-    <form method="post" id="responseForm" class="response-form">
-        {% csrf_token %}
-        
-        <div class="questions-container">
-            {% for question in poll.questions.all %}
-            <div class="question-card" data-question="{{ forloop.counter }}" {% if not forloop.first %}style="display: none;"{% endif %}>
-                <div class="question-header">
-                    <span class="question-number">Question {{ forloop.counter }}</span>
-                    {% if question.is_required %}
-                    <span class="required-badge">Required</span>
-                    {% endif %}
-                </div>
-
-                <div class="question-content">
-                    <label class="question-label">{{ question.text }}</label>
-                    
-                    <div class="answer-container">
-                        {% if question.question_type.slug == 'single_choice' %}
-                            <div class="radio-options">
-                                {% for choice in question.choices.all %}
-                                <label class="radio-option">
-                                    <input type="radio" name="question_{{ question.id }}" value="{{ choice.id }}">
-                                    <div class="option-content">
-                                        <span class="option-text">{{ choice.text }}</span>
-                                    </div>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        
-                        {% elif question.question_type.slug == 'multiple_choice' %}
-                            <div class="checkbox-options">
-                                {% for choice in question.choices.all %}
-                                <label class="checkbox-option">
-                                    <input type="checkbox" name="question_{{ question.id }}" value="{{ choice.id }}">
-                                    <div class="option-content">
-                                        <span class="option-text">{{ choice.text }}</span>
-                                    </div>
-                                </label>
-                                {% endfor %}
-                            </div>
-                        
-                        {% elif question.question_type.slug == 'open_ended' %}
-                            <div class="input-wrapper">
-                                <textarea name="question_{{ question.id }}" rows="3" title="Provide your response" placeholder="Type your answer here..."></textarea>
-                            </div>
-
-                        {% elif question.question_type.slug == 'rating' %}
-                            <div class="radio-options">
-                                {% for question_id, range_values in rating_ranges %}
-                                    {% if question.id == question_id %}
-                                        {% for i in range_values %}
-                                        <label class="radio-option">
-                                            <input type="radio" name="question_{{ question.id }}" value="{{ i }}">
-                                            <span>{{ i }}</span>
-                                        </label>
-                                        {% endfor %}
-                                    {% endif %}
-                                {% endfor %}
-                            </div>
-
-                        {% elif question.question_type.slug == 'slider' %}
-                            <input type="range" name="question_{{ question.id }}" min="{{ question.min_value }}" max="{{ question.max_value }}" step="{{ question.step_value }}">
-                        {% endif %}
-
-                        {% if question.help_text %}
-                        <div class="help-text">
-                            <i class="ri-information-line"></i>
-                            <span>{{ question.help_text }}</span>
-                        </div>
-                        {% endif %}
-
-                        {% if question.errors %}
-                        <div class="error-message">
-                            <i class="ri-error-warning-line"></i>
-                            <span>{{ question.errors|join:", " }}</span>
-                        </div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="question-footer">
-                    {% if not forloop.first %}
-                    <button type="button" class="btn-previous" onclick="previousQuestion({{ forloop.counter }})">
-                        <i class="ri-arrow-left-line"></i>
-                        <span>Previous</span>
-                    </button>
-                    {% endif %}
-
-                    {% if forloop.last %}
-                    <button type="submit" class="btn-submit">
-                        <span>Submit Response</span>
-                        <i class="ri-send-plane-line"></i>
-                    </button>
-                    {% else %}
-                    <button type="button" class="btn-next" onclick="nextQuestion({{ forloop.counter }})">
-                        <span>Next</span>
-                        <i class="ri-arrow-right-line"></i>
-                    </button>
-                    {% endif %}
-                </div>
-            </div>
-            {% endfor %}
-        </div>
-    </form>
 </div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Character counter for text fields
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(function(textarea) {
+        textarea.addEventListener('input', function() {
+            const counterId = this.id + '-count';
+            const counter = document.getElementById(counterId);
+            if (counter) {
+                counter.textContent = this.value.length;
+            }
+        });
+        // Trigger initial count
+        textarea.dispatchEvent(new Event('input'));
+    });
+    
+    // Enhance sliders to update value display
+    const sliders = document.querySelectorAll('input[type="range"]');
+    sliders.forEach(function(slider) {
+        slider.addEventListener('input', function() {
+            const valueDisplay = document.getElementById(this.name + '_value');
+            if (valueDisplay) {
+                valueDisplay.textContent = this.value;
+            }
+        });
+        // Trigger initial display
+        slider.dispatchEvent(new Event('input'));
+    });
+    
+    // Style rating options
+    const ratingOptions = document.querySelectorAll('.rating-option');
+    ratingOptions.forEach(function(option) {
+        option.addEventListener('click', function() {
+            // Remove active class from all options in the same group
+            const ratingContainer = this.closest('.rating-selector');
+            ratingContainer.querySelectorAll('.rating-option').forEach(function(opt) {
+                opt.classList.remove('active');
+            });
+            // Add active class to the clicked option
+            this.classList.add('active');
+        });
+    });
+});
+</script>
 
 <style>
-    :root {
-        --primary-gradient: linear-gradient(135deg, var(--primary) 0%, var(--primary-light) 100%);
-        --card-shadow: 0 8px 32px rgba(0, 0, 0, 0.08);
-        --transition-smooth: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
-        --input-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.06);
-    }
-    
-    .response-container {
-        max-width: 800px;
-        margin: 0 auto;
-        padding: 2rem;
-    }
-    
-    /* Overview Card */
-    .overview-card {
-        background: var(--surface);
-        border-radius: 20px;
-        padding: 1.5rem;
-        margin-bottom: 2rem;
-        box-shadow: var(--card-shadow);
-    }
-    
-    .poll-status-bar {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-        padding-bottom: 1.5rem;
-        border-bottom: 1px solid var(--border);
-    }
-    
-    .status-indicator {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.5rem 1rem;
-        border-radius: 20px;
-        font-size: 0.875rem;
-    }
-    
-    .status-indicator.active {
-        background: rgba(16, 185, 129, 0.1);
-        color: #10b981;
-    }
-    
-    .status-indicator.inactive {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-    }
-    
-    .progress-wrapper {
-        display: flex;
-        flex-direction: column;
-        gap: 0.5rem;
-        min-width: 200px;
-    }
-    
-    .progress-text {
-        font-size: 0.875rem;
-        color: var(--text-2);
-        text-align: right;
-    }
-    
-    .progress-bar {
-        height: 6px;
-        background: var(--surface-2);
-        border-radius: 3px;
-        overflow: hidden;
-    }
-    
-    .progress {
-        height: 100%;
-        background: var(--primary-gradient);
-        transition: var(--transition-smooth);
-    }
-    
-    .poll-meta {
-        display: flex;
-        justify-content: space-between;
-        align-items: flex-start;
-    }
-    
-    .creator-info {
-        display: flex;
-        align-items: center;
-        gap: 1rem;
-    }
-    
-    .creator-avatar {
-        width: 48px;
-        height: 48px;
-        border-radius: 50%;
-        object-fit: cover;
-    }
-    
-    .meta-text {
-        display: flex;
-        flex-direction: column;
-        gap: 0.25rem;
-    }
-    
-    .poll-title {
-        font-size: 1.25rem;
-        font-weight: 600;
-        color: var(--text);
-        margin: 0;
-    }
-    
-    .creator-name {
-        font-size: 0.875rem;
-        color: var(--text-2);
-        margin: 0;
-    }
-    
-    /* Question Cards */
-    .question-card {
-        background: var(--surface);
-        border-radius: 20px;
-        padding: 2rem;
-        margin-bottom: 1rem;
-        box-shadow: var(--card-shadow);
-        transition: var(--transition-smooth);
-    }
-    
-    .question-header {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-bottom: 1.5rem;
-    }
-    
-    .question-number {
-        font-size: 0.875rem;
-        color: var(--text-2);
-        font-weight: 500;
-    }
-    
-    .required-badge {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-        padding: 0.25rem 0.75rem;
-        border-radius: 12px;
-        font-size: 0.75rem;
-        font-weight: 500;
-    }
-    
-    .question-label {
-        display: block;
-        font-size: 1.125rem;
-        font-weight: 500;
-        color: var(--text);
-        margin-bottom: 1.5rem;
-    }
-    
-    /* Form Elements */
-    .radio-options, .checkbox-options {
-        display: flex;
-        flex-direction: column;
-        gap: 1rem;
-    }
-    
-    .radio-option, .checkbox-option {
-        background: var(--surface-2);
-        border-radius: 12px;
-        padding: 1rem;
-        cursor: pointer;
-        transition: var(--transition-smooth);
-    }
-    
-    .radio-option:hover, .checkbox-option:hover {
-        background: var(--surface-3);
-    }
-    
-    .option-content {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-    }
-    
-    .option-text {
-        margin-left: 0.5rem;
-    }
-    
-    .option-indicator {
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        border: 2px solid var(--border);
-        transition: var(--transition-smooth);
-    }
-    
-    input[type="radio"]:checked + .option-content .option-indicator,
-    input[type="checkbox"]:checked + .option-content .option-indicator {
-        background: var(--primary-gradient);
-        border-color: var(--primary);
-    }
-    
-    .range-container {
-        padding: 1rem 0;
-    }
-    
-    .range-wrapper {
-        position: relative;
-        padding: 1rem 0;
-    }
-    
-    input[type="range"] {
-        width: 100%;
-        height: 6px;
-        -webkit-appearance: none;
-        background: var(--surface-2);
-        border-radius: 3px;
-        outline: none;
-    }
-    
-    input[type="range"]::-webkit-slider-thumb {
-        -webkit-appearance: none;
-        width: 20px;
-        height: 20px;
-        border-radius: 50%;
-        background: var(--primary-gradient);
-        cursor: pointer;
-        box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
-    }
-    
-    .range-labels {
-        display: flex;
-        justify-content: space-between;
-        margin-top: 0.5rem;
-        color: var(--text-2);
-        font-size: 0.875rem;
-    }
-    
-    .range-value {
-        text-align: center;
-        font-weight: 500;
-        color: var(--text);
-        margin-top: 1rem;
-    }
-    
-    .input-wrapper {
-        background: var(--surface-2);
-        border-radius: 12px;
-        padding: 0.5rem;
-    }
-    
-    textarea, input[type="text"] {
-        width: 100%;
-        padding: 1rem;
-        border: none;
-        background: transparent;
-        color: var(--text);
-        font-size: 1rem;
-        resize: vertical;
-        min-height: 100px;
-    }
-    
-    /* Footer Buttons */
-    .question-footer {
-        display: flex;
-        justify-content: space-between;
-        align-items: center;
-        margin-top: 2rem;
-    }
-    
-    .btn-previous, .btn-next, .btn-submit {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        padding: 0.75rem 1.5rem;
-        border-radius: 12px;
-        font-weight: 500;
-        transition: var(--transition-smooth);
-        border: none;
-        cursor: pointer;
-    }
-    
-    .btn-previous {
-        background: var(--surface-2);
-        color: var(--text);
-    }
-    
-    .btn-next, .btn-submit {
-        background: var(--primary-gradient);
-        color: white;
-    }
-    
-    .btn-previous:hover {
-        background: var(--surface-3);
-    }
-    
-    .btn-next:hover, .btn-submit:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 12px rgba(99, 102, 241, 0.2);
-    }
-    
-    /* Helper Elements */
-    .help-text, .error-message {
-        display: flex;
-        align-items: center;
-        gap: 0.5rem;
-        margin-top: 1rem;
-        padding: 0.75rem;
-        border-radius: 8px;
-        font-size: 0.875rem;
-    }
-    
-    .help-text {
-        background: rgba(99, 102, 241, 0.1);
-        color: var(--primary);
-    }
-    
-    .error-message {
-        background: rgba(239, 68, 68, 0.1);
-        color: #ef4444;
-    }
-    
-    /* Responsive Design */
-    @media (max-width: 768px) {
-        .response-container {
-            padding: 1rem;
-        }
-    
-        .poll-meta {
-            flex-direction: column;
-            gap: 1rem;
-        }
-    
-        .poll-status-bar {
-            flex-direction: column;
-            gap: 1rem;
-            align-items: stretch;
-        }
-    
-        .question-card {
-            padding: 1.5rem;
-        }
-    }
-</style>
+/* Rating scale styling */
+.rating-selector {
+    display: flex;
+    justify-content: space-between;
+    margin: 1rem 0;
+}
 
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        updateProgress(1);
-        
-        // Range input handlers
-        document.querySelectorAll('input[type="range"]').forEach(range => {
-            const valueDisplay = document.getElementById(`rangeValue${range.closest('.question-card').dataset.question}`);
-            
-            range.addEventListener('input', (e) => {
-                valueDisplay.textContent = e.target.value;
-            });
-        });
-    });
-    
-    function updateProgress(currentQuestionNum) {
-        const totalQuestions = {{ poll.questions.count }};
-        const progress = (currentQuestionNum / totalQuestions) * 100;
-        
-        document.getElementById('currentQuestion').textContent = currentQuestionNum;
-        document.getElementById('progressBar').style.width = `${progress}%`;
-    }
-    
-    function nextQuestion(currentNum) {
-        const currentQuestion = document.querySelector(`[data-question="${currentNum}"]`);
-        const nextQuestion = document.querySelector(`[data-question="${currentNum + 1}"]`);
-        
-        if (validateQuestion(currentQuestion)) {
-            currentQuestion.style.display = 'none';
-            nextQuestion.style.display = 'block';
-            updateProgress(currentNum + 1);
-            
-            nextQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    }
-    
-    function previousQuestion(currentNum) {
-        const currentQuestion = document.querySelector(`[data-question="${currentNum}"]`);
-        const previousQuestion = document.querySelector(`[data-question="${currentNum - 1}"]`);
-        
-        currentQuestion.style.display = 'none';
-        previousQuestion.style.display = 'block';
-        updateProgress(currentNum - 1);
-        
-        previousQuestion.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    }
-    
-    function validateQuestion(questionElement) {
-        const required = questionElement.querySelector('.required-badge');
-        if (!required) return true;
-        
-        const inputs = questionElement.querySelectorAll('input, textarea');
-        let valid = false;
-        
-        inputs.forEach(input => {
-            if (input.type === 'radio' || input.type === 'checkbox') {
-                if (input.checked) valid = true;
-            } else {
-                if (input.value.trim()) valid = true;
-            }
-        });
-        
-        if (!valid) {
-            const errorDiv = questionElement.querySelector('.error-message') || document.createElement('div');
-            errorDiv.className = 'error-message';
-            errorDiv.innerHTML = '<i class="ri-error-warning-line"></i><span>This question requires an answer</span>';
-            
-            if (!questionElement.querySelector('.error-message')) {
-                questionElement.querySelector('.answer-container').appendChild(errorDiv);
-            }
-        }
-        
-        return valid;
-    }
-    
-    // Form submission handler
-    document.getElementById('responseForm').addEventListener('submit', function(e) {
-        e.preventDefault();
-        
-        const allQuestions = document.querySelectorAll('.question-card');
-        let allValid = true;
-        
-        allQuestions.forEach(question => {
-            if (!validateQuestion(question)) {
-                allValid = false;
-                question.style.display = 'block';
-            }
-        });
-        
-        if (allValid) {
-            this.submit();
-        } else {
-            const firstInvalid = document.querySelector('.error-message').closest('.question-card');
-            firstInvalid.scrollIntoView({ behavior: 'smooth', block: 'start' });
-        }
-    });
-</script>
+.rating-option {
+    text-align: center;
+    padding: 0.5rem;
+    border-radius: 4px;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.rating-option input[type="radio"] {
+    display: none;
+}
+
+.rating-option label {
+    cursor: pointer;
+    display: block;
+    font-size: 1.2rem;
+    margin-top: 0.5rem;
+}
+
+.rating-option.active,
+.rating-option:hover {
+    background-color: rgba(13, 110, 253, 0.1);
+}
+
+/* Likert scale styling */
+.likert-scale {
+    margin: 1rem 0;
+}
+
+.likert-options {
+    display: flex;
+    justify-content: space-between;
+    flex-wrap: wrap;
+}
+
+.likert-options input[type="radio"] {
+    margin-right: 5px;
+}
+
+/* Slider styling */
+.slider-container {
+    margin: 2rem 0 0.5rem;
+    position: relative;
+}
+
+.slider-value {
+    text-align: center;
+    font-weight: bold;
+    margin-top: 0.5rem;
+}
+
+.slider-labels {
+    margin-bottom: 1rem;
+    color: #666;
+    font-size: 0.8rem;
+}
+
+/* Options list styling */
+.options-list {
+    margin-left: 1rem;
+}
+
+.options-list ul {
+    list-style: none;
+    padding-left: 0;
+}
+
+.options-list li {
+    margin-bottom: 0.5rem;
+}
+</style>
 {% endblock %}

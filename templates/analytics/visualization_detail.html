@@ -132,7 +132,7 @@
                             <td>
                                 {% if dataset.source_polls.exists %}
                                 {% for poll in dataset.source_polls.all %}
-                                <a href="{% url 'polls:poll_detail' poll.id %}" class="badge bg-secondary me-1 text-decoration-none">
+                                <a href="{% url 'polls:detail' poll.id %}" class="badge bg-secondary me-1 text-decoration-none">
                                     {{ poll.title }}
                                 </a>
                                 {% endfor %}
