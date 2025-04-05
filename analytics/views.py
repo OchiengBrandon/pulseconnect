@@ -1322,14 +1322,25 @@ def process_import_job(job):
         raise
 
 
+
+
 class AnalyticsJobListView(LoginRequiredMixin, ListView):
     model = AnalyticsJob
     template_name = 'analytics/job_list.html'
     context_object_name = 'jobs'
     paginate_by = 20
-    
+
     def get_queryset(self):
+        # Filter jobs created by the logged-in user and order by created_at
         return AnalyticsJob.objects.filter(creator=self.request.user).order_by('-created_at')
+
+    def get_context_data(self, **kwargs):
+        # Get the default context
+        context = super().get_context_data(**kwargs)
+        # Add filtered jobs to the context using the correct status values
+        context['active_jobs'] = self.get_queryset().filter(status='active')  # Adjust 'active' as needed
+        context['completed_jobs'] = self.get_queryset().filter(status='completed')  # Adjust as needed
+        return context
 
 
 @login_required

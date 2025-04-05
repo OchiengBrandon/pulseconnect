@@ -1,69 +1,47 @@
 {% extends 'base.html' %}
-{% load static %}
 
 {% block title %}Analytics Dashboard{% endblock %}
 
+{% block page_title %}Analytics Dashboard{% endblock %}
+
 {% block content %}
-<div class="dashboard-wrapper">
-    <!-- Stats Overview -->
+<div class="dashboard-container">
+    <!-- Overview Stats -->
     <div class="stats-grid">
-        <!-- Total Datasets -->
         <div class="stat-card">
             <div class="stat-icon purple">
                 <i class="ri-database-2-line"></i>
             </div>
-            <div class="stat-info">
+            <div>
                 <h3 class="stat-value">{{ datasets.count }}</h3>
-                <p class="stat-label">Datasets</p>
-            </div>
-            <div class="stat-trend positive">
-                <i class="ri-arrow-up-line"></i>
-                <span>12%</span>
+                <p class="stat-label">Recent Datasets</p>
             </div>
         </div>
-
-        <!-- Active Reports -->
         <div class="stat-card">
             <div class="stat-icon green">
                 <i class="ri-file-chart-line"></i>
             </div>
-            <div class="stat-info">
+            <div>
                 <h3 class="stat-value">{{ reports.count }}</h3>
-                <p class="stat-label">Reports</p>
-            </div>
-            <div class="stat-trend positive">
-                <i class="ri-arrow-up-line"></i>
-                <span>8%</span>
+                <p class="stat-label">Recent Reports</p>
             </div>
         </div>
-
-        <!-- Visualizations -->
         <div class="stat-card">
             <div class="stat-icon blue">
                 <i class="ri-bar-chart-box-line"></i>
             </div>
-            <div class="stat-info">
+            <div>
                 <h3 class="stat-value">{{ visualizations.count }}</h3>
-                <p class="stat-label">Visualizations</p>
-            </div>
-            <div class="stat-trend positive">
-                <i class="ri-arrow-up-line"></i>
-                <span>15%</span>
+                <p class="stat-label">Recent Visualizations</p>
             </div>
         </div>
-
-        <!-- Active Jobs -->
         <div class="stat-card">
-            <div class="stat-icon orange">
-                <i class="ri-cpu-line"></i>
+            <div class="stat-icon" style="background-color: rgba(236, 72, 153, 0.1); color: #ec4899;">
+                <i class="ri-rocket-line"></i>
             </div>
-            <div class="stat-info">
+            <div>
                 <h3 class="stat-value">{{ jobs.count }}</h3>
                 <p class="stat-label">Active Jobs</p>
-            </div>
-            <div class="stat-trend neutral">
-                <i class="ri-subtract-line"></i>
-                <span>Stable</span>
             </div>
         </div>
     </div>
@@ -77,62 +55,35 @@
                     <i class="ri-database-2-line"></i>
                     Recent Datasets
                 </h2>
-                <a href="{% url 'analytics:dataset_list' %}" class="btn btn-sm btn-outline">
-                    View All <i class="ri-arrow-right-line"></i>
+                <a href="{% url 'analytics:dataset_list' %}" class="btn btn-sm btn-primary">
+                    View All
                 </a>
             </div>
             <div class="widget-content">
-                <div class="dataset-list">
-                    {% for dataset in datasets|slice:":5" %}
-                    <div class="dataset-item">
-                        <div class="dataset-info">
-                            <h3 class="dataset-title">{{ dataset.title }}</h3>
-                            <p class="dataset-meta">
-                                <span class="meta-item">
-                                    <i class="ri-time-line"></i>
-                                    {{ dataset.created_at|timesince }} ago
-                                </span>
-                                <span class="meta-item">
-                                    <i class="ri-user-line"></i>
-                                    {{ dataset.creator.get_short_name }}
-                                </span>
-                            </p>
-                        </div>
-                        <div class="dataset-actions">
-                            <a href="{% url 'analytics:dataset_detail' uuid=dataset.uuid %}" 
-                               class="btn btn-icon" title="View Dataset">
-                                <i class="ri-eye-line"></i>
-                            </a>
-                        </div>
+                {% if datasets %}
+                    <div class="list-group">
+                        {% for dataset in datasets %}
+                        <a href="{% url 'analytics:dataset_detail' dataset.uuid %}" class="list-item">
+                            <div class="list-item-icon">
+                                <i class="ri-file-list-line"></i>
+                            </div>
+                            <div class="list-item-content">
+                                <h4>{{ dataset.name }}</h4>
+                                <p>{{ dataset.description|truncatechars:60 }}</p>
+                                <div class="list-item-meta">
+                                    <span><i class="ri-time-line"></i> {{ dataset.created_at|timesince }} ago</span>
+                                    <span><i class="ri-user-line"></i> {{ dataset.creator.get_short_name }}</span>
+                                </div>
+                            </div>
+                        </a>
+                        {% endfor %}
                     </div>
-                    {% empty %}
+                {% else %}
                     <div class="empty-state">
                         <i class="ri-inbox-line"></i>
                         <p>No datasets available</p>
-                        <a href="{% url 'analytics:dataset_create' %}" class="btn btn-primary">
-                            Create Dataset
-                        </a>
                     </div>
-                    {% endfor %}
-                </div>
-            </div>
-        </div>
-
-        <!-- Analytics Chart -->
-        <div class="widget-card">
-            <div class="widget-header">
-                <h2 class="widget-title">
-                    <i class="ri-line-chart-line"></i>
-                    Data Trends
-                </h2>
-                <div class="widget-actions">
-                    <button class="btn btn-sm btn-outline active" data-period="week">Week</button>
-                    <button class="btn btn-sm btn-outline" data-period="month">Month</button>
-                    <button class="btn btn-sm btn-outline" data-period="year">Year</button>
-                </div>
-            </div>
-            <div class="widget-content">
-                <canvas id="trendsChart" height="300"></canvas>
+                {% endif %}
             </div>
         </div>
 
@@ -143,44 +94,35 @@
                     <i class="ri-file-chart-line"></i>
                     Recent Reports
                 </h2>
-                <a href="{% url 'analytics:report_list' %}" class="btn btn-sm btn-outline">
-                    View All <i class="ri-arrow-right-line"></i>
+                <a href="{% url 'analytics:report_list' %}" class="btn btn-sm btn-primary">
+                    View All
                 </a>
             </div>
             <div class="widget-content">
-                <div class="report-list">
-                    {% for report in reports|slice:":5" %}
-                    <div class="report-item">
-                        <div class="report-info">
-                            <h3 class="report-title">{{ report.title }}</h3>
-                            <p class="report-meta">
-                                <span class="meta-item">
-                                    <i class="ri-time-line"></i>
-                                    {{ report.created_at|timesince }} ago
-                                </span>
-                                <span class="meta-item">
-                                    <i class="ri-user-line"></i>
-                                    {{ report.creator.get_short_name }}
-                                </span>
-                            </p>
-                        </div>
-                        <div class="report-actions">
-                            <a href="{% url 'analytics:report_detail' uuid=report.uuid %}" 
-                               class="btn btn-icon" title="View Report">
-                                <i class="ri-eye-line"></i>
-                            </a>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="empty-state">
-                        <i class="ri-file-list-line"></i>
-                        <p>No reports available</p>
-                        <a href="{% url 'analytics:report_create' %}" class="btn btn-primary">
-                            Create Report
+                {% if reports %}
+                    <div class="list-group">
+                        {% for report in reports %}
+                        <a href="{% url 'analytics:report_detail' report.uuid %}" class="list-item">
+                            <div class="list-item-icon">
+                                <i class="ri-file-chart-line"></i>
+                            </div>
+                            <div class="list-item-content">
+                                <h4>{{ report.title }}</h4>
+                                <p>{{ report.summary|truncatechars:60 }}</p>
+                                <div class="list-item-meta">
+                                    <span><i class="ri-time-line"></i> {{ report.created_at|timesince }} ago</span>
+                                    <span><i class="ri-user-line"></i> {{ report.creator.get_short_name }}</span>
+                                </div>
+                            </div>
                         </a>
+                        {% endfor %}
                     </div>
-                    {% endfor %}
-                </div>
+                {% else %}
+                    <div class="empty-state">
+                        <i class="ri-inbox-line"></i>
+                        <p>No reports available</p>
+                    </div>
+                {% endif %}
             </div>
         </div>
 
@@ -191,177 +133,298 @@
                     <i class="ri-bar-chart-box-line"></i>
                     Recent Visualizations
                 </h2>
-                <a href="{% url 'analytics:visualization_list' %}" class="btn btn-sm btn-outline">
-                    View All <i class="ri-arrow-right-line"></i>
+                <a href="{% url 'analytics:visualization_list' %}" class="btn btn-sm btn-primary">
+                    View All
                 </a>
             </div>
             <div class="widget-content">
-                <div class="visualization-grid">
-                    {% for viz in visualizations|slice:":6" %}
-                    <div class="visualization-card">
-                        <div class="visualization-preview">
-                            <!-- Placeholder for visualization preview -->
-                            <div class="viz-placeholder" data-viz-id="{{ viz.id }}">
-                                <i class="ri-{{ viz.get_visualization_type_display|lower }}-chart-line"></i>
+                {% if visualizations %}
+                    <div class="visualization-grid">
+                        {% for viz in visualizations %}
+                        <a href="{% url 'analytics:visualization_detail' viz.id %}" class="visualization-card">
+                            <div class="visualization-preview">
+                                {% if viz.preview_image %}
+                                    <img src="{{ viz.preview_image.url }}" alt="{{ viz.title }}">
+                                {% else %}
+                                    <div class="viz-placeholder">
+                                        <i class="ri-bar-chart-box-line"></i>
+                                    </div>
+                                {% endif %}
                             </div>
-                        </div>
-                        <div class="visualization-info">
-                            <h3 class="visualization-title">{{ viz.title }}</h3>
-                            <p class="visualization-meta">
-                                {{ viz.get_visualization_type_display }}
-                            </p>
-                        </div>
-                        <a href="{% url 'analytics:visualization_detail' pk=viz.pk %}" 
-                           class="visualization-overlay">
-                            <span class="overlay-text">View Details</span>
+                            <div class="visualization-info">
+                                <h4>{{ viz.title }}</h4>
+                                <p>{{ viz.description|truncatechars:40 }}</p>
+                            </div>
                         </a>
+                        {% endfor %}
                     </div>
-                    {% empty %}
+                {% else %}
                     <div class="empty-state">
                         <i class="ri-bar-chart-box-line"></i>
                         <p>No visualizations available</p>
-                        <a href="{% url 'analytics:visualization_create' %}" class="btn btn-primary">
-                            Create Visualization
-                        </a>
                     </div>
-                    {% endfor %}
-                </div>
+                {% endif %}
             </div>
         </div>
 
-        <!-- Active Jobs -->
+        <!-- Recent Jobs -->
         <div class="widget-card">
             <div class="widget-header">
                 <h2 class="widget-title">
-                    <i class="ri-cpu-line"></i>
-                    Active Jobs
+                    <i class="ri-rocket-line"></i>
+                    Recent Jobs
                 </h2>
-                <a href="{% url 'analytics:job_list' %}" class="btn btn-sm btn-outline">
-                    View All <i class="ri-arrow-right-line"></i>
+                <a href="{% url 'analytics:job_list' %}" class="btn btn-sm btn-primary">
+                    View All
                 </a>
             </div>
             <div class="widget-content">
-                <div class="job-list">
-                    {% for job in jobs|slice:":5" %}
-                    <div class="job-item">
-                        <div class="job-info">
-                            <div class="job-status {{ job.status }}">
-                                <i class="ri-checkbox-blank-circle-fill"></i>
-                                {{ job.get_status_display }}
+                {% if jobs %}
+                    <div class="list-group">
+                        {% for job in jobs %}
+                        <div class="list-item">
+                            <div class="list-item-icon">
+                                <i class="ri-rocket-line"></i>
                             </div>
-                            <h3 class="job-title">{{ job.get_job_type_display }}</h3>
-                            <p class="job-meta">
-                                Started {{ job.started_at|timesince }} ago
-                            </p>
-                        </div>
-                        <div class="job-progress">
-                            <div class="progress-bar">
-                                <div class="progress" style="width: {{ job.progress }}%"></div>
+                            <div class="list-item-content">
+                                <h4>{{ job.name }}</h4>
+                                <div class="job-progress">
+                                    <div class="progress-bar" style="width: {{ job.progress }}%"></div>
+                                </div>
+                                <div class="list-item-meta">
+                                    <span class="job-status {{ job.status|lower }}">
+                                        <i class="ri-checkbox-circle-line"></i>
+                                        {{ job.status }}
+                                    </span>
+                                    <span><i class="ri-time-line"></i> {{ job.created_at|timesince }} ago</span>
+                                </div>
                             </div>
-                            <span class="progress-text">{{ job.progress }}%</span>
                         </div>
+                        {% endfor %}
                     </div>
-                    {% empty %}
+                {% else %}
                     <div class="empty-state">
-                        <i class="ri-cpu-line"></i>
+                        <i class="ri-rocket-line"></i>
                         <p>No active jobs</p>
                     </div>
-                    {% endfor %}
-                </div>
+                {% endif %}
             </div>
         </div>
     </div>
 </div>
 
-<!-- Quick Actions Menu -->
-<div class="quick-actions">
-    <button class="action-button" id="quickActionsToggle">
-        <i class="ri-add-line"></i>
-    </button>
-    <div class="quick-actions-menu" id="quickActionsMenu">
-        <a href="{% url 'analytics:dataset_create' %}" class="quick-action-item">
-            <i class="ri-database-2-line"></i>
-            <span>New Dataset</span>
-        </a>
-        <a href="{% url 'analytics:report_create' %}" class="quick-action-item">
-            <i class="ri-file-chart-line"></i>
-            <span>New Report</span>
-        </a>
-        <a href="{% url 'analytics:visualization_create' %}" class="quick-action-item">
-            <i class="ri-bar-chart-box-line"></i>
-            <span>New Visualization</span>
-        </a>
-        <a href="{% url 'analytics:data_import' %}" class="quick-action-item">
-            <i class="ri-upload-cloud-line"></i>
-            <span>Import Data</span>
-        </a>
-    </div>
-</div>
-{% endblock %}
+<style>
+    .dashboard-container {
+        padding: 1rem;
+        max-width: 1600px;
+        margin: 0 auto;
+    }
 
-{% block extra_js %}
-<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
-<script>
-// Initialize charts and other interactive elements
-document.addEventListener('DOMContentLoaded', function() {
-    // Trends Chart
-    const ctx = document.getElementById('trendsChart').getContext('2d');
-    const trendsChart = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: ['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'],
-            datasets: [{
-                label: 'Datasets',
-                data: [12, 19, 3, 5, 2, 3, 7],
-                borderColor: 'rgb(99, 102, 241)',
-                tension: 0.4,
-                fill: false
-            }, {
-                label: 'Reports',
-                data: [7, 11, 5, 8, 3, 7, 9],
-                borderColor: 'rgb(16, 185, 129)',
-                tension: 0.4,
-                fill: false
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: {
-                    position: 'bottom'
-                }
-            },
-            scales: {
-                y: {
-                    beginAtZero: true
-                }
-            }
+    .dashboard-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 1.5rem;
+        margin-top: 1.5rem;
+    }
+
+    .widget-header {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        margin-bottom: 1rem;
+        padding-bottom: 0.75rem;
+        border-bottom: 1px solid var(--border);
+    }
+
+    .widget-title {
+        font-size: 1.125rem;
+        font-weight: 600;
+        margin: 0;
+        display: flex;
+        align-items: center;
+        gap: 0.5rem;
+    }
+
+    .list-group {
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .list-item {
+        display: flex;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem;
+        background: var(--surface-2);
+        border-radius: var(--radius);
+        transition: all 0.3s ease;
+        text-decoration: none;
+        color: var(--text);
+    }
+
+    .list-item:hover {
+        transform: translateY(-2px);
+        background: var(--surface-3);
+    }
+
+    .list-item-icon {
+        width: 40px;
+        height: 40px;
+        border-radius: var(--radius);
+        background: var(--surface);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 1.25rem;
+        color: var(--primary);
+        flex-shrink: 0;
+    }
+
+    .list-item-content {
+        flex: 1;
+        min-width: 0;
+    }
+
+    .list-item-content h4 {
+        margin: 0 0 0.25rem;
+        font-size: 1rem;
+        font-weight: 500;
+    }
+
+    .list-item-content p {
+        margin: 0;
+        color: var(--text-2);
+        font-size: 0.875rem;
+    }
+
+    .list-item-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        margin-top: 0.5rem;
+        font-size: 0.75rem;
+        color: var(--text-2);
+    }
+
+    .list-item-meta span {
+        display: flex;
+        align-items: center;
+        gap: 0.25rem;
+    }
+
+    .empty-state {
+        text-align: center;
+        padding: 2rem;
+        color: var(--text-2);
+    }
+
+    .empty-state i {
+        font-size: 2.5rem;
+        margin-bottom: 0.5rem;
+    }
+
+    .visualization-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 1rem;
+    }
+
+    .visualization-card {
+        text-decoration: none;
+        color: var(--text);
+        transition: transform 0.3s ease;
+    }
+
+    .visualization-card:hover {
+        transform: translateY(-2px);
+    }
+
+    .visualization-preview {
+        aspect-ratio: 16/9;
+        background: var(--surface-2);
+        border-radius: var(--radius);
+        overflow: hidden;
+        margin-bottom: 0.5rem;
+    }
+
+    .visualization-preview img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+    }
+
+    .viz-placeholder {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 2rem;
+        color: var(--text-2);
+    }
+
+    .visualization-info h4 {
+        margin: 0;
+        font-size: 0.875rem;
+        font-weight: 500;
+    }
+
+    .visualization-info p {
+        margin: 0.25rem 0 0;
+        font-size: 0.75rem;
+        color: var(--text-2);
+    }
+
+    .job-progress {
+        height: 4px;
+        background: var(--surface-3);
+        border-radius: 2px;
+        margin: 0.5rem 0;
+        overflow: hidden;
+    }
+
+    .progress-bar {
+        height: 100%;
+        background: var(--primary);
+        border-radius: 2px;
+        transition: width 0.3s ease;
+    }
+
+    .job-status {
+        display: inline-flex;
+        align-items: center;
+        gap: 0.25rem;
+        padding: 0.25rem 0.5rem;
+        border-radius: var(--radius-sm);
+        font-size: 0.75rem;
+        font-weight: 500;
+    }
+
+    .job-status.completed {
+        background: rgba(16, 185, 129, 0.1);
+        color: #10b981;
+    }
+
+    .job-status.running {
+        background: rgba(59, 130, 246, 0.1);
+        color: #3b82f6;
+    }
+
+    .job-status.failed {
+        background: rgba(239, 68, 68, 0.1);
+        color: #ef4444;
+    }
+
+    @media (max-width: 768px) {
+        .dashboard-grid {
+            grid-template-columns: 1fr;
         }
-    });
 
-    // Quick Actions Menu Toggle
-    const quickActionsToggle = document.getElementById('quickActionsToggle');
-    const quickActionsMenu = document.getElementById('quickActionsMenu');
-
-    quickActionsToggle.addEventListener('click', function() {
-        quickActionsMenu.classList.toggle('show');
-    });
-
-    // Close quick actions menu when clicking outside
-    document.addEventListener('click', function(event) {
-        if (!event.target.closest('.quick-actions')) {
-            quickActionsMenu.classList.remove('show');
+        .visualization-grid {
+            grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
         }
-    });
+    }
+</style>
 
-    // Initialize visualization previews
-    document.querySelectorAll('.viz-placeholder').forEach(placeholder => {
-        const vizId = placeholder.dataset.vizId;
-        // Here you would typically load the actual visualization preview
-        // For now, we'll just add a class to style it
-        placeholder.classList.add('viz-loaded');
-    });
-});
-</script>
 {% endblock %}
