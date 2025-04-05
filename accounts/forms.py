@@ -24,7 +24,21 @@ class CustomUserCreationForm(UserCreationForm):
             user.save()
         return user
 
+# Add this to your forms.py file
+from allauth.socialaccount.forms import SignupForm as AllauthSignupForm
 
+class SocialSignupForm(AllauthSignupForm):
+    user_type = forms.ChoiceField(
+        choices=User.USER_TYPE_CHOICES,
+        label=_('User Type'),
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+    
+    def save(self, request):
+        # The actual save happens in the view
+        user = super(SocialSignupForm, self).save(request)
+        return user
+    
 class CustomAuthenticationForm(AuthenticationForm):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)

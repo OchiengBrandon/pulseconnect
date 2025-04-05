@@ -38,6 +38,12 @@ INSTALLED_APPS = [
     'channels',
     'colorfield',
     'django_extensions',
+    'allauth',
+    'allauth.account',
+    'allauth.socialaccount',
+    'allauth.socialaccount.providers.google',
+    'allauth.socialaccount.providers.facebook',
+    'allauth.socialaccount.providers.apple',
     
     # Custom apps
     'accounts',
@@ -61,7 +67,53 @@ MIDDLEWARE = [
     'django.contrib.messages.middleware.MessageMiddleware',
     'django.middleware.clickjacking.XFrameOptionsMiddleware',
     'accessibility.middleware.AccessibilityMiddleware',
+    'allauth.account.middleware.AccountMiddleware'
 ]
+
+
+AUTHENTICATION_BACKENDS = [
+    # Django default
+    'django.contrib.auth.backends.ModelBackend',
+    # django-allauth
+    'allauth.account.auth_backends.AuthenticationBackend',
+]
+
+# Provider specific settings
+SOCIALACCOUNT_PROVIDERS = {
+    'google': {
+        'APP': {
+            'client_id': 'your-google-client-id',
+            'secret': 'your-google-client-secret',
+            'key': ''
+        },
+        'SCOPE': ['profile', 'email'],
+    },
+    'facebook': {
+        'APP': {
+            'client_id': 'your-facebook-app-id',
+            'secret': 'your-facebook-app-secret',
+            'key': ''
+        },
+        'SCOPE': ['email', 'public_profile'],
+        'METHOD': 'oauth2',
+    },
+    'apple': {
+        'APP': {
+            'client_id': 'your-apple-client-id',
+            'secret': 'your-apple-client-secret',
+            'key': '',
+            'certificate_key': 'your-apple-certificate-key'
+        },
+    }
+}
+
+# Social account settings
+ACCOUNT_EMAIL_REQUIRED = True
+ACCOUNT_USERNAME_REQUIRED = True
+ACCOUNT_AUTHENTICATION_METHOD = 'username_email'
+ACCOUNT_EMAIL_VERIFICATION = 'mandatory'
+SOCIALACCOUNT_AUTO_SIGNUP = False  # Require users to complete your signup form
+SOCIALACCOUNT_EMAIL_VERIFICATION = 'none' 
 
 ROOT_URLCONF = 'pulseconnect.urls'
 

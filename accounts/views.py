@@ -15,7 +15,7 @@ from django.http import JsonResponse
 
 from .models import User, UserVerification, InstitutionProfile, Follow
 from .forms import (
-    CustomUserCreationForm, CustomAuthenticationForm, 
+    CustomUserCreationForm, CustomAuthenticationForm, SocialSignupForm, 
     UserProfileForm, InstitutionProfileForm, AccessibilitySettingsForm
 )
 
@@ -63,6 +63,34 @@ class SignUpView(CreateView):
         
         # Log the user in
         login(self.request, user)
+        
+        return response
+
+
+# New view for handling social account signup
+from allauth.socialaccount.views import SignupView as AllauthSignupView
+
+class SocialSignupView(AllauthSignupView):
+    form_class = SocialSignupForm
+    template_name = 'accounts/social_signup.html'
+    
+    def form_valid(self, form):
+        response = super().form_valid(form)
+        user = self.user
+        
+        # Set user type from form data
+        user.user_type = form.cleaned_data['user_type']
+        user.save()
+        
+        # If user is an institution, create institution profile
+        if user.user_type == 'institution':
+            InstitutionProfile.objects.create(user=user)
+        
+        # Create verification record (but mark as verified since email is verified by social provider)
+        UserVerification.objects.create(
+            user=user,
+            is_verified=True
+        )
         
         return response
 
