@@ -19,16 +19,24 @@
                 <h2 class="h4 mb-2">{{ dataset.name }}</h2>
                 <p class="text-2 mb-3">{{ dataset.description }}</p>
                 <div class="d-flex gap-2 flex-wrap">
-                    <button class="btn btn-primary">
-                        <i class="ri-download-line"></i> Export
-                    </button>
+                    <form action="{% url 'analytics:export_dataset' dataset.uuid %}" method="get" class="d-flex gap-2">
+                        <select name="format" class="form-select" required>
+                            <option value="json">JSON</option>
+                            <option value="csv">CSV</option>
+                            <option value="excel">Excel</option>
+                            <option value="pdf">PDF</option>
+                        </select>
+                        <button type="submit" class="btn btn-primary">
+                            <i class="ri-download-line"></i> Export
+                        </button>
+                    </form>
                     {% if user == dataset.creator %}
-                    <button class="btn btn-outline-primary">
+                    <a href="{% url 'analytics:dataset_update' dataset.uuid %}" class="btn btn-outline-primary">
                         <i class="ri-edit-line"></i> Edit
-                    </button>
-                    <button class="btn btn-outline-danger">
+                    </a>
+                    <a href="{% url 'analytics:dataset_delete' dataset.uuid %}" class="btn btn-outline-danger">
                         <i class="ri-delete-bin-line"></i> Delete
-                    </button>
+                    </a>
                     {% endif %}
                 </div>
             </div>
