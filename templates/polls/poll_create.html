@@ -1,596 +1,507 @@
 {% extends "base.html" %}
-{% load static %}
 {% load i18n %}
+{% load static %}
 
 {% block title %}{% trans "Create New Poll" %}{% endblock %}
 
 {% block content %}
-{% load custom_tags %}
 <div class="container py-4">
     <div class="row">
         <div class="col-12">
-            <h1 class="mb-4">{% trans "Create New Poll" %}</h1>
+            <h1 class="mb-4">{% trans "Create a New Poll" %}</h1>
             
-            <form method="post" id="poll-form" class="needs-validation" novalidate>
-                {% csrf_token %}
-                
-                <div class="card mb-4">
-                    <div class="card-header">
-                        <h4>{% trans "Poll Details" %}</h4>
+            {% if messages %}
+                {% for message in messages %}
+                    <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                        {{ message }}
+                        <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
                     </div>
-                    <div class="card-body">
-                        {% if form.non_field_errors %}
-                            <div class="alert alert-danger">
-                                {{ form.non_field_errors }}
-                            </div>
-                        {% endif %}
+                {% endfor %}
+            {% endif %}
+            
+            <div class="card shadow-sm">
+                <div class="card-body">
+                    <form method="post" id="poll-form" enctype="multipart/form-data">
+                        {% csrf_token %}
                         
-                        <div class="row mb-3">
-                            <div class="col-md-8">
-                                <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
-                                {{ form.title|add_class:"form-control" }}
-                                {% if form.title.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.title.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-4">
-                                <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
-                                {{ form.category|add_class:"form-select" }}
-                                {% if form.category.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.category.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="mb-3">
-                            <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
-                            {{ form.description|add_class:"form-control" }}
-                            {% if form.description.errors %}
-                                <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
-                            {% endif %}
-                        </div>
-                        
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="{{ form.poll_type.id_for_label }}" class="form-label">{{ form.poll_type.label }}</label>
-                                {{ form.poll_type|add_class:"form-select" }}
-                                {% if form.poll_type.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.poll_type.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-4">
-                                <label for="{{ form.start_date.id_for_label }}" class="form-label">{{ form.start_date.label }}</label>
-                                {{ form.start_date|add_class:"form-control" }}
-                                {% if form.start_date.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.start_date.errors }}</div>
-                                {% endif %}
-                            </div>
-                            <div class="col-md-4">
-                                <label for="{{ form.end_date.id_for_label }}" class="form-label">{{ form.end_date.label }}</label>
-                                {{ form.end_date|add_class:"form-control" }}
-                                <small class="text-muted">{% trans "Optional. Leave blank for no end date." %}</small>
-                                {% if form.end_date.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.end_date.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div id="institution-field" class="mb-3" style="display: none;">
-                            <label for="{{ form.restricted_to_institution.id_for_label }}" class="form-label">{{ form.restricted_to_institution.label }}</label>
-                            {{ form.restricted_to_institution|add_class:"form-control" }}
-                            {% if form.restricted_to_institution.errors %}
-                                <div class="invalid-feedback d-block">{{ form.restricted_to_institution.errors }}</div>
-                            {% endif %}
-                        </div>yy
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
-                                {{ form.status|add_class:"form-select" }}
-                                {% if form.status.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.status.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                        
-                        <div class="row mb-3">
+                        <div class="row mb-4">
                             <div class="col-12">
-                                <label for="{{ form.tags.id_for_label }}" class="form-label">{{ form.tags.label }}</label>
-                                {{ form.tags|add_class:"form-control" }}
-                                <small class="text-muted">{% trans "Enter tags separated by commas" %}</small>
-                                {% if form.tags.errors %}
-                                    <div class="invalid-feedback d-block">{{ form.tags.errors }}</div>
-                                {% endif %}
+                                <h3>{% trans "Poll Details" %}</h3>
+                                <hr>
                             </div>
                         </div>
                         
-                        <div class="row mb-3">
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    {{ form.is_featured|add_class:"form-check-input" }}
-                                    <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">
-                                        {{ form.is_featured.label }}
-                                    </label>
+                        <!-- Poll basic details -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label for="{{ form.title.id_for_label }}" class="form-label">{{ form.title.label }}</label>
+                                    {{ form.title }}
+                                    {% if form.title.help_text %}
+                                        <div class="form-text text-muted">{{ form.title.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.title.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.title.errors }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
+                            
                             <div class="col-md-4">
-                                <div class="form-check">
-                                    {{ form.allow_comments|add_class:"form-check-input" }}
-                                    <label class="form-check-label" for="{{ form.allow_comments.id_for_label }}">
-                                        {{ form.allow_comments.label }}
-                                    </label>
+                                <div class="form-group">
+                                    <label for="{{ form.category.id_for_label }}" class="form-label">{{ form.category.label }}</label>
+                                    {{ form.category }}
+                                    {% if form.category.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.category.errors }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
-                            <div class="col-md-4">
-                                <div class="form-check">
-                                    {{ form.allow_sharing|add_class:"form-check-input" }}
-                                    <label class="form-check-label" for="{{ form.allow_sharing.id_for_label }}">
-                                        {{ form.allow_sharing.label }}
-                                    </label>
+                            
+                            <div class="col-12">
+                                <div class="form-group">
+                                    <label for="{{ form.description.id_for_label }}" class="form-label">{{ form.description.label }}</label>
+                                    {{ form.description }}
+                                    {% if form.description.help_text %}
+                                        <div class="form-text text-muted">{{ form.description.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.description.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.description.errors }}</div>
+                                    {% endif %}
                                 </div>
                             </div>
                         </div>
-                    </div>
-                </div>
-                
-                <!-- Questions Section -->
-                <div class="card mb-4">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h4>{% trans "Questions" %}</h4>
-                        <button type="button" class="btn btn-outline-primary" id="add-question">
-                            <i class="fas fa-plus"></i> {% trans "Add Question" %}
-                        </button>
-                    </div>
-                    <div class="card-body">
-                        {{ question_formset.management_form }}
                         
-                        {% if question_formset.non_form_errors %}
-                            <div class="alert alert-danger">
-                                {{ question_formset.non_form_errors }}
+                        <!-- Poll settings -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.poll_type.id_for_label }}" class="form-label">{{ form.poll_type.label }}</label>
+                                    {{ form.poll_type }}
+                                    {% if form.poll_type.help_text %}
+                                        <div class="form-text text-muted">{{ form.poll_type.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.poll_type.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.poll_type.errors }}</div>
+                                    {% endif %}
+                                </div>
                             </div>
-                        {% endif %}
+                            
+                            <div class="col-md-4" id="institution-selector" style="display: none;">
+                                <div class="form-group">
+                                    <label for="{{ form.restricted_to_institution.id_for_label }}" class="form-label">{{ form.restricted_to_institution.label }}</label>
+                                    {{ form.restricted_to_institution }}
+                                    {% if form.restricted_to_institution.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.restricted_to_institution.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label for="{{ form.status.id_for_label }}" class="form-label">{{ form.status.label }}</label>
+                                    {{ form.status }}
+                                    {% if form.status.help_text %}
+                                        <div class="form-text text-muted">{{ form.status.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.status.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.status.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.start_date.id_for_label }}" class="form-label">{{ form.start_date.label }}</label>
+                                    {{ form.start_date }}
+                                    {% if form.start_date.help_text %}
+                                        <div class="form-text text-muted">{{ form.start_date.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.start_date.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.start_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label for="{{ form.end_date.id_for_label }}" class="form-label">{{ form.end_date.label }}</label>
+                                    {{ form.end_date }}
+                                    {% if form.end_date.help_text %}
+                                        <div class="form-text text-muted">{{ form.end_date.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.end_date.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.end_date.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                        </div>
                         
+                        <!-- Poll options -->
+                        <div class="row g-3 mb-4">
+                            <div class="col-md-12">
+                                <div class="form-group">
+                                    <label for="{{ form.tags.id_for_label }}" class="form-label">{{ form.tags.label }}</label>
+                                    {{ form.tags }}
+                                    {% if form.tags.help_text %}
+                                        <div class="form-text text-muted">{{ form.tags.help_text }}</div>
+                                    {% endif %}
+                                    {% if form.tags.errors %}
+                                        <div class="invalid-feedback d-block">{{ form.tags.errors }}</div>
+                                    {% endif %}
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    {{ form.is_featured }}
+                                    <label class="form-check-label" for="{{ form.is_featured.id_for_label }}">{{ form.is_featured.label }}</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    {{ form.allow_comments }}
+                                    <label class="form-check-label" for="{{ form.allow_comments.id_for_label }}">{{ form.allow_comments.label }}</label>
+                                </div>
+                            </div>
+                            
+                            <div class="col-md-4">
+                                <div class="form-check form-switch">
+                                    {{ form.allow_sharing }}
+                                    <label class="form-check-label" for="{{ form.allow_sharing.id_for_label }}">{{ form.allow_sharing.label }}</label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Questions Section -->
+                        <div class="row mt-5 mb-4">
+                            <div class="col-12">
+                                <h3>{% trans "Questions" %}</h3>
+                                <p class="text-muted">{% trans "Add the questions for your poll below." %}</p>
+                                <hr>
+                            </div>
+                        </div>
+                        
+                        <!-- Question Types Selector -->
+                        <div class="row mb-4">
+                            <div class="col-12">
+                                <div class="card bg-light">
+                                    <div class="card-body">
+                                        <h5 class="card-title">{% trans "Add a Question" %}</h5>
+                                        
+                                        <ul class="nav nav-tabs" id="questionTypeTabs" role="tablist">
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link active" id="basic-tab" data-bs-toggle="tab" data-bs-target="#basic" type="button" role="tab" aria-controls="basic" aria-selected="true">{% trans "Basic" %}</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="scale-tab" data-bs-toggle="tab" data-bs-target="#scale" type="button" role="tab" aria-controls="scale" aria-selected="false">{% trans "Scale" %}</button>
+                                            </li>
+                                            <li class="nav-item" role="presentation">
+                                                <button class="nav-link" id="advanced-tab" data-bs-toggle="tab" data-bs-target="#advanced" type="button" role="tab" aria-controls="advanced" aria-selected="false">{% trans "Advanced" %}</button>
+                                            </li>
+                                        </ul>
+                                        
+                                        <div class="tab-content pt-3" id="questionTypeTabsContent">
+                                            <!-- Basic Question Types -->
+                                            <div class="tab-pane fade show active" id="basic" role="tabpanel" aria-labelledby="basic-tab">
+                                                <div class="row g-3">
+                                                    {% for question_type in question_types_by_category.basic %}
+                                                        <div class="col-md-4">
+                                                            <div class="card question-type-card" data-question-type-id="{{ question_type.id }}" data-question-type-slug="{{ question_type.slug }}">
+                                                                <div class="card-body text-center py-3">
+                                                                    <h6 class="card-title mb-1">{{ question_type.name }}</h6>
+                                                                    <p class="card-text small text-muted">{{ question_type.description|truncatechars:60 }}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Scale Question Types -->
+                                            <div class="tab-pane fade" id="scale" role="tabpanel" aria-labelledby="scale-tab">
+                                                <div class="row g-3">
+                                                    {% for question_type in question_types_by_category.scale %}
+                                                        <div class="col-md-4">
+                                                            <div class="card question-type-card" data-question-type-id="{{ question_type.id }}" data-question-type-slug="{{ question_type.slug }}">
+                                                                <div class="card-body text-center py-3">
+                                                                    <h6 class="card-title mb-1">{{ question_type.name }}</h6>
+                                                                    <p class="card-text small text-muted">{{ question_type.description|truncatechars:60 }}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                            
+                                            <!-- Advanced Question Types -->
+                                            <div class="tab-pane fade" id="advanced" role="tabpanel" aria-labelledby="advanced-tab">
+                                                <div class="row g-3">
+                                                    {% for question_type in question_types_by_category.advanced %}
+                                                        <div class="col-md-4">
+                                                            <div class="card question-type-card" data-question-type-id="{{ question_type.id }}" data-question-type-slug="{{ question_type.slug }}">
+                                                                <div class="card-body text-center py-3">
+                                                                    <h6 class="card-title mb-1">{{ question_type.name }}</h6>
+                                                                    <p class="card-text small text-muted">{{ question_type.description|truncatechars:60 }}</p>
+                                                                </div>
+                                                            </div>
+                                                        </div>
+                                                    {% endfor %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Questions Management -->
                         <div id="questions-container">
+                            {{ question_formset.management_form }}
+                            
                             {% for question_form in question_formset %}
-                                <div class="question-form mb-4 p-3 border rounded">
-                                    <div class="d-flex justify-content-between mb-2">
-                                        <h5>{% trans "Question" %} #<span class="question-number">{{ forloop.counter }}</span></h5>
-                                        <button type="button" class="btn btn-sm btn-outline-danger delete-question">
-                                            <i class="fas fa-trash"></i> {% trans "Remove" %}
-                                        </button>
-                                    </div>
-                                    
-                                    {{ question_form.id }}
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-8">
-                                            <label for="{{ question_form.text.id_for_label }}" class="form-label">{% trans "Question Text" %}</label>
-                                            {{ question_form.text|add_class:"form-control" }}
-                                            {% if question_form.text.errors %}
-                                                <div class="invalid-feedback d-block">{{ question_form.text.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="{{ question_form.question_type.id_for_label }}" class="form-label">{% trans "Question Type" %}</label>
-                                            <select name="{{ question_form.prefix }}-question_type" id="{{ question_form.question_type.id_for_label }}" class="form-select question-type-select">
-                                                {% for type in question_types %}
-                                                    <option value="{{ type.id }}"{% if type.id == question_form.question_type.value %} selected{% endif %}>
-                                                        {{ type.name }}
-                                                    </option>
-                                                {% endfor %}
-                                            </select>
-                                            {% if question_form.question_type.errors %}
-                                                <div class="invalid-feedback d-block">{{ question_form.question_type.errors }}</div>
-                                            {% endif %}
+                                <div class="question-item card mb-4" data-index="{{ forloop.counter0 }}">
+                                    <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                        <h5 class="mb-0">{% trans "Question" %} #<span class="question-number">{{ forloop.counter }}</span></h5>
+                                        <div>
+                                            <button type="button" class="btn btn-sm btn-outline-danger delete-question">
+                                                <i class="bi bi-trash"></i> {% trans "Remove" %}
+                                            </button>
                                         </div>
                                     </div>
-                                    
-                                    <div class="row mb-3">
-                                        <div class="col-md-4">
-                                            <div class="form-check">
-                                                {{ question_form.is_required|add_class:"form-check-input" }}
-                                                <label class="form-check-label" for="{{ question_form.is_required.id_for_label }}">
-                                                    {% trans "Required" %}
-                                                </label>
-                                            </div>
-                                        </div>
-                                        <div class="col-md-2">
-                                            <label for="{{ question_form.order.id_for_label }}" class="form-label">{% trans "Order" %}</label>
-                                            {{ question_form.order|add_class:"form-control" }}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Rating and Slider specific fields -->
-                                    <div class="row mb-3 numeric-fields" style="display: none;">
-                                        <div class="col-md-4">
-                                            <label for="{{ question_form.min_value.id_for_label }}" class="form-label">{% trans "Min Value" %}</label>
-                                            {{ question_form.min_value|add_class:"form-control" }}
-                                            {% if question_form.min_value.errors %}
-                                                <div class="invalid-feedback d-block">{{ question_form.min_value.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-md-4">
-                                            <label for="{{ question_form.max_value.id_for_label }}" class="form-label">{% trans "Max Value" %}</label>
-                                            {{ question_form.max_value|add_class:"form-control" }}
-                                            {% if question_form.max_value.errors %}
-                                                <div class="invalid-feedback d-block">{{ question_form.max_value.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                        <div class="col-md-4 step-value-field">
-                                            <label for="{{ question_form.step_value.id_for_label }}" class="form-label">{% trans "Step Value" %}</label>
-                                            {{ question_form.step_value|add_class:"form-control" }}
-                                            {% if question_form.step_value.errors %}
-                                                <div class="invalid-feedback d-block">{{ question_form.step_value.errors }}</div>
-                                            {% endif %}
-                                        </div>
-                                    </div>
-                                    
-                                    <!-- Choice options for multiple choice and single choice -->
-                                    <div class="choices-container" style="display: none;">
-                                        <h6 class="mt-3">{% trans "Choices" %}</h6>
-                                        <div class="choices-list">
-                                            <!-- Initial empty choices will be added by JS -->
-                                            <div class="choice-item row mb-2">
-                                                <div class="col-10">
-                                                    <input type="text" class="form-control choice-text" 
-                                                           name="question_{{ question_form.prefix }}_choices" 
-                                                           placeholder="{% trans 'Enter choice text' %}">
-                                                </div>
-                                                <div class="col-2">
-                                                    <button type="button" class="btn btn-sm btn-outline-danger remove-choice">
-                                                        <i class="fas fa-times"></i>
-                                                    </button>
+                                    <div class="card-body">
+                                        {{ question_form.id }}
+                                        <div class="question-error-container text-danger mb-3"></div>
+                                        
+                                        <div class="row g-3">
+                                            <div class="col-md-8">
+                                                <div class="form-group">
+                                                    <label for="{{ question_form.text.id_for_label }}" class="form-label">{% trans "Question Text" %}</label>
+                                                    {{ question_form.text }}
+                                                    {% if question_form.text.errors %}
+                                                        <div class="invalid-feedback d-block">{{ question_form.text.errors }}</div>
+                                                    {% endif %}
                                                 </div>
                                             </div>
-                                        </div>
-                                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2 add-choice">
-                                            <i class="fas fa-plus"></i> {% trans "Add Choice" %}
-                                        </button>
-                                    </div>
-                                    
-                                    <!-- Advanced settings as JSON -->
-                                    <div class="mt-3">
-                                        <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" 
-                                           href="#settings-{{ question_form.prefix }}" role="button">
-                                            {% trans "Advanced Settings" %}
-                                        </a>
-                                        <div class="collapse mt-2" id="settings-{{ question_form.prefix }}">
-                                            <div class="card card-body bg-light">
-                                                <label for="{{ question_form.settings.id_for_label }}" class="form-label">{% trans "Settings (JSON)" %}</label>
-                                                {{ question_form.settings|add_class:"form-control" }}
-                                                <small class="text-muted">{% trans "Optional. Advanced settings in JSON format." %}</small>
+                                            
+                                            <div class="col-md-4">
+                                                <div class="form-group">
+                                                    <label for="{{ question_form.question_type.id_for_label }}" class="form-label">{% trans "Question Type" %}</label>
+                                                    {{ question_form.question_type }}
+                                                    {% if question_form.question_type.errors %}
+                                                        <div class="invalid-feedback d-block">{{ question_form.question_type.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-3 number-field min-value-field" style="display: none;">
+                                                <div class="form-group">
+                                                    <label for="{{ question_form.min_value.id_for_label }}" class="form-label">{% trans "Minimum Value" %}</label>
+                                                    {{ question_form.min_value }}
+                                                    {% if question_form.min_value.errors %}
+                                                        <div class="invalid-feedback d-block">{{ question_form.min_value.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-3 number-field max-value-field" style="display: none;">
+                                                <div class="form-group">
+                                                    <label for="{{ question_form.max_value.id_for_label }}" class="form-label">{% trans "Maximum Value" %}</label>
+                                                    {{ question_form.max_value }}
+                                                    {% if question_form.max_value.errors %}
+                                                        <div class="invalid-feedback d-block">{{ question_form.max_value.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-3 number-field step-value-field" style="display: none;">
+                                                <div class="form-group">
+                                                    <label for="{{ question_form.step_value.id_for_label }}" class="form-label">{% trans "Step Value" %}</label>
+                                                    {{ question_form.step_value }}
+                                                    {% if question_form.step_value.errors %}
+                                                        <div class="invalid-feedback d-block">{{ question_form.step_value.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-3">
+                                                <div class="form-group">
+                                                    <label for="{{ question_form.order.id_for_label }}" class="form-label">{% trans "Order" %}</label>
+                                                    {{ question_form.order }}
+                                                    {% if question_form.order.errors %}
+                                                        <div class="invalid-feedback d-block">{{ question_form.order.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-6 settings-field" style="display: none;">
+                                                <div class="form-group">
+                                                    <label for="{{ question_form.settings.id_for_label }}" class="form-label">{% trans "Advanced Settings (JSON)" %}</label>
+                                                    {{ question_form.settings }}
+                                                    {% if question_form.settings.errors %}
+                                                        <div class="invalid-feedback d-block">{{ question_form.settings.errors }}</div>
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                            
+                                            <div class="col-md-12">
+                                                <div class="form-check">
+                                                    {{ question_form.is_required }}
+                                                    <label class="form-check-label" for="{{ question_form.is_required.id_for_label }}">
+                                                        {% trans "This question requires an answer" %}
+                                                    </label>
+                                                </div>
                                             </div>
                                         </div>
+                                        
+                                        <!-- Choices Section -->
+                                        <div class="choices-container mt-4" style="display: none;">
+                                            <h6>{% trans "Answer Choices" %}</h6>
+                                            <p class="text-muted small">{% trans "Add at least two answer choices below." %}</p>
+                                            
+                                            <div class="choices-list">
+                                                <!-- Dynamic choices will be added here -->
+                                            </div>
+                                            
+                                            <div class="mt-3">
+                                                <button type="button" class="btn btn-sm btn-outline-primary add-choice">
+                                                    <i class="bi bi-plus-circle"></i> {% trans "Add Another Choice" %}
+                                                </button>
+                                            </div>
+                                        </div>
+                                        
+                                        {{ question_form.DELETE }}
                                     </div>
-                                    
-                                    {% for hidden_field in question_form.hidden_fields %}
-                                        {{ hidden_field }}
-                                    {% endfor %}
                                 </div>
                             {% endfor %}
                         </div>
                         
-                        {% if question_formset.forms|length == 0 %}
-                            <div class="alert alert-info">
-                                {% trans "Add questions to your poll using the button above." %}
+                        <!-- Empty question template for JS -->
+                        <div id="empty-question-template" style="display: none;">
+                            <div class="question-item card mb-4" data-index="__prefix__">
+                                <div class="card-header bg-light d-flex justify-content-between align-items-center">
+                                    <h5 class="mb-0">{% trans "Question" %} #<span class="question-number">__number__</span></h5>
+                                    <div>
+                                        <button type="button" class="btn btn-sm btn-outline-danger delete-question">
+                                            <i class="bi bi-trash"></i> {% trans "Remove" %}
+                                        </button>
+                                    </div>
+                                </div>
+                                <div class="card-body">
+                                    <div class="question-error-container text-danger mb-3"></div>
+                                    
+                                    <div class="row g-3">
+                                        <div class="col-md-8">
+                                            <div class="form-group">
+                                                <label class="form-label">{% trans "Question Text" %}</label>
+                                                <textarea name="{{ question_formset.prefix }}-__prefix__-text" id="{{ question_formset.prefix }}-__prefix__-text" rows="3" class="form-control question-text" placeholder="{% trans 'Enter your question text here' %}"></textarea>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-4">
+                                            <div class="form-group">
+                                                <label class="form-label">{% trans "Question Type" %}</label>
+                                                <select name="{{ question_formset.prefix }}-__prefix__-question_type" id="{{ question_formset.prefix }}-__prefix__-question_type" class="form-select">
+                                                    {% for question_type in question_types %}
+                                                        <option value="{{ question_type.id }}" data-slug="{{ question_type.slug }}">{{ question_type.name }}</option>
+                                                    {% endfor %}
+                                                </select>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-3 number-field min-value-field" style="display: none;">
+                                            <div class="form-group">
+                                                <label class="form-label">{% trans "Minimum Value" %}</label>
+                                                <input type="number" name="{{ question_formset.prefix }}-__prefix__-min_value" id="{{ question_formset.prefix }}-__prefix__-min_value" class="form-control" value="1">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-3 number-field max-value-field" style="display: none;">
+                                            <div class="form-group">
+                                                <label class="form-label">{% trans "Maximum Value" %}</label>
+                                                <input type="number" name="{{ question_formset.prefix }}-__prefix__-max_value" id="{{ question_formset.prefix }}-__prefix__-max_value" class="form-control" value="5">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-3 number-field step-value-field" style="display: none;">
+                                            <div class="form-group">
+                                                <label class="form-label">{% trans "Step Value" %}</label>
+                                                <input type="number" name="{{ question_formset.prefix }}-__prefix__-step_value" id="{{ question_formset.prefix }}-__prefix__-step_value" class="form-control" value="1" step="0.1">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-3">
+                                            <div class="form-group">
+                                                <label class="form-label">{% trans "Order" %}</label>
+                                                <input type="number" name="{{ question_formset.prefix }}-__prefix__-order" id="{{ question_formset.prefix }}-__prefix__-order" class="form-control" min="1">
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-6 settings-field" style="display: none;">
+                                            <div class="form-group">
+                                                <label class="form-label">{% trans "Advanced Settings (JSON)" %}</label>
+                                                <textarea name="{{ question_formset.prefix }}-__prefix__-settings" id="{{ question_formset.prefix }}-__prefix__-settings" rows="3" class="form-control json-settings" placeholder='{"custom_setting": "value"}'></textarea>
+                                            </div>
+                                        </div>
+                                        
+                                        <div class="col-md-12">
+                                            <div class="form-check">
+                                                <input type="checkbox" name="{{ question_formset.prefix }}-__prefix__-is_required" id="{{ question_formset.prefix }}-__prefix__-is_required" class="form-check-input" checked>
+                                                <label class="form-check-label" for="{{ question_formset.prefix }}-__prefix__-is_required">
+                                                    {% trans "This question requires an answer" %}
+                                                </label>
+                                            </div>
+                                        </div>
+                                    </div>
+                                    
+                                    <!-- Choices Section -->
+                                    <div class="choices-container mt-4" style="display: none;">
+                                        <h6>{% trans "Answer Choices" %}</h6>
+                                        <p class="text-muted small">{% trans "Add at least two answer choices below." %}</p>
+                                        
+                                        <div class="choices-list">
+                                            <!-- Dynamic choices will be added here -->
+                                        </div>
+                                        
+                                        <div class="mt-3">
+                                            <button type="button" class="btn btn-sm btn-outline-primary add-choice">
+                                                <i class="bi bi-plus-circle"></i> {% trans "Add Another Choice" %}
+                                            </button>
+                                        </div>
+                                    </div>
+                                    
+                                    <input type="checkbox" name="{{ question_formset.prefix }}-__prefix__-DELETE" id="{{ question_formset.prefix }}-__prefix__-DELETE" class="delete-checkbox" style="display: none;">
+                                </div>
                             </div>
-                        {% endif %}
-                    </div>
+                        </div>
+                        
+                        <!-- Empty choice template for JS -->
+                        <div id="empty-choice-template" style="display: none;">
+                            <div class="choice-item input-group mb-2">
+                                <div class="input-group-text">
+                                    <span class="choice-number">1</span>
+                                </div>
+                                <input type="text" name="question___question_index___choice___choice_index__" class="form-control choice-input" placeholder="{% trans 'Enter choice text' %}">
+                                <button type="button" class="btn btn-outline-danger delete-choice">
+                                    <i class="bi bi-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Submit Buttons -->
+                        <div class="row mt-5">
+                            <div class="col-12 d-flex justify-content-between">
+                                <a href="{% url 'polls:poll_list' %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                                <button type="submit" class="btn btn-primary">{% trans "Create Poll" %}</button>
+                            </div>
+                        </div>
+                    </form>
                 </div>
-                
-                <div class="d-flex justify-content-between">
-                    <a href="{% url 'polls:poll_list' %}" class="btn btn-outline-secondary">
-                        <i class="fas fa-arrow-left"></i> {% trans "Cancel" %}
-                    </a>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="fas fa-save"></i> {% trans "Create Poll" %}
-                    </button>
-                </div>
-            </form>
+            </div>
         </div>
     </div>
 </div>
 {% endblock %}
 
 {% block extra_js %}
-<script>
-    document.addEventListener('DOMContentLoaded', function() {
-        // Poll type change handler - show/hide institution field
-        const pollTypeSelect = document.getElementById('{{ form.poll_type.id_for_label }}');
-        const institutionField = document.getElementById('institution-field');
-        
-        pollTypeSelect.addEventListener('change', function() {
-            if (this.value === 'institution') {
-                institutionField.style.display = 'block';
-            } else {
-                institutionField.style.display = 'none';
-            }
-        });
-        
-        // Initialize institution field visibility
-        if (pollTypeSelect.value === 'institution') {
-            institutionField.style.display = 'block';
-        }
-        
-        // Question formset management
-        const questionsContainer = document.getElementById('questions-container');
-        const addQuestionBtn = document.getElementById('add-question');
-        const totalFormsInput = document.getElementById('id_{{ question_formset.prefix }}-TOTAL_FORMS');
-        let formCount = parseInt(totalFormsInput.value);
-        
-        // Function to update form indices
-        function updateFormIndices() {
-            const questionForms = questionsContainer.querySelectorAll('.question-form');
-            questionForms.forEach((form, index) => {
-                form.querySelector('.question-number').textContent = index + 1;
-                
-                // Update order field with the new index if it's the default value
-                const orderInput = form.querySelector('input[name$="-order"]');
-                if (orderInput && (orderInput.value === '' || orderInput.value === '0')) {
-                    orderInput.value = index;
-                }
-            });
-        }
-        
-        // Function to add a new question form
-        addQuestionBtn.addEventListener('click', function() {
-            // Clone the first form (empty template)
-            let newForm;
-            if (questionsContainer.querySelector('.question-form')) {
-                newForm = questionsContainer.querySelector('.question-form').cloneNode(true);
-                
-                // Clear values from the cloned form
-                newForm.querySelectorAll('input[type="text"], textarea').forEach(input => {
-                    input.value = '';
-                });
-                
-                // Reset checkboxes
-                newForm.querySelectorAll('input[type="checkbox"]').forEach(checkbox => {
-                    checkbox.checked = checkbox.defaultChecked;
-                });
-                
-                // Reset hidden ID field
-                const idField = newForm.querySelector('input[name$="-id"]');
-                if (idField) idField.value = '';
-            } else {
-                // Create a completely new form if there's no template
-                newForm = document.createElement('div');
-                newForm.className = 'question-form mb-4 p-3 border rounded';
-                newForm.innerHTML = `
-                    <div class="d-flex justify-content-between mb-2">
-                        <h5>{% trans "Question" %} #<span class="question-number">1</span></h5>
-                        <button type="button" class="btn btn-sm btn-outline-danger delete-question">
-                            <i class="fas fa-trash"></i> {% trans "Remove" %}
-                        </button>
-                    </div>
-                    
-                    <input type="hidden" name="{{ question_formset.prefix }}-${formCount}-id" id="id_{{ question_formset.prefix }}-${formCount}-id">
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-8">
-                            <label class="form-label">{% trans "Question Text" %}</label>
-                            <textarea name="{{ question_formset.prefix }}-${formCount}-text" class="form-control" rows="3" required></textarea>
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">{% trans "Question Type" %}</label>
-                            <select name="{{ question_formset.prefix }}-${formCount}-question_type" class="form-select question-type-select">
-                                {% for type in question_types %}
-                                    <option value="{{ type.id }}" data-requires-choices="{{ type.requires_choices|yesno:'true,false' }}">{{ type.name }}</option>
-                                {% endfor %}
-                            </select>
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3">
-                        <div class="col-md-4">
-                            <div class="form-check">
-                                <input type="checkbox" name="{{ question_formset.prefix }}-${formCount}-is_required" class="form-check-input" checked>
-                                <label class="form-check-label">{% trans "Required" %}</label>
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <label class="form-label">{% trans "Order" %}</label>
-                            <input type="number" name="{{ question_formset.prefix }}-${formCount}-order" class="form-control" value="${formCount}">
-                        </div>
-                    </div>
-                    
-                    <div class="row mb-3 numeric-fields" style="display: none;">
-                        <div class="col-md-4">
-                            <label class="form-label">{% trans "Min Value" %}</label>
-                            <input type="number" name="{{ question_formset.prefix }}-${formCount}-min_value" class="form-control">
-                        </div>
-                        <div class="col-md-4">
-                            <label class="form-label">{% trans "Max Value" %}</label>
-                            <input type="number" name="{{ question_formset.prefix }}-${formCount}-max_value" class="form-control">
-                        </div>
-                        <div class="col-md-4 step-value-field">
-                            <label class="form-label">{% trans "Step Value" %}</label>
-                            <input type="number" name="{{ question_formset.prefix }}-${formCount}-step_value" class="form-control" step="0.1">
-                        </div>
-                    </div>
-                    
-                    <div class="choices-container" style="display: none;">
-                        <h6 class="mt-3">{% trans "Choices" %}</h6>
-                        <div class="choices-list">
-                            <div class="choice-item row mb-2">
-                                <div class="col-10">
-                                    <input type="text" class="form-control choice-text" 
-                                           name="question_{{ question_formset.prefix }}-${formCount}_choices" 
-                                           placeholder="{% trans 'Enter choice text' %}">
-                                </div>
-                                <div class="col-2">
-                                    <button type="button" class="btn btn-sm btn-outline-danger remove-choice">
-                                        <i class="fas fa-times"></i>
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-                        <button type="button" class="btn btn-sm btn-outline-secondary mt-2 add-choice">
-                            <i class="fas fa-plus"></i> {% trans "Add Choice" %}
-                        </button>
-                    </div>
-                    
-                    <div class="mt-3">
-                        <a class="btn btn-sm btn-outline-secondary" data-bs-toggle="collapse" 
-                           href="#settings-{{ question_formset.prefix }}-${formCount}" role="button">
-                            {% trans "Advanced Settings" %}
-                        </a>
-                        <div class="collapse mt-2" id="settings-{{ question_formset.prefix }}-${formCount}">
-                            <div class="card card-body bg-light">
-                                <label class="form-label">{% trans "Settings (JSON)" %}</label>
-                                <textarea name="{{ question_formset.prefix }}-${formCount}-settings" class="form-control json-settings" rows="3"></textarea>
-                                <small class="text-muted">{% trans "Optional. Advanced settings in JSON format." %}</small>
-                            </div>
-                        </div>
-                    </div>
-                `;
-            }
-            
-            // Update form indices
-            const formRegex = new RegExp('{{ question_formset.prefix }}-\\d+', 'g');
-            newForm.innerHTML = newForm.innerHTML.replace(formRegex, `{{ question_formset.prefix }}-${formCount}`);
-            
-            // Add the new form to the container
-            questionsContainer.appendChild(newForm);
-            
-            // Increment form count
-            formCount++;
-            totalFormsInput.value = formCount;
-            
-            // Update question numbers
-            updateFormIndices();
-            
-            // Re-attach event handlers
-            attachQuestionEventHandlers();
-        });
-        
-        // Function to remove a question form
-        function attachQuestionEventHandlers() {
-            // Delete question buttons
-            document.querySelectorAll('.delete-question').forEach(button => {
-                button.addEventListener('click', function() {
-                    const form = this.closest('.question-form');
-                    form.remove();
-                    
-                    // Update form count and indices
-                    formCount--;
-                    totalFormsInput.value = formCount;
-                    updateFormIndices();
-                });
-            });
-            
-            // Question type change handlers
-            document.querySelectorAll('.question-type-select').forEach(select => {
-                select.addEventListener('change', function() {
-                    const form = this.closest('.question-form');
-                    const numericFields = form.querySelector('.numeric-fields');
-                    const choicesContainer = form.querySelector('.choices-container');
-                    const stepValueField = form.querySelector('.step-value-field');
-                    const option = this.options[this.selectedIndex];
-                    const requiresChoices = option.getAttribute('data-requires-choices') === 'true';
-                    
-                    // Get the selected question type (this needs to be adjusted based on your actual types)
-                    const selectedType = this.options[this.selectedIndex].text.toLowerCase();
-                    const isRating = selectedType.includes('rating');
-                    const isSlider = selectedType.includes('slider');
-                    
-                    // Show/hide numeric fields
-                    if (isRating || isSlider) {
-                        numericFields.style.display = 'flex';
-                        stepValueField.style.display = isSlider ? 'block' : 'none';
-                    } else {
-                        numericFields.style.display = 'none';
-                    }
-                    
-                    // Show/hide choices
-                    if (requiresChoices) {
-                        choicesContainer.style.display = 'block';
-                    } else {
-                        choicesContainer.style.display = 'none';
-                    }
-                });
-                
-                // Trigger change to initialize UI
-                select.dispatchEvent(new Event('change'));
-            });
-            
-            // Add choice button handlers
-            document.querySelectorAll('.add-choice').forEach(button => {
-                button.addEventListener('click', function() {
-                    const form = this.closest('.question-form');
-                    const choicesList = form.querySelector('.choices-list');
-                    const choiceItem = choicesList.querySelector('.choice-item').cloneNode(true);
-                    
-                    // Clear the input value
-                    choiceItem.querySelector('input').value = '';
-                    
-                    // Add remove button handler
-                    choiceItem.querySelector('.remove-choice').addEventListener('click', function() {
-                        if (choicesList.querySelectorAll('.choice-item').length > 1) {
-                            this.closest('.choice-item').remove();
-                        }
-                    });
-                    
-                    choicesList.appendChild(choiceItem);
-                });
-            });
-            
-            // Remove choice button handlers
-            document.querySelectorAll('.remove-choice').forEach(button => {
-                button.addEventListener('click', function() {
-                    const choicesList = this.closest('.choices-list');
-                    if (choicesList.querySelectorAll('.choice-item').length > 1) {
-                        this.closest('.choice-item').remove();
-                    }
-                });
-            });
-        }
-        
-        // Initial setup
-        attachQuestionEventHandlers();
-        
-        // If no questions exist, add one by default
-        if (formCount === 0) {
-            addQuestionBtn.click();
-        }
-        
-        // Form validation before submit
-        document.getElementById('poll-form').addEventListener('submit', function(e) {
-            let isValid = true;
-            
-            // Check if at least one question exists
-            if (questionsContainer.querySelectorAll('.question-form').length === 0) {
-                alert("{% trans 'Please add at least one question to your poll' %}");
-                isValid = false;
-            }
-            
-            // Check that questions with required choices have at least two choices
-            document.querySelectorAll('.question-form').forEach(form => {
-                const questionTypeSelect = form.querySelector('.question-type-select');
-                const option = questionTypeSelect.options[questionTypeSelect.selectedIndex];
-                const requiresChoices = option.getAttribute('data-requires-choices') === 'true';
-                
-                if (requiresChoices) {
-                    const choiceInputs = form.querySelectorAll('.choice-text');
-                    let validChoicesCount = 0;
-                    
-                    choiceInputs.forEach(input => {
-                        if (input.value.trim() !== '') {
-                            validChoicesCount++;
-                        }
-                    });
-                    
-                    if (validChoicesCount < 2) {
-                        const questionNum = form.querySelector('.question-number').textContent;
-                        alert(`{% trans "Question" %} #${questionNum} {% trans "requires at least two valid choices" %}`);
-                        isValid = false;
-                    }
-                }
-            });
-            
-            if (!isValid) {
-                e.preventDefault();
-            }
-        });
-    });
-</script>
+<script src="{% static 'js/poll-create.js' %}"></script>
 {% endblock %}

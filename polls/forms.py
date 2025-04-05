@@ -29,7 +29,7 @@ class PollCategoryForm(forms.ModelForm):
 
 
 class PollForm(forms.ModelForm):
-    tags = TagField(required=False, help_text=_("Comma-separated tags"))
+    tags = TagField(required=False, help_text=_("Comma-separated tags (e.g., education, research, feedback)"))
 
     class Meta:
         model = Poll
@@ -40,60 +40,79 @@ class PollForm(forms.ModelForm):
             'tags'
         ]
         widgets = {
-            'description': forms.Textarea(attrs={'rows': 4}),
-            'start_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
-            'end_date': forms.DateTimeInput(attrs={'type': 'datetime-local'}),
+            'title': forms.TextInput(attrs={'class': 'form-control', 'placeholder': _('Enter poll title')}),
+            'description': forms.Textarea(attrs={
+                'rows': 4, 
+                'class': 'form-control', 
+                'placeholder': _('Describe the purpose of your poll')
+            }),
+            'start_date': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'form-control'
+            }),
+            'end_date': forms.DateTimeInput(attrs={
+                'type': 'datetime-local',
+                'class': 'form-control'
+            }),
+            'status': forms.Select(attrs={'class': 'form-select'}),
+            'poll_type': forms.Select(attrs={'class': 'form-select'}),
+            'category': forms.Select(attrs={'class': 'form-select'}),
+            'restricted_to_institution': forms.Select(attrs={'class': 'form-select'}),
+        }
+        help_texts = {
+            'title': _('Choose a clear, concise title for your poll'),
+            'poll_type': _('Public polls are visible to everyone, while institution polls are restricted'),
+            'status': _('Draft polls are only visible to you until published'),
+            'start_date': _('When the poll will become available (leave blank for immediate availability)'),
+            'end_date': _('When the poll will close (leave blank to keep it open indefinitely)'),
         }
     
     def __init__(self, *args, **kwargs):
-        self.user = kwargs.pop('creator', None)  # Change 'creator' to 'user' here
+        self.user = kwargs.pop('creator', None)
         super().__init__(*args, **kwargs)
+
+        # Style all fields with Bootstrap classes
+        for field_name, field in self.fields.items():
+            if 'class' not in field.widget.attrs:
+                field.widget.attrs['class'] = 'form-control'
+            
+            # Ensure select fields use the correct class
+            if isinstance(field.widget, forms.Select):
+                field.widget.attrs['class'] = 'form-select'
+
+        # Make description optional
+        self.fields['description'].required = False
+        
+        # Default values
+        if not self.instance.pk:  # New poll
+            self.fields['status'].initial = 'draft'
+            self.fields['poll_type'].initial = 'public'
+            self.fields['allow_comments'].initial = True
+            self.fields['allow_sharing'].initial = True
 
         # Populate the restricted_to_institution field with institutions
         self.fields['restricted_to_institution'].queryset = InstitutionProfile.objects.all()
-
-        # Conditionally show/hide restricted_to_institution based on poll_type
         self.fields['restricted_to_institution'].widget.attrs['data-show-if-poll-type'] = 'institution'
 
         # Autofill the restricted_to_institution if the user is associated with one
         if self.user:
             try:
                 institution = InstitutionProfile.objects.get(user=self.user)
-                self.initial['restricted_to_institution'] = institution.pk  # Autofill if applicable
+                self.initial['restricted_to_institution'] = institution.pk
             except InstitutionProfile.DoesNotExist:
-                pass  # User does not have an associated InstitutionProfile
-    
+                pass
+
     def clean(self):
         cleaned_data = super().clean()
-        poll_type = cleaned_data.get('poll_type')
-        restricted_to_institution = cleaned_data.get('restricted_to_institution')
         
-        if poll_type == 'institution' and not restricted_to_institution:
-            raise forms.ValidationError(
-                _("Institution name is required for institution-specific polls")
-            )
-        
-        start_date = cleaned_data.get('start_date')
-        end_date = cleaned_data.get('end_date')
-        
-        if end_date and start_date and end_date < start_date:
-            raise forms.ValidationError(
-                _("End date must be after start date")
-            )
+        # Ensure the status field is valid
+        status = cleaned_data.get('status')
+        if not status:
+            self.add_error('status', _("Please select a valid status."))
+            
+        # Additional cross-field validations can be added here
         
         return cleaned_data
-    
-    def save(self, commit=True):
-        instance = super().save(commit=False)
-        if self.user and not instance.pk:  # Only set user on new polls
-            instance.creator = self.user  # Assuming 'creator' field exists
-         
-        if commit:
-            instance.save()
-            self.save_m2m()  # Required for tags
-            
-        return instance
-
 
 class QuestionForm(forms.ModelForm):
     class Meta:
@@ -103,8 +122,28 @@ class QuestionForm(forms.ModelForm):
             'min_value', 'max_value', 'step_value', 'settings'
         ]
         widgets = {
-            'text': forms.Textarea(attrs={'rows': 3}),
-            'settings': forms.Textarea(attrs={'rows': 3, 'class': 'json-settings'}),
+            'text': forms.Textarea(attrs={
+                'rows': 3, 
+                'class': 'form-control question-text',
+                'placeholder': _('Enter your question text here')
+            }),
+            'settings': forms.Textarea(attrs={
+                'rows': 3, 
+                'class': 'form-control json-settings', 
+                'placeholder': '{"custom_setting": "value"}'
+            }),
+            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+            'min_value': forms.NumberInput(attrs={'class': 'form-control'}),
+            'max_value': forms.NumberInput(attrs={'class': 'form-control'}),
+            'step_value': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.1'}),
+        }
+        help_texts = {
+            'text': _('Enter the question you want to ask'),
+            'question_type': _('Select the type of response you want to collect'),
+            'is_required': _('Should respondents be required to answer this question?'),
+            'min_value': _('For rating/slider questions: the minimum value'),
+            'max_value': _('For rating/slider questions: the maximum value'),
+            'step_value': _('For slider questions: the increment between values'),
         }
     
     def __init__(self, *args, **kwargs):
@@ -114,53 +153,30 @@ class QuestionForm(forms.ModelForm):
         self.fields['min_value'].required = False
         self.fields['max_value'].required = False
         self.fields['step_value'].required = False
+        self.fields['settings'].required = False
+        
+        # Default order if not provided
+        if not self.instance.pk and not self.initial.get('order'):
+            self.initial['order'] = 1
         
         # Add data attributes for JS to know which fields to show for each question type
         self.fields['min_value'].widget.attrs['data-show-for-types'] = 'rating,slider'
         self.fields['max_value'].widget.attrs['data-show-for-types'] = 'rating,slider'
         self.fields['step_value'].widget.attrs['data-show-for-types'] = 'slider'
-    
-    def clean(self):
-        cleaned_data = super().clean()
-        question_type = cleaned_data.get('question_type')
-        
-        if question_type:
-            # Convert ID to model instance if needed
-            if isinstance(question_type, int):
-                try:
-                    question_type = QuestionType.objects.get(id=question_type)
-                except QuestionType.DoesNotExist:
-                    self.add_error('question_type', _('Invalid question type selected'))
-                    return cleaned_data
-            
-            # Type-specific validation
-            type_slug = getattr(question_type, 'slug', '')
-            
-            if type_slug in ['rating', 'slider']:
-                min_value = cleaned_data.get('min_value')
-                max_value = cleaned_data.get('max_value')
-                
-                if min_value is None:
-                    self.add_error('min_value', _('Required for this question type'))
-                
-                if max_value is None:
-                    self.add_error('max_value', _('Required for this question type'))
-                
-                if min_value is not None and max_value is not None:
-                    if min_value >= max_value:
-                        self.add_error('max_value', _('Maximum value must be greater than minimum value'))
-                
-                # For slider, ensure step is provided
-                if type_slug == 'slider' and not cleaned_data.get('step_value'):
-                    self.add_error('step_value', _('Required for slider questions'))
-        
-        return cleaned_data
+        self.fields['settings'].widget.attrs['data-show-for-types'] = 'open_ended,multiple_choice,likert'
 
 
 class ChoiceForm(forms.ModelForm):
     class Meta:
         model = Choice
         fields = ['text', 'order']
+        widgets = {
+            'text': forms.TextInput(attrs={
+                'class': 'form-control choice-text',
+                'placeholder': _('Enter choice text')
+            }),
+            'order': forms.NumberInput(attrs={'class': 'form-control', 'min': 1}),
+        }
 
 
 # Create a formset for handling multiple choices per question

@@ -1,334 +1,353 @@
 {% extends 'base.html' %}
 {% load static %}
+{% load i18n %}
 
-{% block title %}{{ poll.title }} - PulseConnect{% endblock %}
-
-{% block page_title %}{{ poll.title }}{% endblock %}
+{% block title %}{{ poll.title }} | {% trans "Poll" %}{% endblock %}
 
 {% block content %}
-<div class="poll-detail-container">
-    <!-- Poll Header -->
-    <div class="widget-card mb-4">
-        <div class="d-flex justify-content-between align-items-start mb-4">
-            <div class="d-flex gap-3">
-                <a href="{% url 'accounts:profile' poll.creator.username %}">
-                    <img src="{{ poll.creator.profile_picture.url|default:'https://via.placeholder.com/48' }}" 
-                         class="rounded-circle" width="48" height="48" alt="{{ poll.creator.get_full_name }}">
-                </a>
-                <div>
-                    <h4 class="mb-1">{{ poll.title }}</h4>
-                    <div class="d-flex align-items-center gap-2 text-muted">
-                        <span>Created by <a href="{% url 'accounts:profile' poll.creator.username %}">{{ poll.creator.get_full_name }}</a></span>
-                        <span>•</span>
-                        <span>{{ poll.created_at|timesince }} ago</span>
-                        {% if poll.end_date %}
-                        <span>•</span>
-                        <span class="{% if poll.is_expired %}text-danger{% else %}text-warning{% endif %}">
-                            {% if poll.is_expired %}
-                                Expired {{ poll.end_date|timesince }} ago
-                            {% else %}
-                                Ends in {{ poll.end_date|timeuntil }}
-                            {% endif %}
+<div class="container py-4">
+    <div class="row">
+        <!-- Main poll content -->
+        <div class="col-lg-8">
+            <!-- Poll header -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-body">
+                    <div class="d-flex justify-content-between align-items-center mb-3">
+                        {% if poll.category %}
+                        <span class="badge badge-primary">{{ poll.category.name }}</span>
+                        {% endif %}
+                        <span class="badge badge-{% if poll.status == 'active' %}success{% elif poll.status == 'draft' %}warning{% else %}secondary{% endif %}">
+                            {{ poll.get_status_display }}
                         </span>
+                    </div>
+                    
+                    <h1 class="card-title h3">{{ poll.title }}</h1>
+                    <div class="text-muted mb-3">
+                        <small>{% trans "Created by" %} {{ poll.creator.username }} 
+                        {% if poll.created_at %}
+                            {{ poll.created_at|date:"F d, Y" }}
+                        {% endif %}
+                        </small>
+                    </div>
+                    
+                    <div class="mb-3">
+                        {{ poll.description|linebreaks }}
+                    </div>
+                    
+                    <div class="d-flex justify-content-between align-items-center">
+                        <div>
+                            <i class="fas fa-users"></i> {{ total_participants }} {% trans "participants" %}
+                            <i class="fas fa-chart-bar ml-3"></i> {{ total_responses }} {% trans "responses" %}
+                        </div>
+                        
+                        {% if poll.end_date %}
+                        <div class="text-{% if poll.is_expired %}danger{% else %}info{% endif %}">
+                            {% if poll.is_expired %}
+                            <i class="fas fa-clock"></i> {% trans "Ended" %} {{ poll.end_date|date:"F d, Y" }}
+                            {% else %}
+                            <i class="fas fa-clock"></i> {% trans "Ends" %} {{ poll.end_date|date:"F d, Y" }}
+                            {% endif %}
+                        </div>
                         {% endif %}
                     </div>
                 </div>
             </div>
             
-            <div class="d-flex gap-2">
-                {% if user == poll.creator %}
-                <a href="{% url 'polls:update' poll.slug %}" class="btn btn-outline-primary">
-                    <i class="ri-edit-line me-2"></i>Edit Poll
-                </a>
-                {% endif %}
-                <div class="dropdown">
-                    <button class="btn btn-icon" data-bs-toggle="dropdown">
-                        <i class="ri-more-2-fill"></i>
-                    </button>
-                    <ul class="dropdown-menu dropdown-menu-end">
-                        <li><a class="dropdown-item" href="#" onclick="sharePoll()">
-                            <i class="ri-share-line me-2"></i>Share Poll
-                        </a></li>
-                        <li><a class="dropdown-item" href="{% url 'polls:export_data' poll.slug %}">
-                            <i class="ri-download-line me-2"></i>Export Data
-                        </a></li>
-                        {% if user == poll.creator %}
-                        <li><hr class="dropdown-divider"></li>
-                        <li><a class="dropdown-item" href="{% url 'polls:save_template' poll.slug %}">
-                            <i class="ri-file-copy-line me-2"></i>Save as Template
-                        </a></li>
-                        <li><a class="dropdown-item text-danger" href="{% url 'polls:delete' poll.slug %}">
-                            <i class="ri-delete-bin-line me-2"></i>Delete Poll
-                        </a></li>
+            <!-- Poll response section -->
+            {% if poll.status == 'active' and not user_responded and user.is_authenticated %}
+                <div class="card shadow-sm mb-4">
+                    <div class="card-header bg-primary text-white">
+                        <h5 class="card-title mb-0">{% trans "Respond to this poll" %}</h5>
+                    </div>
+                    <div class="card-body">
+                        <form method="post" action="{% url 'polls:detail' poll.slug %}">
+                            {% csrf_token %}
+                            {{ response_form.non_field_errors }}
+                            
+                            {% for question in poll.questions.all %}
+                                <div class="form-group mb-4">
+                                    <label for="question-{{ question.id }}">
+                                        {{ question.text }}
+                                        {% if question.is_required %}
+                                            <span class="text-danger">*</span>
+                                        {% endif %}
+                                    </label>
+                                    
+                                    {% if question.question_type.slug == 'single_choice' %}
+                                        <div class="mt-2">
+                                            {% for choice in question.choices.all %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="radio" 
+                                                        name="question_{{ question.id }}" 
+                                                        id="choice-{{ choice.id }}" 
+                                                        value="{{ choice.id }}"
+                                                        {% if question.is_required %}required{% endif %}>
+                                                    <label class="form-check-label" for="choice-{{ choice.id }}">
+                                                        {{ choice.text }}
+                                                    </label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                    {% elif question.question_type.slug == 'multiple_choice' %}
+                                        <div class="mt-2">
+                                            {% for choice in question.choices.all %}
+                                                <div class="form-check">
+                                                    <input class="form-check-input" type="checkbox" 
+                                                        name="question_{{ question.id }}" 
+                                                        id="choice-{{ choice.id }}" 
+                                                        value="{{ choice.id }}">
+                                                    <label class="form-check-label" for="choice-{{ choice.id }}">
+                                                        {{ choice.text }}
+                                                    </label>
+                                                </div>
+                                            {% endfor %}
+                                        </div>
+                                        
+                                    {% elif question.question_type.slug == 'text' %}
+                                        <textarea class="form-control mt-2" 
+                                            id="question-{{ question.id }}" 
+                                            name="question_{{ question.id }}" 
+                                            rows="3"
+                                            {% if question.is_required %}required{% endif %}></textarea>
+                                            
+                                    {% elif question.question_type.slug == 'rating' or question.question_type.slug == 'slider' %}
+                                        <div class="range-container mt-3">
+                                            <input type="range" class="form-range w-100" 
+                                                min="{{ question.min_value|default:1 }}" 
+                                                max="{{ question.max_value|default:10 }}" 
+                                                step="{{ question.step_value|default:1 }}"
+                                                id="question-{{ question.id }}" 
+                                                name="question_{{ question.id }}"
+                                                {% if question.is_required %}required{% endif %}>
+                                            <div class="d-flex justify-content-between">
+                                                <span>{{ question.min_value|default:1 }}</span>
+                                                <span>{{ question.max_value|default:10 }}</span>
+                                            </div>
+                                            <div class="text-center">
+                                                Selected: <span id="question-{{ question.id }}-value"></span>
+                                            </div>
+                                        </div>
+                                        
+                                    {% elif question.question_type.slug == 'dropdown' %}
+                                        <select class="form-control mt-2"
+                                            id="question-{{ question.id }}" 
+                                            name="question_{{ question.id }}"
+                                            {% if question.is_required %}required{% endif %}>
+                                            <option value="">{% trans "Select an option" %}</option>
+                                            {% for choice in question.choices.all %}
+                                                <option value="{{ choice.id }}">{{ choice.text }}</option>
+                                            {% endfor %}
+                                        </select>
+                                    {% endif %}
+                                </div>
+                            {% endfor %}
+                            
+                            <div class="text-center mt-4">
+                                <button type="submit" name="response_submit" class="btn btn-primary">
+                                    {% trans "Submit Response" %}
+                                </button>
+                            </div>
+                        </form>
+                    </div>
+                </div>
+            {% elif user_responded %}
+                <div class="alert alert-info">
+                    <i class="fas fa-check-circle"></i> {% trans "You have already responded to this poll." %}
+                    <a href="{% url 'polls:results' poll.slug %}" class="alert-link">{% trans "View Results" %}</a>
+                </div>
+            {% elif poll.status != 'active' %}
+                <div class="alert alert-warning">
+                    <i class="fas fa-exclamation-circle"></i> {% trans "This poll is no longer active." %}
+                    {% if poll.status == 'closed' %}
+                        <a href="{% url 'polls:results' poll.slug %}" class="alert-link">{% trans "View Results" %}</a>
+                    {% endif %}
+                </div>
+            {% elif not user.is_authenticated %}
+                <div class="alert alert-secondary">
+                    <i class="fas fa-user"></i> {% trans "Please log in to respond to this poll." %}
+                </div>
+            {% endif %}
+            
+            <!-- Comments section -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{% trans "Comments" %} ({{ comments|length }})</h5>
+                </div>
+                <div class="card-body">
+                    {% if user.is_authenticated %}
+                        <form method="post" action="{% url 'polls:detail' poll.slug %}">
+                            {% csrf_token %}
+                            <div class="form-group">
+                                {{ comment_form.text }}
+                                {{ comment_form.text.errors }}
+                            </div>
+                            <button type="submit" name="comment_submit" class="btn btn-sm btn-primary">
+                                {% trans "Add Comment" %}
+                            </button>
+                        </form>
+                        <hr>
+                    {% endif %}
+                    
+                    {% if comments %}
+                        <div class="comments-list">
+                            {% for comment in comments %}
+                                <div class="comment mb-3 pb-3 border-bottom">
+                                    <div class="d-flex">
+                                        <div class="comment-avatar me-3">
+                                            {% if comment.user.profile_image %}
+                                                <img src="{{ comment.user.profile_image.url }}" class="rounded-circle" width="40" height="40" alt="{{ comment.user.username }}">
+                                            {% else %}
+                                                <div class="avatar-placeholder rounded-circle bg-secondary text-white d-flex align-items-center justify-content-center" style="width:40px;height:40px">
+                                                    {{ comment.user.username|first|upper }}
+                                                </div>
+                                            {% endif %}
+                                        </div>
+                                        <div class="comment-content">
+                                            <div class="d-flex justify-content-between">
+                                                <h6 class="mb-1">{{ comment.user.username }}</h6>
+                                                <small class="text-muted">{{ comment.created_at|date:"F d, Y H:i" }}</small>
+                                            </div>
+                                            <p class="mb-0">{{ comment.text }}</p>
+                                        </div>
+                                    </div>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-center text-muted">{% trans "No comments yet. Be the first to comment!" %}</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <!-- Sidebar -->
+        <div class="col-lg-4">
+            <!-- Quick actions -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{% trans "Actions" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-grid gap-2">
+                        <a href="{% url 'polls:results' poll.slug %}" class="btn btn-outline-primary">
+                            <i class="fas fa-chart-pie"></i> {% trans "View Results" %}
+                        </a>
+                        
+                        {% if user.is_authenticated and user == poll.creator %}
+                            <a href="{% url 'polls:update' poll.slug %}" class="btn btn-outline-secondary">
+                                <i class="fas fa-edit"></i> {% trans "Edit Poll" %}
+                            </a>
+                            <a href="{% url 'polls:save_template' poll.slug %}" class="btn btn-outline-info">
+                                <i class="fas fa-copy"></i> {% trans "Save as Template" %}
+                            </a>
+                            <a href="{% url 'polls:analytics' poll.slug %}" class="btn btn-outline-dark">
+                                <i class="fas fa-analytics"></i> {% trans "Advanced Analytics" %}
+                            </a>
+                        {% endif %}
+                        
+                        <button type="button" class="btn btn-outline-secondary" onclick="sharePoll()">
+                            <i class="fas fa-share-alt"></i> {% trans "Share" %}
+                        </button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Poll information -->
+            <div class="card shadow-sm mb-4">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{% trans "Poll Information" %}</h5>
+                </div>
+                <div class="card-body">
+                    <ul class="list-unstyled">
+                        <li class="mb-2">
+                            <i class="fas fa-tag"></i> {% trans "Type" %}: {{ poll.get_poll_type_display }}
+                        </li>
+                        {% if poll.restricted_to_institution %}
+                        <li class="mb-2">
+                            <i class="fas fa-building"></i> {% trans "Institution" %}: {{ poll.restricted_to_institution.name }}
+                        </li>
+                        {% endif %}
+                        <li class="mb-2">
+                            <i class="fas fa-question-circle"></i> {% trans "Questions" %}: {{ poll.questions.count }}
+                        </li>
+                        <li class="mb-2">
+                            <i class="fas fa-calendar"></i> {% trans "Created" %}: {{ poll.created_at|date:"F d, Y" }}
+                        </li>
+                        {% if poll.tags.all %}
+                        <li class="mb-2">
+                            <i class="fas fa-tags"></i> {% trans "Tags" %}:
+                            {% for tag in poll.tags.all %}
+                                <span class="badge bg-light text-dark">{{ tag.name }}</span>
+                            {% endfor %}
+                        </li>
                         {% endif %}
                     </ul>
                 </div>
             </div>
-        </div>
-
-        <p class="mb-4">{{ poll.description }}</p>
-
-        <div class="d-flex flex-wrap gap-3">
-            {% if poll.category %}
-            <span class="badge" style="background-color: {{ poll.category.color }}">
-                {{ poll.category.name }}
-            </span>
-            {% endif %}
-            <span class="badge bg-secondary">{{ poll.get_poll_type_display }}</span>
-            {% for tag in poll.tags.all %}
-            <span class="badge bg-light text-dark">#{{ tag.name }}</span>
-            {% endfor %}
-        </div>
-    </div>
-
-    <div class="row g-4">
-        <!-- Poll Questions Section -->
-        <div class="col-lg-8">
-            {% if not user_responded and poll.status == 'active' and user.is_authenticated %}
-            <form method="post" action="{% url 'polls:respond' poll.slug %}" id="pollForm">
-                {% csrf_token %}
-                {% for field in response_form %}
-                <div class="widget-card mb-4">
-                    <div class="mb-3">
-                        <label class="form-label fw-medium">
-                            {{ field.label }}
-                            {% if field.field.required %}
-                            <span class="text-danger">*</span>
-                            {% endif %}
-                        </label>
-                        {% if field.field.widget.input_type == 'radio' %}
-                            <div class="d-flex flex-column gap-2">
-                                {% for choice in field %}
-                                <div class="form-check">
-                                    {{ choice.tag }}
-                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
-                                        {{ choice.choice_label }}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        {% elif field.field.widget.input_type == 'checkbox' %}
-                            <div class="d-flex flex-column gap-2">
-                                {% for choice in field %}
-                                <div class="form-check">
-                                    {{ choice.tag }}
-                                    <label class="form-check-label" for="{{ choice.id_for_label }}">
-                                        {{ choice.choice_label }}
-                                    </label>
-                                </div>
-                                {% endfor %}
-                            </div>
-                        {% else %}
-                            {{ field }}
-                        {% endif %}
-                        {% if field.help_text %}
-                            <div class="form-text">{{ field.help_text }}</div>
-                        {% endif %}
-                        {% if field.errors %}
-                            <div class="invalid-feedback d-block">
-                                {{ field.errors|join:", " }}
-                            </div>
-                        {% endif %}
-                    </div>
-                </div>
-                {% endfor %}
-                
-                <div class="d-flex justify-content-between align-items-center">
-                    <button type="submit" class="btn btn-primary">
-                        <i class="ri-send-plane-line me-2"></i>Submit Response
-                    </button>
-                    <button type="button" class="btn btn-link text-muted" onclick="resetForm()">
-                        Reset Form
-                    </button>
-                </div>
-            </form>
-            {% elif user_responded %}
-            <div class="widget-card">
-                <div class="text-center py-4">
-                    <i class="ri-checkbox-circle-line text-success display-4"></i>
-                    <h4 class="mt-3">Thank You!</h4>
-                    <p class="text-muted">You have already submitted your response to this poll.</p>
-                    <a href="{% url 'polls:results' poll.slug %}" class="btn btn-primary mt-3">
-                        <i class="ri-bar-chart-line me-2"></i>View Results
-                    </a>
-                </div>
-            </div>
-            {% else %}
-            <div class="widget-card">
-                <div class="text-center py-4">
-                    {% if not user.is_authenticated %}
-                    <i class="ri-lock-line text-warning display-4"></i>
-                    <h4 class="mt-3">Authentication Required</h4>
-                    <p class="text-muted">Please log in to participate in this poll.</p>
-                    <a href="{% url 'accounts:login' %}?next={{ request.path }}" class="btn btn-primary mt-3">
-                        <i class="ri-login-box-line me-2"></i>Log In
-                    </a>
-                    {% elif poll.status != 'active' %}
-                    <i class="ri-time-line text-danger display-4"></i>
-                    <h4 class="mt-3">Poll is Closed</h4>
-                    <p class="text-muted">This poll is no longer accepting responses.</p>
-                    <a href="{% url 'polls:results' poll.slug %}" class="btn btn-primary mt-3">
-                        <i class="ri-bar-chart-line me-2"></i>View Results
-                    </a>
-                    {% endif %}
-                </div>
-            </div>
-            {% endif %}
-        </div>
-
-        <!-- Sidebar -->
-        <div class="col-lg-4">
-            <!-- Poll Statistics -->
-            <div class="widget-card mb-4">
-                <h5 class="mb-4"><i class="ri-bar-chart-box-line me-2"></i>Poll Statistics</h5>
-                <div class="d-flex flex-column gap-3">
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted">Total Responses</span>
-                        <span class="fw-medium">{{ total_responses }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted">Participants</span>
-                        <span class="fw-medium">{{ total_participants }}</span>
-                    </div>
-                    <div class="d-flex justify-content-between align-items-center">
-                        <span class="text-muted">Completion Rate</span>
-                        <span class="fw-medium">{{ poll.completion_rate }}%</span>
-                    </div>
-                </div>
-                <div class="progress mt-4" style="height: 6px;">
-                    <div class="progress-bar" role="progressbar" 
-                         style="width: {{ poll.completion_rate }}%"
-                         aria-valuenow="{{ poll.completion_rate }}" 
-                         aria-valuemin="0" aria-valuemax="100"></div>
-                </div>
-            </div>
-
-            <!-- Related Polls -->
+            
+            <!-- Related polls -->
             {% if related_polls %}
-            <div class="widget-card mb-4">
-                <h5 class="mb-4"><i class="ri-links-line me-2"></i>Related Polls</h5>
-                <div class="d-flex flex-column gap-3">
-                    {% for related_poll in related_polls %}
-                    <a href="{% url 'polls:detail' related_poll.slug %}" 
-                       class="related-poll-card p-3 rounded">
-                        <h6 class="mb-2">{{ related_poll.title }}</h6>
-                        <div class="d-flex align-items-center text-muted small">
-                            <img src="{{ related_poll.creator.profile_picture.url|default:'https://via.placeholder.com/24' }}" 
-                                 class="rounded-circle me-2" width="24" height="24" alt="{{ related_poll.creator.get_full_name }}">
-                            <span>{{ related_poll.creator.get_short_name }}</span>
-                            <span class="mx-2">•</span>
-                            <span>{{ related_poll.created_at|timesince }} ago</span>
-                        </div>
-                    </a>
-                    {% endfor %}
+            <div class="card shadow-sm">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">{% trans "Related Polls" %}</h5>
+                </div>
+                <div class="card-body">
+                    <div class="list-group list-group-flush">
+                        {% for related in related_polls %}
+                            <a href="{% url 'polls:detail' related.slug %}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ related.title }}</h6>
+                                    <small class="text-muted">{{ related.total_responses }} {% trans "responses" %}</small>
+                                </div>
+                                <small>{{ related.description|truncatechars:80 }}</small>
+                            </a>
+                        {% endfor %}
+                    </div>
                 </div>
             </div>
             {% endif %}
-
-            <!-- Comments Section -->
-            <div class="widget-card">
-                <h5 class="mb-4"><i class="ri-chat-3-line me-2"></i>Comments</h5>
-                {% if user.is_authenticated %}
-                <form method="post" action="{% url 'polls:add_comment' poll.slug %}" class="mb-4">
-                    {% csrf_token %}
-                    <div class="mb-3">
-                        <textarea class="form-control" name="content" rows="3" 
-                                  placeholder="Add a comment..."></textarea>
-                    </div>
-                    <button type="submit" class="btn btn-primary">
-                        <i class="ri-send-plane-line me-2"></i>Post Comment
-                    </button>
-                </form>
-                {% endif %}
-
-                <div class="comments-list">
-                    {% for comment in comments %}
-                    <div class="comment-card p-3 rounded mb-3">
-                        <div class="d-flex gap-3">
-                            <a href="{% url 'accounts:profile' comment.user.username %}">
-                                <img src="{{ comment.user.profile_picture.url|default:'https://via.placeholder.com/32' }}" 
-                                     class="rounded-circle" width="32" height="32" alt="{{ comment.user.get_full_name }}">
-                            </a>
-                            <div class="flex-grow-1">
-                                <div class="d-flex justify-content-between align-items-center mb-2">
-                                    <div class="fw-medium">{{ comment.user.get_full_name }}</div>
-                                    <small class="text-muted">{{ comment.created_at|timesince }} ago</small>
-                                </div>
-                                <p class="mb-0">{{ comment.content }}</p>
-                            </div>
-                        </div>
-                    </div>
-                    {% empty %}
-                    <div class="text-center text-muted py-4">
-                        <i class="ri-chat-3-line mb-2 display-6"></i>
-                        <p>No comments yet. Be the first to comment!</p>
-                    </div>
-                    {% endfor %}
-                </div>
-            </div>
         </div>
     </div>
 </div>
 
-<style>
-    .related-poll-card {
-        background-color: var(--surface-2);
-        transition: all 0.2s ease;
-        text-decoration: none;
-        color: var(--text);
-        border: 1px solid var(--border);
-    }
-    
-    .related-poll-card:hover {
-        background-color: var(--surface-3);
-        transform: translateX(4px);
-        color: var(--text);
-    }
-    
-    .comment-card {
-        background-color: var(--surface-2);
-        border: 1px solid var(--border);
-    }
-    
-    .form-control {
-        background-color: var(--surface-2);
-        border: 1px solid var(--border);
-        color: var(--text);
-    }
-    
-    .form-control:focus {
-        background-color: var(--surface);
-        border-color: var(--primary);
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
-    }
-</style>
+{% endblock %}
 
+{% block extra_js %}
 <script>
+    // Handle range input display values
+    document.addEventListener('DOMContentLoaded', function() {
+        const rangeInputs = document.querySelectorAll('input[type="range"]');
+        rangeInputs.forEach(input => {
+            const valueDisplay = document.getElementById(`${input.id}-value`);
+            valueDisplay.textContent = input.value;
+            
+            input.addEventListener('input', function() {
+                valueDisplay.textContent = this.value;
+            });
+        });
+    });
+    
+    // Share functionality
     function sharePoll() {
+        const shareUrl = window.location.href;
+        
         if (navigator.share) {
             navigator.share({
                 title: '{{ poll.title }}',
-                text: '{{ poll.description }}',
-                url: window.location.href
+                text: '{{ poll.description|truncatechars:100 }}',
+                url: shareUrl,
             })
-            .catch(console.error);
+            .catch(error => console.log('Error sharing', error));
         } else {
-            // Fallback
-            const dummy = document.createElement('input');
-            document.body.appendChild(dummy);
-            dummy.value = window.location.href;
-            dummy.select();
-            document.execCommand('copy');
-            document.body.removeChild(dummy);
-            
-            // Show tooltip or notification
-            alert('Poll URL copied to clipboard!');
-        }
-    }
-
-    function resetForm() {
-        if (confirm('Are you sure you want to reset your responses?')) {
-            document.getElementById('pollForm').reset();
+            // Fallback for browsers that don't support navigator.share
+            navigator.clipboard.writeText(shareUrl)
+                .then(() => {
+                    alert('{% trans "Link copied to clipboard!" %}');
+                })
+                .catch(error => {
+                    console.error('Failed to copy: ', error);
+                });
         }
     }
 </script>

@@ -138,6 +138,7 @@ from .models import Poll, QuestionType, Choice, InstitutionProfile
 from .forms import PollForm, QuestionFormSet
 from django.utils.translation import gettext as _
 
+@method_decorator(login_required, name='dispatch')
 class PollCreateView(CreateView):
     model = Poll
     form_class = PollForm
@@ -148,16 +149,6 @@ class PollCreateView(CreateView):
         kwargs['creator'] = self.request.user
         return kwargs
     
-    def get_initial(self):
-        initial = super().get_initial()
-        # Check if the user has an associated InstitutionProfile
-        try:
-            institution = InstitutionProfile.objects.get(user=self.request.user)
-            initial['restricted_to_institution'] = institution.pk  # Autofill the institution field
-        except InstitutionProfile.DoesNotExist:
-            pass  # User does not have an associated InstitutionProfile
-        return initial
-    
     def get_context_data(self, **kwargs):
         context = super().get_context_data(**kwargs)
         
@@ -167,8 +158,21 @@ class PollCreateView(CreateView):
         else:
             context['question_formset'] = QuestionFormSet(instance=self.object)
         
-        # Add required context data for the form
+        # Add all question types for the UI
         context['question_types'] = QuestionType.objects.all()
+        
+        # Group question types by category for better UX
+        question_types_by_category = {
+            'basic': QuestionType.objects.filter(slug__in=['single_choice', 'multiple_choice', 'open_ended']),
+            'scale': QuestionType.objects.filter(slug__in=['rating', 'likert', 'slider']),
+            'advanced': QuestionType.objects.exclude(
+                slug__in=['single_choice', 'multiple_choice', 'open_ended', 'rating', 'likert', 'slider']
+            )
+        }
+        context['question_types_by_category'] = question_types_by_category
+        
+        # Add empty choice formset for JavaScript to use as template
+        context['empty_choice_form'] = ChoiceForm(prefix='__prefix__')
         
         return context
     
@@ -178,70 +182,96 @@ class PollCreateView(CreateView):
         question_formset = context['question_formset']
         
         if not question_formset.is_valid():
-            messages.error(self.request, _('There are issues with one or more questions. Please check and try again.'))
             return self.form_invalid(form)
         
-        # Save the poll
-        self.object = form.save()
+        # Save the poll with the creator
+        self.object = form.save(commit=False)
+        self.object.creator = self.request.user
+        self.object.save()
+        form.save_m2m()  # Save tags and other M2M relationships
         
-        # Save questions
-        question_formset.instance = self.object
+        # Process and save questions
         questions = question_formset.save(commit=False)
+        for i, question_form in enumerate(question_formset):
+            if question_form.is_valid() and not question_form.cleaned_data.get('DELETE', False):
+                question = question_form.save(commit=False)
+                question.poll = self.object
+                question.save()
+                
+                # Process choices for questions that need them
+                question_type = question.question_type
+                if question_type.requires_choices or question_type.slug in ['single_choice', 'multiple_choice']:
+                    # Get choices from the POST data
+                    choice_prefix = f"question_{i}"
+                    
+                    # Extract all choice fields for this question
+                    choices_data = []
+                    choice_index = 0
+                    
+                    # Keep looking for choices until we don't find any more
+                    while True:
+                        choice_key = f'{choice_prefix}_choice_{choice_index}'
+                        if choice_key in self.request.POST and self.request.POST[choice_key].strip():
+                            choices_data.append(self.request.POST[choice_key].strip())
+                            choice_index += 1
+                        else:
+                            break
+                    
+                    # If no choices were found using the index approach, try the older method
+                    if not choices_data:
+                        for key, value in self.request.POST.items():
+                            if key.startswith(f'{choice_prefix}_choice_') and value.strip():
+                                choices_data.append(value.strip())
+                    
+                    # Create choices
+                    for j, choice_text in enumerate(choices_data):
+                        Choice.objects.create(
+                            question=question,
+                            text=choice_text,
+                            order=j + 1
+                        )
         
-        # Process each question
-        for question in questions:
-            question.poll = self.object
-            question.save()
-            
-            # Handle choices for questions that require them
-            if question.question_type.requires_choices:
-                # First check for dynamic choices added via JavaScript
-                choices_data = []
-                
-                # Look for choices with the pattern question_{prefix}_choices
-                prefix = question.id or f"{question_formset.prefix}-{question_formset.forms.index(question_formset[question])}"
-                
-                for key, value in self.request.POST.items():
-                    choice_key = f'question_{prefix}_choices'
-                    if key.startswith(choice_key) and value.strip():
-                        choices_data.append(value.strip())
-                
-                # Create choices for this question
-                for i, choice_text in enumerate(choices_data):
-                    Choice.objects.create(
-                        question=question,
-                        text=choice_text,
-                        order=i
-                    )
-        
-        # Save many-to-many relationships
-        question_formset.save_m2m()
+        # Handle deleted questions
+        for deleted_form in question_formset.deleted_forms:
+            if deleted_form.instance.pk:
+                deleted_form.instance.delete()
         
         messages.success(self.request, _('Poll created successfully!'))
         return redirect(self.get_success_url())
     
     def form_invalid(self, form):
         """Handle form validation errors"""
+        messages.error(self.request, _('Please correct the errors below.'))
+        
+        # Log specific errors for debugging
         for field, errors in form.errors.items():
             for error in errors:
                 messages.error(self.request, f"{field}: {error}")
         
         # Check for formset errors
         context = self.get_context_data()
-        question_formset = context['question_formset']
+        question_formset = context.get('question_formset')
         
-        if question_formset.non_form_errors():
+        if question_formset and question_formset.non_form_errors():
             for error in question_formset.non_form_errors():
                 messages.error(self.request, f"Questions: {error}")
         
-        for form_idx, question_form in enumerate(question_formset.forms):
-            if question_form.errors:
-                messages.error(self.request, f"Question #{form_idx+1} has errors: {question_form.errors}")
+        if question_formset:
+            for i, question_form in enumerate(question_formset.forms):
+                if question_form.errors:
+                    messages.error(self.request, f"Question #{i+1} has errors")
+                    
+                    # Add detailed error messages for each field
+                    for field, errors in question_form.errors.items():
+                        for error in errors:
+                            messages.error(self.request, f"Question #{i+1} {field}: {error}")
         
         return super().form_invalid(form)
     
     def get_success_url(self):
-        return reverse('polls:detail', kwargs={'slug': self.object.slug})
+        if self.object and self.object.slug:
+            return reverse('polls:detail', kwargs={'slug': self.object.slug})
+        return reverse('polls:poll_list')
     
     # Add AJAX support for dynamic question type loading
     def get_question_type_details(self, request):
@@ -260,8 +290,6 @@ class PollCreateView(CreateView):
                     return JsonResponse({'error': 'Question type not found'}, status=404)
         
         return JsonResponse({'error': 'Invalid request'}, status=400)
-
-        
 @method_decorator(login_required, name='dispatch')
 class PollUpdateView(UserPassesTestMixin, SuccessMessageMixin, UpdateView):
     model = Poll
