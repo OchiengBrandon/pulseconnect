@@ -2,9 +2,10 @@ dj_database_url==2.3.0
 Django==5.1.6
 django_allauth==65.3.0
 django_taggit==6.1.0
+djangorestframework==3.14.0  
 matplotlib==3.10.1
 numpy==2.2.4
 pandas==2.2.3
 python-decouple==3.8
 reportlab==4.3.1
-gunicorn==23.0.0  
+gunicorn==23.0.0
