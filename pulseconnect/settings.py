@@ -129,6 +129,7 @@ TEMPLATES = [
                 'django.contrib.auth.context_processors.auth',
                 'django.contrib.messages.context_processors.messages',
                 'accessibility.context_processors.accessibility_settings',
+                'collaboration.context_processors.user_invitations',
             ],
         },
     },

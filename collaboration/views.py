@@ -556,6 +556,18 @@ def delete_document(request, doc_pk):
     
     return redirect('collaboration:project_documents', pk=project.pk)
 
+@login_required
+def my_invitations(request):
+    """View all pending invitations for the current user"""
+    # Get invitations for this user (either by email or direct user invitation)
+    invitations = ProjectInvitation.objects.filter(
+        (Q(email=request.user.email) | Q(invited_user=request.user)) &
+        Q(status='pending')
+    ).order_by('-created_at')
+    
+    return render(request, 'collaboration/my_invitations.html', {
+        'invitations': invitations
+    })
 
 @login_required
 def project_invitations(request, pk):

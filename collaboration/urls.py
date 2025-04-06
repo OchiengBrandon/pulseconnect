@@ -35,4 +35,5 @@ urlpatterns = [
     path('invitations/<int:invitation_pk>/cancel/', views.cancel_invitation, name='cancel_invitation'),
     path('invitations/<uuid:token>/accept/', views.accept_invitation, name='accept_invitation'),
     path('invitations/<uuid:token>/decline/', views.decline_invitation, name='decline_invitation'),
+    path('invitations/', views.my_invitations, name='my_invitations'),
 ]
