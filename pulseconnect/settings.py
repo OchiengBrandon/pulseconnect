@@ -2,6 +2,7 @@ import os
 from pathlib import Path
 from django.utils.translation import gettext_lazy as _
 from decouple import config, Csv
+import dj_database_url
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
@@ -141,17 +142,20 @@ ASGI_APPLICATION = 'pulseconnect.asgi.application'
 
 
 
-# Database configuration for PostgreSQL
+# Database configuration for MySQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DATABASE', default='pulseconnect'),
-        'USER': config('POSTGRES_USER', default='postgres'),
-        'PASSWORD': config('POSTGRES_PASSWORD', default='Brandon'),
-        'HOST': config('POSTGRES_HOST', default='localhost'),
-        'PORT': int(config('POSTGRES_PORT', default=5432)),
+        'ENGINE': 'django.db.backends.mysql',
+        'NAME': config('MYSQL_DATABASE', default='pulseconnect'),
+        'USER': config('MYSQL_USER', default='root'),
+        'PASSWORD': config('MYSQL_PASSWORD', default='Brandon'),
+        'HOST': config('MYSQL_HOST', default='localhost'),
+        'PORT': int(config('MYSQL_PORT', default=3306)),
     }
 }
+
+DATABASES['default'] = dj_database_url.parse("postgresql://pulseconnect_5468_user:fRLbLvs4iX4Bqjj2zz1QtY2I64iGaEpj@dpg-cvpfa10dl3ps7381kot0-a.oregon-postgres.render.com/pulseconnect_5468")
+
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
 
