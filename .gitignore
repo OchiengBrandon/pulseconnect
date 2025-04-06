@@ -18,9 +18,6 @@ coverage.xml
 *.cover
 *.py,cover
 
-# Migrations
-*/migrations/*
-!*/migrations/__init__.py
 
 # SQLite database
 db.sqlite3
