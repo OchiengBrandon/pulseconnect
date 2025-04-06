@@ -8,12 +8,12 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'django-insecure-pulseconnect-replace-with-env-variable')
+SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv('DJANGO_DEBUG', 'True') == 'True'
+DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1']
+ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -153,8 +153,8 @@ DATABASES = {
         'PORT': int(config('MYSQL_PORT', default=3306)),
     }
 }
-
-DATABASES['default'] = dj_database_url.parse("postgresql://pulseconnect_5468_user:fRLbLvs4iX4Bqjj2zz1QtY2I64iGaEpj@dpg-cvpfa10dl3ps7381kot0-a.oregon-postgres.render.com/pulseconnect_5468")
+database_url = os.environ.get('DATABASE_URL')
+DATABASES['default'] = dj_database_url.parse(database_url)
 
 # Custom user model
 AUTH_USER_MODEL = 'accounts.User'
@@ -246,8 +246,8 @@ EMAIL_BACKEND = 'django.core.mail.backends.smtp.EmailBackend'
 EMAIL_HOST = 'smtp.gmail.com'
 EMAIL_PORT = 587
 EMAIL_USE_TLS = True
-EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='pulseconnectorg@gmail.com')  # Use environment variable for email user
-EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='jzoj gngj dhdh qaal')  # Use environment variable for email password
+EMAIL_HOST_USER = os.environ.get('EMAIL_HOST_USER')  
+EMAIL_HOST_PASSWORD = os.environ.get('EMAIL_HOST_PASSWORD')  
 DEFAULT_FROM_EMAIL = 'PulseConnect <noreply@pulseconnect.org>'
 
 # Login URLs
