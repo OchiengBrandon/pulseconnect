@@ -309,8 +309,11 @@ class EventListView(ListView):
         )
         
         return context
+
+
+from django.utils import timezone
+from django.views.generic import DetailView
 from django.contrib.contenttypes.models import ContentType
-from .models import Event, Comment  # Make sure you import your Comment model
 
 class EventDetailView(DetailView):
     model = Event
@@ -329,6 +332,9 @@ class EventDetailView(DetailView):
         context['user_attending'] = user_attending
         context['attendees'] = event.attendees.all()
         
+        # Calculate delays for attendees
+        context['attendee_delays'] = [i * 50 for i in range(len(context['attendees']))]
+        
         # Get comments for this event
         event_type = ContentType.objects.get_for_model(Event)
         context['comments'] = Comment.objects.filter(
@@ -341,6 +347,9 @@ class EventDetailView(DetailView):
         
         # Add comment form
         context['comment_form'] = CommentForm()
+        
+        # Determine if the event is upcoming
+        context['is_upcoming'] = event.end_datetime > timezone.now()
         
         return context
 @method_decorator(login_required, name='dispatch')

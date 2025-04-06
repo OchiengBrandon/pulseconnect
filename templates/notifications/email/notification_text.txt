@@ -1,0 +1,22 @@
+{{ site_name }} - {{ title }}
+
+Hello {{ recipient.get_full_name|default:recipient.username }},
+
+{{ message }}
+
+{% if content_object %}
+Regarding: {{ content_object }}
+{% endif %}
+
+{% if url %}
+View details: {{ url }}
+{% endif %}
+
+Thank you for being part of our community!
+
+The {{ site_name }} Team
+
+---
+© {% now "Y" %} {{ site_name }}. All rights reserved.
+This email was sent to {{ recipient.email }}.
+To manage your notification settings, visit: {{ site_url }}{% url 'notifications:preferences' %}

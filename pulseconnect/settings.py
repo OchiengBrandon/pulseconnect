@@ -54,7 +54,7 @@ INSTALLED_APPS = [
     'accessibility',
     'gamification',
     'api',
-    'calendar_view',
+    'notifications',
 ]
 
 MIDDLEWARE = [

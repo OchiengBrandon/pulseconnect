@@ -11,7 +11,7 @@ urlpatterns = [
     path('accounts/', include('allauth.urls')),  # Django Allauth URLs for authentication
     path('polls/', include('polls.urls')),
     path('analytics/', include('analytics.urls')),
-    path('calendar/', include('calendar_view.urls')),
+    path('notifications/', include('notifications.urls')),
     path('community/', include('community.urls')),
     path('collaborate/', include('collaboration.urls')),
     path('rewards/', include('gamification.urls')),
