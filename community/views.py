@@ -309,7 +309,8 @@ class EventListView(ListView):
         )
         
         return context
-
+from django.contrib.contenttypes.models import ContentType
+from .models import Event, Comment  # Make sure you import your Comment model
 
 class EventDetailView(DetailView):
     model = Event
@@ -326,8 +327,6 @@ class EventDetailView(DetailView):
             user_attending = event.attendees.filter(id=self.request.user.id).exists()
         
         context['user_attending'] = user_attending
-        
-        # Get attendees
         context['attendees'] = event.attendees.all()
         
         # Get comments for this event
@@ -337,12 +336,13 @@ class EventDetailView(DetailView):
             object_id=event.id
         ).order_by('created_at')
         
+        # Add the content_type_id to the context
+        context['content_type_id'] = event_type.id
+        
         # Add comment form
         context['comment_form'] = CommentForm()
         
         return context
-
-
 @method_decorator(login_required, name='dispatch')
 class EventCreateView(CreateView):
     model = Event
@@ -492,7 +492,7 @@ class VolunteerOpportunityListView(ListView):
         context['polls'] = Poll.objects.filter(status='active')
         
         return context
-
+from django.contrib.contenttypes.models import ContentType
 
 class VolunteerOpportunityDetailView(DetailView):
     model = VolunteerOpportunity
@@ -520,6 +520,9 @@ class VolunteerOpportunityDetailView(DetailView):
             object_id=opportunity.id
         ).order_by('created_at')
         
+        # Add the content_type_id to the context
+        context['content_type_id'] = opportunity_type.id  # Add this line
+        
         # Add comment form
         context['comment_form'] = CommentForm()
         
@@ -532,7 +535,6 @@ class VolunteerOpportunityDetailView(DetailView):
             ).exclude(id=opportunity.id).distinct()[:5]
         
         return context
-
 
 @method_decorator(login_required, name='dispatch')
 class VolunteerOpportunityCreateView(CreateView):
