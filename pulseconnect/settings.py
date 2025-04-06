@@ -141,15 +141,15 @@ ASGI_APPLICATION = 'pulseconnect.asgi.application'
 
 
 
-# Database configuration for MySQL
+# Database configuration for PostgreSQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.mysql',
-        'NAME': config('MYSQL_DATABASE', default='pulseconnect'),
-        'USER': config('MYSQL_USER', default='root'),
-        'PASSWORD': config('MYSQL_PASSWORD', default='Brandon'),
-        'HOST': config('MYSQL_HOST', default='localhost'),
-        'PORT': int(config('MYSQL_PORT', default=3306)),
+        'ENGINE': 'django.db.backends.postgresql',
+        'NAME': config('POSTGRES_DATABASE', default='pulseconnect'),
+        'USER': config('POSTGRES_USER', default='postgres'),
+        'PASSWORD': config('POSTGRES_PASSWORD', default='Brandon'),
+        'HOST': config('POSTGRES_HOST', default='localhost'),
+        'PORT': int(config('POSTGRES_PORT', default=5432)),
     }
 }
 # Custom user model
