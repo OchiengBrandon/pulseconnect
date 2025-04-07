@@ -1,0 +1,54 @@
+# Exported from Render on 2025-04-07T08:14:14Z
+services:
+- type: web
+  name: pulseconnect
+  runtime: python
+  repo: https://github.com/OchiengBrandon/pulseconnect
+  plan: free
+  envVars:
+  - key: DJANGO_SUPERUSER_EMAIL
+    sync: false
+  - key: DJANGO_SUPERUSER_USERNAME
+    sync: false
+  - key: DJANGO_SUPERUSER_PASSWORD
+    sync: false
+  - key: CREATE_SUPERUSER
+    sync: false
+  - key: EMAIL_HOST_PASSWORD
+    sync: false
+  - key: EMAIL_HOST_USER
+    sync: false
+  - key: DJANGO_DEBUG
+    sync: false
+  - key: DJANGO_SECRET_KEY
+    sync: false
+  - key: POSTGRES_USER
+    sync: false
+  - key: POSTGRES_PORT
+    sync: false
+  - key: POSTGRES_PASSWORD
+    sync: false
+  - key: POSTGRES_HOST
+    sync: false
+  - key: POSTGRES_DATABASE
+    sync: false
+  - key: MYSQL_PORT
+    sync: false
+  - key: MYSQL_HOST
+    sync: false
+  - key: MYSQL_PASSWORD
+    sync: false
+  - key: MYSQL_USER
+    sync: false
+  - key: MYSQL_DATABASE
+    sync: false
+  - key: DATABASE_URL
+    sync: false
+  - key: ALLOWED_HOSTS
+    sync: false
+  - key: USE_MYSQL
+    sync: false
+  region: oregon
+  buildCommand: pip install -r requirements.txt
+  startCommand: ./build.sh
+version: "1"
