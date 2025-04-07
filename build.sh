@@ -22,4 +22,4 @@ if [[ $CREATE_SUPERUSER ]]; then
 fi
 
 # Start the application with Gunicorn
-exec gunicorn pulseconnect.wsgi:application --bind 0.0.0.0
+exec gunicorn pulseconnect.wsgi:application 
