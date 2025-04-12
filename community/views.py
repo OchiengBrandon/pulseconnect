@@ -74,7 +74,7 @@ class DiscussionListView(ListView):
         context['current_poll'] = self.request.GET.get('poll', '')
         context['current_tag'] = self.request.GET.get('tag', '')
         context['sort_by'] = self.request.GET.get('sort', 'recent')
-        
+            
         # Add related polls for filter dropdown
         context['polls'] = Poll.objects.filter(status='active')
         
