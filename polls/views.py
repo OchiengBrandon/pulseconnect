@@ -310,6 +310,8 @@ class PollCreateView(CreateView):
                     return JsonResponse({'error': 'Question type not found'}, status=404)
         
         return JsonResponse({'error': 'Invalid request'}, status=400)
+
+# Poll Update view
 class PollUpdateView(UserPassesTestMixin, SuccessMessageMixin, UpdateView):
     model = Poll
     form_class = PollForm
@@ -322,7 +324,7 @@ class PollUpdateView(UserPassesTestMixin, SuccessMessageMixin, UpdateView):
     
     def get_form_kwargs(self):
         kwargs = super().get_form_kwargs()
-        kwargs['creator'] = self.request.user  # Ensure this matches the PollForm
+        kwargs['creator'] = self.request.user
         return kwargs
     
     def get_context_data(self, **kwargs):
@@ -343,6 +345,21 @@ class PollUpdateView(UserPassesTestMixin, SuccessMessageMixin, UpdateView):
                     choices = Choice.objects.filter(question=question).order_by('order')
                     question_form.choices = choices
         
+        # Add all question types for the UI
+        context['question_types'] = QuestionType.objects.all()
+        
+        # Group question types by category for better UX
+        question_types_by_category = {
+            'basic': QuestionType.objects.filter(slug__in=['single_choice', 'multiple_choice', 'open_ended', 'short_answer', 'true_false']),
+            'choice': QuestionType.objects.filter(slug__in=['single_choice', 'multiple_choice']),
+            'scale': QuestionType.objects.filter(slug__in=['rating_scale', 'likert_scale']),
+            'text': QuestionType.objects.filter(slug__in=['essay']),
+        }
+        context['question_types_by_category'] = question_types_by_category
+        
+        # Add empty choice form for JavaScript to use as template
+        context['empty_choice_form'] = ChoiceForm(prefix='__prefix__')
+        
         return context
     
     @transaction.atomic
@@ -350,37 +367,147 @@ class PollUpdateView(UserPassesTestMixin, SuccessMessageMixin, UpdateView):
         context = self.get_context_data()
         question_formset = context['question_formset']
         
-        if question_formset.is_valid():
-            self.object = form.save()
-            question_formset.instance = self.object
-            question_formset.save()
-            
-            # Process each question to update choices
-            for question_form in question_formset:
-                if not question_form.cleaned_data.get('DELETE', False):
-                    question = question_form.instance
-                    
-                    # Delete existing choices if we're updating them
-                    if f'question_{question.id}_choices' in self.request.POST:
-                        Choice.objects.filter(question=question).delete()
-                        
-                        # Create new choices
-                        choices_data = self.request.POST.getlist(f'question_{question.id}_choices', [])
-                        for i, choice_text in enumerate(choices_data):
-                            if choice_text.strip():
-                                Choice.objects.create(
-                                    question=question,
-                                    text=choice_text.strip(),
-                                    order=i
-                                )
-            
-            messages.success(self.request, self.success_message)
-            return redirect(self.get_success_url())
-        else:
+        if not question_formset.is_valid():
             return self.form_invalid(form)
+        
+        self.object = form.save()
+        
+        # Process and save questions
+        questions = question_formset.save(commit=False)
+        
+        # Track deleted questions to handle their choices
+        for deleted_form in question_formset.deleted_forms:
+            if deleted_form.instance.pk:
+                deleted_form.instance.delete()
+        
+        # Process each question form
+        for i, question_form in enumerate(question_formset.forms):
+            if question_form.is_valid() and not question_form.cleaned_data.get('DELETE', False):
+                question = question_form.save(commit=False)
+                question.poll = self.object
+                question.save()
+                
+                # Process question type specific requirements
+                question_type = question.question_type
+                question_slug = question_type.slug
+                
+                # Handle choices based on the form data
+                choice_prefix = f"question_{i if not question.id else question.id}"
+                
+                # If question type requires choices
+                if question_type.requires_choices or question_slug in ['single_choice', 'multiple_choice', 'true_false', 'likert_scale']:
+                    # For true/false, add predefined choices if none exist
+                    if question_slug == 'true_false' and not Choice.objects.filter(question=question).exists():
+                        Choice.objects.filter(question=question).delete()  # Clear any existing choices
+                        Choice.objects.create(question=question, text=_('True'), order=1)
+                        Choice.objects.create(question=question, text=_('False'), order=2)
+                    elif question_slug == 'likert_scale' and not Choice.objects.filter(question=question).exists():
+                        # Handle Likert scale default options
+                        likert_options = [
+                            (_('Strongly Disagree'), 1),
+                            (_('Disagree'), 2),
+                            (_('Neutral'), 3),
+                            (_('Agree'), 4),
+                            (_('Strongly Agree'), 5)
+                        ]
+                        for text, order in likert_options:
+                            Choice.objects.create(
+                                question=question,
+                                text=text,
+                                order=order
+                            )
+                    else:
+                        # Extract all choice fields for this question
+                        choices_data = []
+                        choice_index = 0
+                        
+                        # Extract choices either by name pattern or direct array
+                        choices_key = f'{choice_prefix}_choices'
+                        if choices_key in self.request.POST:
+                            # If choices were submitted as an array
+                            choices_data = self.request.POST.getlist(choices_key, [])
+                        else:
+                            # Try to find choices by indexed naming pattern
+                            while f'{choice_prefix}_choice_{choice_index}' in self.request.POST:
+                                choice_value = self.request.POST[f'{choice_prefix}_choice_{choice_index}'].strip()
+                                if choice_value:
+                                    choices_data.append(choice_value)
+                                choice_index += 1
+                        
+                        # If we found choices, update them
+                        if choices_data:
+                            # First delete existing choices
+                            Choice.objects.filter(question=question).delete()
+                            
+                            # Then create new ones
+                            for j, choice_text in enumerate(choices_data):
+                                if choice_text.strip():
+                                    Choice.objects.create(
+                                        question=question,
+                                        text=choice_text.strip(),
+                                        order=j + 1
+                                    )
+                
+                # Handle rating scale specific fields
+                if question_slug == 'rating_scale':
+                    if question.min_value is None:
+                        question.min_value = 1
+                    if question.max_value is None:
+                        question.max_value = 5
+                    question.save()
+        
+        messages.success(self.request, self.success_message)
+        return redirect(self.get_success_url())
+    
+    def form_invalid(self, form):
+        """Handle form validation errors"""
+        messages.error(self.request, _('Please correct the errors below.'))
+        
+        # Log specific errors for debugging
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(self.request, f"{field}: {error}")
+        
+        # Check for formset errors
+        context = self.get_context_data()
+        question_formset = context.get('question_formset')
+        
+        if question_formset and question_formset.non_form_errors():
+            for error in question_formset.non_form_errors():
+                messages.error(self.request, f"Questions: {error}")
+        
+        if question_formset:
+            for i, question_form in enumerate(question_formset.forms):
+                if question_form.errors:
+                    messages.error(self.request, f"Question #{i+1} has errors")
+                    
+                    # Add detailed error messages for each field
+                    for field, errors in question_form.errors.items():
+                        for error in errors:
+                            messages.error(self.request, f"Question #{i+1} {field}: {error}")
+        
+        return super().form_invalid(form)
     
     def get_success_url(self):
         return reverse('polls:detail', kwargs={'slug': self.object.slug})
+
+    # Add AJAX support for dynamic question type loading
+    def get_question_type_details(self, request):
+        """AJAX endpoint to get question type details"""
+        if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
+            type_id = request.GET.get('type_id')
+            if type_id:
+                try:
+                    question_type = QuestionType.objects.get(id=type_id)
+                    return JsonResponse({
+                        'requires_choices': question_type.requires_choices,
+                        'slug': question_type.slug,
+                        'name': question_type.name,
+                    })
+                except QuestionType.DoesNotExist:
+                    return JsonResponse({'error': 'Question type not found'}, status=404)
+        
+        return JsonResponse({'error': 'Invalid request'}, status=400)
 
 @method_decorator(login_required, name='dispatch')
 class PollDeleteView(UserPassesTestMixin, DeleteView):

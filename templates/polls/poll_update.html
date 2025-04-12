@@ -1,24 +1,490 @@
-{% extends "base.html" %}
+{% extends 'base.html' %}
+{% load i18n %}
+{% load static %}
+{% load crispy_forms_tags %}
 
-{% block title %}Update Poll{% endblock %}
+{% block title %}{% trans "Edit Poll" %} - {{ poll.title }}{% endblock %}
 
 {% block content %}
-<div class="poll-update">
-    <h1>Update Poll</h1>
-
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-
-        <h2>Questions</h2>
-        {{ question_formset.management_form }}
-        {% for form in question_formset %}
-            <div class="question-form">
-                {{ form.as_p }}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card shadow-sm">
+                <div class="card-header bg-primary text-white">
+                    <h3>{% trans "Edit Poll" %}</h3>
+                </div>
+                <div class="card-body">
+                    {% if messages %}
+                        {% for message in messages %}
+                            <div class="alert alert-{{ message.tags }}">{{ message }}</div>
+                        {% endfor %}
+                    {% endif %}
+                    
+                    <form method="post" id="poll-update-form">
+                        {% csrf_token %}
+                        
+                        <!-- Poll Basic Information -->
+                        <div class="card mb-4">
+                            <div class="card-header">
+                                <h4>{% trans "Poll Information" %}</h4>
+                            </div>
+                            <div class="card-body">
+                                {{ form|crispy }}
+                            </div>
+                        </div>
+                        
+                        <!-- Questions Section -->
+                        <div class="card mb-4">
+                            <div class="card-header d-flex justify-content-between align-items-center">
+                                <h4>{% trans "Questions" %}</h4>
+                                <button type="button" class="btn btn-success add-question">
+                                    <i class="fas fa-plus"></i> {% trans "Add Question" %}
+                                </button>
+                            </div>
+                            <div class="card-body">
+                                {{ question_formset.management_form }}
+                                
+                                <div id="questions-container">
+                                    {% for question_form in question_formset %}
+                                        <div class="question-item card mb-3" data-index="{{ forloop.counter0 }}">
+                                            <div class="card-header d-flex justify-content-between align-items-center">
+                                                <h5>{% trans "Question" %} #{{ forloop.counter }}</h5>
+                                                <div>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary move-question-up">
+                                                        <i class="fas fa-arrow-up"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-outline-secondary move-question-down">
+                                                        <i class="fas fa-arrow-down"></i>
+                                                    </button>
+                                                    <button type="button" class="btn btn-sm btn-danger delete-question">
+                                                        <i class="fas fa-trash"></i>
+                                                    </button>
+                                                </div>
+                                            </div>
+                                            <div class="card-body">
+                                                <!-- Question ID for existing questions -->
+                                                {% if question_form.instance.id %}
+                                                    <input type="hidden" name="{{ question_form.id.html_name }}" value="{{ question_form.instance.id }}" />
+                                                {% endif %}
+                                                
+                                                <!-- DELETE field for formset -->
+                                                <div class="d-none">
+                                                    {{ question_form.DELETE }}
+                                                </div>
+                                                
+                                                <div class="form-row">
+                                                    <div class="col-md-8">
+                                                        {{ question_form.text|as_crispy_field }}
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        {{ question_form.question_type|as_crispy_field }}
+                                                    </div>
+                                                </div>
+                                                
+                                                <div class="form-row">
+                                                    <div class="col-md-4">
+                                                        {{ question_form.is_required|as_crispy_field }}
+                                                    </div>
+                                                    <div class="col-md-4">
+                                                        {{ question_form.order|as_crispy_field }}
+                                                    </div>
+                                                </div>
+                                                
+                                                <!-- Question type specific fields -->
+                                                <div class="question-specific-fields mt-3">
+                                                    {% if question_form.instance.id %}
+                                                        {% with question_type=question_form.instance.question_type %}
+                                                            <!-- Rating Scale Specific Fields -->
+                                                            <div class="rating-scale-fields {% if question_type.slug != 'rating_scale' %}d-none{% endif %}">
+                                                                <div class="form-row">
+                                                                    <div class="col-md-4">
+                                                                        {{ question_form.min_value|as_crispy_field }}
+                                                                    </div>
+                                                                    <div class="col-md-4">
+                                                                        {{ question_form.max_value|as_crispy_field }}
+                                                                    </div>
+                                                                    <div class="col-md-4">
+                                                                        {{ question_form.step_value|as_crispy_field }}
+                                                                    </div>
+                                                                </div>
+                                                            </div>
+                                                            
+                                                            <!-- Choice Fields for question types that need them -->
+                                                            <div class="choice-fields {% if not question_type.requires_choices and question_type.slug not in 'single_choice,multiple_choice,true_false,likert_scale' %}d-none{% endif %}">
+                                                                <h6 class="mt-3">{% trans "Choices" %}</h6>
+                                                                
+                                                                <!-- Don't show choices for true/false since they're predefined -->
+                                                                {% if question_type.slug != 'true_false' %}
+                                                                    <div class="choices-container" id="choices-container-{{ forloop.counter0 }}">
+                                                                        {% if question_form.choices %}
+                                                                            {% for choice in question_form.choices %}
+                                                                                <div class="choice-item input-group mb-2">
+                                                                                    <input type="text" 
+                                                                                           name="question_{{ question_form.instance.id }}_choice_{{ forloop.counter0 }}"
+                                                                                           class="form-control"
+                                                                                           value="{{ choice.text }}"
+                                                                                           placeholder="{% trans 'Choice text' %}">
+                                                                                    <div class="input-group-append">
+                                                                                        <button type="button" class="btn btn-outline-danger delete-choice">
+                                                                                            <i class="fas fa-times"></i>
+                                                                                        </button>
+                                                                                    </div>
+                                                                                </div>
+                                                                            {% endfor %}
+                                                                        {% endif %}
+                                                                    </div>
+                                                                    <button type="button" class="btn btn-sm btn-outline-primary add-choice"
+                                                                            data-question-index="{{ forloop.counter0 }}"
+                                                                            data-question-id="{{ question_form.instance.id }}">
+                                                                        <i class="fas fa-plus"></i> {% trans "Add Choice" %}
+                                                                    </button>
+                                                                {% else %}
+                                                                    <div class="alert alert-info">
+                                                                        {% trans "True/False choices are automatically generated." %}
+                                                                    </div>
+                                                                {% endif %}
+                                                            </div>
+                                                        {% endwith %}
+                                                    {% endif %}
+                                                </div>
+                                            </div>
+                                        </div>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <button type="submit" class="btn btn-primary">{% trans "Update Poll" %}</button>
+                            <a href="{% url 'polls:detail' slug=poll.slug %}" class="btn btn-secondary">{% trans "Cancel" %}</a>
+                        </div>
+                    </form>
+                </div>
             </div>
-        {% endfor %}
-        
-        <button type="submit" class="btn-submit">Update Poll</button>
-    </form>
+        </div>
+    </div>
 </div>
+
+<!-- Templates for dynamic content -->
+<div class="d-none">
+    <!-- Empty Question Template -->
+    <div id="empty-question-template" class="question-item card mb-3">
+        <div class="card-header d-flex justify-content-between align-items-center">
+            <h5>{% trans "New Question" %}</h5>
+            <div>
+                <button type="button" class="btn btn-sm btn-outline-secondary move-question-up">
+                    <i class="fas fa-arrow-up"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-outline-secondary move-question-down">
+                    <i class="fas fa-arrow-down"></i>
+                </button>
+                <button type="button" class="btn btn-sm btn-danger delete-question">
+                    <i class="fas fa-trash"></i>
+                </button>
+            </div>
+        </div>
+        <div class="card-body">
+            <!-- Content will be populated by JavaScript -->
+        </div>
+    </div>
+    
+    <!-- Empty Choice Template -->
+    <div id="empty-choice-template" class="choice-item input-group mb-2">
+        <input type="text" name="__placeholder__" class="form-control" value="" placeholder="{% trans 'Choice text' %}">
+        <div class="input-group-append">
+            <button type="button" class="btn btn-outline-danger delete-choice">
+                <i class="fas fa-times"></i>
+            </button>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block extra_scripts %}
+<script>
+$(document).ready(function() {
+    const questionFormsetPrefix = '{{ question_formset.prefix }}';
+    let questionCounter = $('#questions-container .question-item').length;
+    
+    // Question type change handler
+    function setupQuestionTypeHandler() {
+        $(document).on('change', '.question-type-select', function() {
+            const questionItem = $(this).closest('.question-item');
+            const selectedType = $(this).val();
+            
+            // Ajax request to get question type details
+            $.ajax({
+                url: '{% url "polls:get_question_type_details" %}',
+                data: {
+                    'type_id': selectedType
+                },
+                dataType: 'json',
+                success: function(data) {
+                    // Show/hide appropriate fields based on question type
+                    const ratingScaleFields = questionItem.find('.rating-scale-fields');
+                    const choiceFields = questionItem.find('.choice-fields');
+                    
+                    // Handle rating scale
+                    if (data.slug === 'rating_scale') {
+                        ratingScaleFields.removeClass('d-none');
+                    } else {
+                        ratingScaleFields.addClass('d-none');
+                    }
+                    
+                    // Handle choices
+                    if (data.requires_choices || ['single_choice', 'multiple_choice', 'likert_scale'].includes(data.slug)) {
+                        choiceFields.removeClass('d-none');
+                        
+                        // For true/false, show info message
+                        if (data.slug === 'true_false') {
+                            choiceFields.find('.choices-container').addClass('d-none');
+                            choiceFields.find('.add-choice').addClass('d-none');
+                            choiceFields.find('.alert-info').removeClass('d-none');
+                        } else {
+                            choiceFields.find('.choices-container').removeClass('d-none');
+                            choiceFields.find('.add-choice').removeClass('d-none');
+                            choiceFields.find('.alert-info').addClass('d-none');
+                            
+                            // For Likert scale, pre-populate with standard options if empty
+                            if (data.slug === 'likert_scale' && choiceFields.find('.choice-item').length === 0) {
+                                const questionIndex = questionItem.data('index');
+                                const choicesContainer = choiceFields.find('.choices-container');
+                                
+                                const likertOptions = [
+                                    '{% trans "Strongly Disagree" %}',
+                                    '{% trans "Disagree" %}',
+                                    '{% trans "Neutral" %}',
+                                    '{% trans "Agree" %}',
+                                    '{% trans "Strongly Agree" %}'
+                                ];
+                                
+                                choicesContainer.empty();
+                                likertOptions.forEach((option, i) => {
+                                    addChoice(questionIndex, null, option);
+                                });
+                            }
+                        }
+                    } else {
+                        choiceFields.addClass('d-none');
+                    }
+                }
+            });
+        });
+    }
+    
+    // Add a new question
+    $('.add-question').click(function() {
+        const newIndex = questionCounter;
+        questionCounter++;
+        
+        // Create a copy of an empty question form
+        const emptyForm = $('#empty-question-template').clone();
+        emptyForm.attr('id', '').attr('data-index', newIndex);
+        
+        // Replace form prefix with the correct index
+        const questionFormHTML = `
+            <div class="form-row">
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label for="id_${questionFormsetPrefix}-${newIndex}-text">Question text</label>
+                        <input type="text" name="${questionFormsetPrefix}-${newIndex}-text" class="form-control" id="id_${questionFormsetPrefix}-${newIndex}-text" required>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="id_${questionFormsetPrefix}-${newIndex}-question_type">Question type</label>
+                        <select name="${questionFormsetPrefix}-${newIndex}-question_type" class="form-control question-type-select" id="id_${questionFormsetPrefix}-${newIndex}-question_type" required>
+                            <option value="">---------</option>
+                            {% for question_type in question_types %}
+                                <option value="{{ question_type.id }}">{{ question_type.name }}</option>
+                            {% endfor %}
+                        </select>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="id_${questionFormsetPrefix}-${newIndex}-is_required">Required</label>
+                        <div class="form-check">
+                            <input type="checkbox" name="${questionFormsetPrefix}-${newIndex}-is_required" class="form-check-input" id="id_${questionFormsetPrefix}-${newIndex}-is_required" checked>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label for="id_${questionFormsetPrefix}-${newIndex}-order">Order</label>
+                        <input type="number" name="${questionFormsetPrefix}-${newIndex}-order" value="${newIndex + 1}" class="form-control" id="id_${questionFormsetPrefix}-${newIndex}-order">
+                    </div>
+                </div>
+            </div>
+            
+            <!-- DELETE field for formset -->
+            <div class="d-none">
+                <input type="checkbox" name="${questionFormsetPrefix}-${newIndex}-DELETE" id="id_${questionFormsetPrefix}-${newIndex}-DELETE">
+            </div>
+            
+            <!-- Question type specific fields -->
+            <div class="question-specific-fields mt-3">
+                <!-- Rating Scale Specific Fields -->
+                <div class="rating-scale-fields d-none">
+                    <div class="form-row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="id_${questionFormsetPrefix}-${newIndex}-min_value">Min value</label>
+                                <input type="number" name="${questionFormsetPrefix}-${newIndex}-min_value" value="1" class="form-control" id="id_${questionFormsetPrefix}-${newIndex}-min_value">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="id_${questionFormsetPrefix}-${newIndex}-max_value">Max value</label>
+                                <input type="number" name="${questionFormsetPrefix}-${newIndex}-max_value" value="5" class="form-control" id="id_${questionFormsetPrefix}-${newIndex}-max_value">
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label for="id_${questionFormsetPrefix}-${newIndex}-step_value">Step value</label>
+                                <input type="number" name="${questionFormsetPrefix}-${newIndex}-step_value" value="1" class="form-control" id="id_${questionFormsetPrefix}-${newIndex}-step_value">
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Choice Fields -->
+                <div class="choice-fields d-none">
+                    <h6 class="mt-3">{% trans "Choices" %}</h6>
+                    
+                    <!-- True/False info -->
+                    <div class="alert alert-info d-none">
+                        {% trans "True/False choices are automatically generated." %}
+                    </div>
+                    
+                    <!-- Choices container -->
+                    <div class="choices-container" id="choices-container-${newIndex}">
+                        <!-- Choices will be added here -->
+                    </div>
+                    
+                    <button type="button" class="btn btn-sm btn-outline-primary add-choice" data-question-index="${newIndex}">
+                        <i class="fas fa-plus"></i> {% trans "Add Choice" %}
+                    </button>
+                </div>
+            </div>
+        `;
+        
+        emptyForm.find('.card-body').html(questionFormHTML);
+        $('#questions-container').append(emptyForm);
+        
+        // Update formset management form
+        const totalForms = $('#id_' + questionFormsetPrefix + '-TOTAL_FORMS');
+        totalForms.val(parseInt(totalForms.val()) + 1);
+        
+        // Renumber questions for display
+        renumberQuestions();
+    });
+    
+    // Delete a question
+    $(document).on('click', '.delete-question', function() {
+        const questionItem = $(this).closest('.question-item');
+        const questionIndex = questionItem.data('index');
+        
+        // If it's an existing question, mark it for deletion instead of removing
+        const deleteField = questionItem.find('input[name$="-DELETE"]');
+        if (deleteField.length) {
+            deleteField.prop('checked', true);
+            questionItem.hide();
+        } else {
+            // If it's a new question, just remove it
+            questionItem.remove();
+            
+            // Update formset management form
+            const totalForms = $('#id_' + questionFormsetPrefix + '-TOTAL_FORMS');
+            totalForms.val(parseInt(totalForms.val()) - 1);
+        }
+        
+        // Renumber questions
+        renumberQuestions();
+    });
+    
+    // Add a choice
+    $(document).on('click', '.add-choice', function() {
+        const questionIndex = $(this).data('question-index');
+        const questionId = $(this).data('question-id');
+        addChoice(questionIndex, questionId);
+    });
+    
+    // Delete a choice
+    $(document).on('click', '.delete-choice', function() {
+        $(this).closest('.choice-item').remove();
+    });
+    
+    // Move question up
+    $(document).on('click', '.move-question-up', function() {
+        const currentItem = $(this).closest('.question-item');
+        const prevItem = currentItem.prev('.question-item');
+        
+        if (prevItem.length) {
+            currentItem.insertBefore(prevItem);
+            updateQuestionOrders();
+        }
+    });
+    
+    // Move question down
+    $(document).on('click', '.move-question-down', function() {
+        const currentItem = $(this).closest('.question-item');
+        const nextItem = currentItem.next('.question-item');
+        
+        if (nextItem.length) {
+            currentItem.insertAfter(nextItem);
+            updateQuestionOrders();
+        }
+    });
+    
+    // Helper function to add a choice
+    function addChoice(questionIndex, questionId, choiceText = '') {
+        const choiceTemplate = $('#empty-choice-template').clone();
+        choiceTemplate.attr('id', '');
+        
+        const choicesContainer = $(`#choices-container-${questionIndex}`);
+        const choiceCount = choicesContainer.find('.choice-item').length;
+        
+        // Set the name attribute properly
+        const inputField = choiceTemplate.find('input');
+        let inputName;
+        
+        if (questionId) {
+            inputName = `question_${questionId}_choice_${choiceCount}`;
+        } else {
+            inputName = `question_${questionIndex}_choice_${choiceCount}`;
+        }
+        
+        inputField.attr('name', inputName);
+        inputField.val(choiceText);
+        
+        choicesContainer.append(choiceTemplate);
+    }
+    
+    // Helper function to renumber questions in the UI
+    function renumberQuestions() {
+        $('#questions-container .question-item:visible').each(function(index) {
+            $(this).find('h5').text(`Question #${index + 1}`);
+        });
+    }
+    
+    // Helper function to update question order fields
+    function updateQuestionOrders() {
+        $('#questions-container .question-item:visible').each(function(index) {
+            $(this).find('input[name$="-order"]').val(index + 1);
+        });
+    }
+    
+    // Initialize event handlers
+    setupQuestionTypeHandler();
+    
+    // Trigger question type handlers for existing questions
+    $('.question-type-select').each(function() {
+        $(this).trigger('change');
+    });
+});
+</script>
 {% endblock %}
