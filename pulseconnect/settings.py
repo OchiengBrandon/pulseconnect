@@ -8,12 +8,12 @@ import dj_database_url
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.environ.get('DJANGO_SECRET_KEY')
+SECRET_KEY = config('DJANGO_SECRET_KEY')
 
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.environ.get('DJANGO_DEBUG', 'True') == 'True'
 
-ALLOWED_HOSTS = os.environ.get('ALLOWED_HOSTS', '').split(',')
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', '').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -143,19 +143,28 @@ TEMPLATES = [
 WSGI_APPLICATION = 'pulseconnect.wsgi.application'
 ASGI_APPLICATION = 'pulseconnect.asgi.application'
 
-
-
-# Database configuration for PostgreSQL
+# Database configuration for MySQL
 DATABASES = {
     'default': {
-        'ENGINE': 'django.db.backends.postgresql',
-        'NAME': config('POSTGRES_DATABASE'),
-        'USER': config('POSTGRES_USER'),
-        'PASSWORD': config('POSTGRES_PASSWORD'),
-        'HOST': config('POSTGRES_HOST'),
-        'PORT': int(config('POSTGRES_PORT', default=5432)),
+        'ENGINE': 'django.db.backends.mysql', 
+        'NAME': config('MYSQL_DATABASE'),         
+        'USER': config('MYSQL_USER'),         
+        'PASSWORD': config('MYSQL_PASSWORD'),  
+        'HOST': config('MYSQL_HOST'),  
+        'PORT': config('MYSQL_PORT', '3306'),      
     }
 }
+# Database configuration for PostgreSQL
+# DATABASES = {
+#     'default': {
+#         'ENGINE': 'django.db.backends.postgresql',
+#         'NAME': config('POSTGRES_DATABASE'),
+#         'USER': config('POSTGRES_USER'),
+#         'PASSWORD': config('POSTGRES_PASSWORD'),
+#         'HOST': config('POSTGRES_HOST'),
+#         'PORT': int(config('POSTGRES_PORT', default=5432)),
+#     }
+# }
 
 
 # Custom user model

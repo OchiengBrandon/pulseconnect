@@ -3,6 +3,11 @@
 *.pyo
 __pycache__/
 
+# Migrations
+migrations/
+/migrations/    
+
+
 # Environment variables
 .env
 .venv/
